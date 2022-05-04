@@ -159,6 +159,10 @@ fn read_c_uint (s: &mut Peekable<impl Iterator<Item=u8>>) -> c_uint {
   c_uint::from_le_bytes (bytes)
 }
 
+fn skip_until (s: &mut Peekable<impl Iterator<Item=u8>>, delim: u8) {
+  while s.next_if (|x| *x != delim).is_some () {}
+}
+
 pub unsafe fn load () -> Result<(), std::io::Error> {
   log::info! ("Rebuilding hibernated state");
   let hiberfile: Vec<u8> = std::fs::read ("./.window_manager_hiberfile")?;
@@ -166,6 +170,10 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
   let mut ws_idx: usize = 0;
   // Active workspace
   active_workspace = read_usize (&mut it);
+  if active_workspace >= (*config).workspace_count {
+    log::warn! ("Hibernated active workspace is greater than current workspace count");
+    active_workspace = 0;
+  }
   // Clients
   loop {
     // Check if empty
@@ -176,6 +184,15 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     if *it.peek ().unwrap () == b'#' {
       it.next ().unwrap ();
       ws_idx = read_usize (&mut it);
+      if ws_idx >= (*config).workspace_count {
+        log::warn! ("Cannot load workspace {} from hibernation (not enough workspaces)", ws_idx + 1);
+        // Skip until next workspace identifier
+        // We could just break here since we serealize workspaces in-order but
+        // we'll keep going, mainly to print the warning message for each
+        // workspace we cannot reconstruct.
+        skip_until (&mut it, b'#');
+        continue;
+      }
     }
     // Program
     let program = read_until (&mut it, b'\0');
