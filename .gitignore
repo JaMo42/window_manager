@@ -1,0 +1,9 @@
+/target
+
+# These get created by the window manager
+log.txt
+.window_manager_hiberfile
+
+# When running `./run.sh 2> err`
+err
+

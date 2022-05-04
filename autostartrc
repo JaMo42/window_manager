@@ -1,0 +1,11 @@
+# Set wallpaper
+#feh --bg-scale ~/Pictures/annie-spratt-zWCUF5pTIM4-unsplash.jpg
+# Run compositor
+#picom &
+# Status bar
+$HOME/.config/polybar/launch.sh &
+
+# Startup programs
+
+#urxvt &
+

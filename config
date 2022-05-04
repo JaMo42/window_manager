@@ -1,0 +1,45 @@
+# Number of workspaces
+workspaces 2
+
+# Inner gap for snapped clients
+gaps 5
+# Top, Bottom, Left, Right padding for snapped clients
+pad 45 5 5 5
+
+# Width of border around windows
+border 10
+
+# Define a window to be a meta-window by its title
+meta xclock
+
+# Defines the 'Mod' key in bind statements
+# Defines the modifier key for pre-defined bindings (anything mouse related
+# and workspace operations)
+# Must be defined before using it in bind statements
+mod Win
+
+# Key names must adhere to the requirements of XStringToKeysym
+bind Mod+Q close_window
+bind Mod+Shift+Q quit
+bind Mod+space $ rofi -show run
+bind Mod+Return $ urxvt
+bind Mod+Up snap_fullscreen
+bind Mod+Down unsnap_or_center
+bind Mod+Left snap_left
+bind Mod+Right snap_right
+#bind Alt+Tab switch_window
+
+# Define colors
+
+# Border of focused window
+color Focused #0a75ad
+# Border of other windows
+color Normal #313233
+# Solid background color
+color Background #62639b
+# Color or pending window druing window switching
+color Selected #00ff00
+
+# Enable hibernation
+hibernate
+
