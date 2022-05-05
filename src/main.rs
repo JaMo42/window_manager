@@ -55,6 +55,9 @@ unsafe fn connect () {
 
 
 unsafe fn grab_keys () {
+  // MAYBE_TODO: dwm seems to grab each key with the numlock and 'LockMask'
+  // modifiers as well and then ignores those when handling key presses, maybe
+  // do that as well?
   XUngrabKey (display, AnyKey as i32, AnyModifier, root);
   for (key, _) in &(*config).key_binds {
     XGrabKey (
@@ -138,7 +141,7 @@ unsafe fn init () {
   if (*config).hibernate {
     select_input (SubstructureRedirectMask);
     if hibernate::load ().is_err () {
-      log::warn! ("Could not read hiberfile");
+      log::error! ("Could not read hiberfile");
     }
   }
   // Grab input
@@ -305,7 +308,7 @@ fn main () {
       .build ("log_file", Box::new (log_file)))
     .build (log4rs::config::Root::builder ()
       .appender ("log_file")
-      .build (log::LevelFilter::Debug))
+      .build (log::LevelFilter::Trace))
     .unwrap ();
   log4rs::init_config (log_config).unwrap ();
   // Run window manager

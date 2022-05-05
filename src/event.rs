@@ -16,7 +16,6 @@ macro_rules! ignore_meta_window {
 
 
 pub unsafe fn button_press (event: &XButtonEvent) {
-  log::trace! ("Event: button_press");
   if event.subwindow == X_NONE {
     return;
   }
@@ -27,7 +26,6 @@ pub unsafe fn button_press (event: &XButtonEvent) {
 
 
 pub unsafe fn motion (event: &XButtonEvent) {
-  log::trace! ("Event: motion");
   if let Some (s) = mouse.0 {
     if s.subwindow == X_NONE {
       return;
@@ -62,7 +60,6 @@ pub unsafe fn motion (event: &XButtonEvent) {
 
 
 pub unsafe fn button_release (event: &XButtonEvent) {
-  log::trace! ("Event: button_release");
   if let Some (s) = mouse.0 {
     if s.subwindow != X_NONE {
       ignore_meta_window! (s.subwindow);
@@ -86,7 +83,6 @@ pub unsafe fn button_release (event: &XButtonEvent) {
 
 
 pub unsafe fn key_press (event: &XKeyEvent) {
-  log::trace! ("Event: key_press");
   let action = (*config).get (event.keycode, event.state);
   match action {
     Action::WM (f) => {
@@ -112,7 +108,6 @@ pub unsafe fn key_press (event: &XKeyEvent) {
 
 
 pub unsafe fn map_request (event: &XMapRequestEvent) {
-  log::trace! ("Event: map_request");
   for ws in workspaces.iter () {
     for c in ws.iter () {
       if c.window == event.window {
@@ -149,7 +144,6 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
 
 
 pub unsafe fn enter (event: &XCrossingEvent) {
-  log::trace! ("Event: enter");
   if event.subwindow == X_NONE {
     return;
   }
@@ -158,7 +152,6 @@ pub unsafe fn enter (event: &XCrossingEvent) {
 
 
 pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
-  log::trace! ("Event: configure_request");
   XConfigureWindow (
     display, event.window, event.value_mask as u32,
     &mut XWindowChanges {
@@ -189,11 +182,22 @@ pub unsafe fn client_message (_event: &XClientMessageEvent) {
   log::trace! ("Event: client_message");
 }
 
-pub unsafe fn mapping_notify (_event: &XMappingEvent) {
-  log::trace! ("Event: mapping_notify");
+pub unsafe fn mapping_notify (event: &XMappingEvent) {
+  let mut ev = event.clone ();
+  XRefreshKeyboardMapping (&mut ev);
+  if ev.request == MappingKeyboard {
+    grab_keys ();
+  }
 }
 
-pub unsafe fn destroy_notify (_event: &XDestroyWindowEvent) {
-  log::trace! ("Event: destroy_notify");
+pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
+  let window = event.window;
+  for ws_idx in 0..workspaces.len () {
+    for client in workspaces[ws_idx].iter () {
+      if client.window == window {
+        workspaces[ws_idx].remove (client);
+      }
+    }
+  }
 }
 
