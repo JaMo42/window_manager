@@ -31,15 +31,20 @@ bind Mod+Right snap_right
 
 # Define colors
 
+# Palette used here:
+# https://www.color-hex.com/color-palette/2017
+
 # Border of focused window
-color Focused #0a75ad
+color Focused #2793e8
 # Border of other windows
-color Normal #313233
-# Solid background color
-color Background #62639b
+color Normal #666666
 # Color or pending window druing window switching
-color Selected #00ff00
+color Selected #559900
+# Color of a window that demands attention
+color Urgent #cc181e
+# Solid background color
+color Background #f1f1f1
 
 # Enable hibernation
-hibernate
+#hibernate
 
