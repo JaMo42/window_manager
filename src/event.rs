@@ -96,25 +96,26 @@ pub unsafe fn button_release (event: &XButtonEvent) {
 
 
 pub unsafe fn key_press (event: &XKeyEvent) {
-  let action = (*config).get (event.keycode, event.state);
-  match action {
-    Action::WM (f) => {
-      if let Some (client) = focused_client! () {
-        f (client);
+  if let Some (action) = (*config).get (event.keycode, event.state) {
+    match action {
+      Action::WM (f) => {
+        if let Some (client) = focused_client! () {
+          f (client);
+        }
+      },
+      Action::WS (f, workspace_index, requires_window) => {
+        let maybe_client = focused_client! ();
+        if *requires_window && maybe_client.is_none () {
+          return;
+        }
+        f (*workspace_index, maybe_client);
+      },
+      Action::Launch (cmd) => {
+        run_process (cmd);
+      },
+      Action::Generic (f) => {
+        f ();
       }
-    },
-    Action::WS (f, workspace_index, requires_window) => {
-      let maybe_client = focused_client! ();
-      if *requires_window && maybe_client.is_none () {
-        return;
-      }
-      f (*workspace_index, maybe_client);
-    },
-    Action::Launch (cmd) => {
-      run_process (cmd);
-    },
-    Action::Generic (f) => {
-      f ();
     }
   }
 }

@@ -22,7 +22,7 @@ mod Win
 bind Mod+Q close_window
 bind Mod+Shift+Q quit
 bind Mod+space $ rofi -show run
-bind Mod+Return $ urxvt
+bind Mod+Return $ xfce4-terminal
 bind Mod+Up snap_fullscreen
 bind Mod+Down unsnap_or_center
 bind Mod+Left snap_left

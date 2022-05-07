@@ -24,6 +24,7 @@ pub const MOD_WIN: c_uint = Mod4Mask;
 pub const MOD_ALT: c_uint = Mod1Mask;
 pub const MOD_SHIFT: c_uint = ShiftMask;
 pub const MOD_CTRL: c_uint = ControlMask;
+pub static mut numlock_mask: c_uint = 0;
 
 pub const SNAP_LEFT: u8 = 0x1;
 pub const SNAP_RIGHT: u8 = 0x2;

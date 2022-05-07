@@ -7,6 +7,14 @@ use super::*;
 use super::config_parser;
 use super::color::Color_Scheme;
 
+macro_rules! clean_mods {
+  ($mods:expr) => {
+    $mods
+      & unsafe { !(LockMask | numlock_mask) }
+      & (MOD_WIN | MOD_ALT | MOD_SHIFT | MOD_CTRL)
+  }
+}
+
 #[derive(Eq, Hash, Copy, Clone)]
 pub struct Key {
   pub modifiers: c_uint,
@@ -85,8 +93,8 @@ impl Config {
     self.key_binds.insert (key, action);
   }
 
-  pub fn get (&self, key_code: c_uint, modifiers: c_uint) -> &Action {
-    self.key_binds.get (&Key { modifiers: modifiers, code: key_code }).unwrap ()
+  pub fn get (&self, key_code: c_uint, modifiers: c_uint) -> Option<&Action> {
+    self.key_binds.get (&Key { modifiers: clean_mods! (modifiers), code: key_code })
   }
 
   pub fn load (&mut self) {

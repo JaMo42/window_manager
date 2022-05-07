@@ -56,21 +56,36 @@ unsafe fn connect () {
 }
 
 
+unsafe fn update_numlock_mask () {
+  let modmap = XGetModifierMapping (display);
+  numlock_mask = 0;
+  for i in 0..9 {
+    for j in 0..(*modmap).max_keypermod {
+      let check = *(*modmap).modifiermap.add ((i * (*modmap).max_keypermod + j) as usize);
+      if check == XKeysymToKeycode (display, x11::keysym::XK_Num_Lock as u64) {
+        numlock_mask = 1 << i;
+      }
+    }
+  }
+  XFreeModifiermap (modmap);
+}
+
+
 unsafe fn grab_keys () {
-  // MAYBE_TODO: dwm seems to grab each key with the numlock and 'LockMask'
-  // modifiers as well and then ignores those when handling key presses, maybe
-  // do that as well?
+  update_numlock_mask ();
   XUngrabKey (display, AnyKey as i32, AnyModifier, root);
   for (key, _) in &(*config).key_binds {
-    XGrabKey (
-      display,
-      key.code as c_int,
-      key.modifiers,
-      root,
-      X_TRUE,
-      GrabModeAsync,
-      GrabModeAsync
-    );
+    for extra in [0, LockMask, numlock_mask, LockMask|numlock_mask] {
+      XGrabKey (
+        display,
+        key.code as c_int,
+        key.modifiers | extra,
+        root,
+        X_TRUE,
+        GrabModeAsync,
+        GrabModeAsync
+      );
+    }
   }
 }
 
