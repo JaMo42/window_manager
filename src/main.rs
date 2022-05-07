@@ -27,6 +27,28 @@ use config::*;
 use workspace::*;
 use property::Net;
 
+mod paths {
+  pub static mut config: String = String::new ();
+  pub static mut autostartrc: String = String::new ();
+  pub static mut hiberfile: String = String::new ();
+
+  pub unsafe fn load () {
+    let config_dir = if let Some (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME").ok () {
+      format! ("{}/window_manager", xdg_config_home)
+    }
+    else {
+      format! ("{}/.config/window_manager", std::env::var ("HOME").unwrap ())
+    };
+    if std::fs::create_dir_all (&config_dir).is_err () {
+      panic! ("Could not configuration directory: {}", config_dir);
+    }
+    config = format! ("{}/config", config_dir);
+    autostartrc = format! ("{}/autostartrc", config_dir);
+    hiberfile = format! ("{}/.hiberfile", config_dir);
+  }
+}
+
+
 unsafe extern "C" fn x_error (my_display: *mut Display, event: *mut XErrorEvent) -> c_int {
   const ERROR_TEXT_SIZE: usize = 1024;
   let mut error_text_buf: [c_char; ERROR_TEXT_SIZE] = [0; ERROR_TEXT_SIZE];
@@ -172,7 +194,7 @@ unsafe fn init () {
   select_input (0);
   // Run autostart script
   // TODO: don't rely on relative path
-  if std::path::Path::new ("./autostartrc").exists () {
+  if std::path::Path::new (&paths::autostartrc).exists () {
     std::process::Command::new ("bash")
       .arg ("./autostartrc")
       .spawn ()
@@ -346,6 +368,7 @@ fn main () {
   log4rs::init_config (log_config).unwrap ();
   // Run window manager
   unsafe {
+    paths::load ();
     log::trace! ("Connecting to X server");
     connect ();
     log::info! ("Display size: {}x{}", screen_size.w, screen_size.h);

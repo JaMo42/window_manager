@@ -6,6 +6,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::client::Client;
 use super::geometry::Geometry;
+use super::paths;
 
 // XRes bindings
 // (source file locations based on the version I have on my machine :^))
@@ -83,7 +84,7 @@ fn commandline_of_pid (pid: libc::pid_t) -> String {
 
 pub unsafe fn store () -> Result<(), std::io::Error> {
   log::info! ("Writing hibernation info");
-  let mut file = File::create ("./.window_manager_hiberfile").unwrap ();
+  let mut file = File::create (&paths::hiberfile).unwrap ();
   // Active workspace
   file.write (&active_workspace.to_le_bytes ())?;
   // Clients
@@ -165,7 +166,7 @@ fn skip_until (s: &mut Peekable<impl Iterator<Item=u8>>, delim: u8) {
 
 pub unsafe fn load () -> Result<(), std::io::Error> {
   log::info! ("Rebuilding hibernated state");
-  let hiberfile: Vec<u8> = std::fs::read ("./.window_manager_hiberfile")?;
+  let hiberfile: Vec<u8> = std::fs::read (&paths::hiberfile)?;
   let mut it = hiberfile.into_iter ().peekable ();
   let mut ws_idx: usize = 0;
   // Active workspace

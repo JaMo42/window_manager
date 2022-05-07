@@ -6,6 +6,7 @@ use x11::keysym::*;
 use super::*;
 use super::config_parser;
 use super::color::Color_Scheme;
+use super::paths;
 
 macro_rules! clean_mods {
   ($mods:expr) => {
@@ -103,7 +104,7 @@ impl Config {
     };
     // Parse file
     // TODO: don't rely on relative path
-    let source = std::fs::read_to_string ("./config").unwrap ();
+    let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
     let parser = config_parser::Parser::new (source.chars ());
     for def in parser {
       use config_parser::Definition_Type::*;
