@@ -4,8 +4,6 @@
 log.txt
 .window_manager_hiberfile
 
-# When running `./run.sh 2> err`
+# Created by `./run.sh`
 err
-# When using valgrind
-vgerr
 
