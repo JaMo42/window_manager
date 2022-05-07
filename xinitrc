@@ -1,7 +1,13 @@
 xrdb -merge $HOME/.Xresources
-if [ $VALGRIND = 1 ]; then
-  exec valgrind ./target/debug/window_manager 2>vgerr
-else
-  exec ./target/debug/window_manager
-fi
+case $VALGRIND in
+  1)
+    exec valgrind ./target/debug/window_manager 2>vgerr
+    ;;
+  2)
+    exec valgrind --track-origins=yes --leck-check=full ./target/debug/window_manager 2>vgerr
+    ;;
+  *)
+    exec ./target/debug/window_manager
+    ;;
+esac
 
