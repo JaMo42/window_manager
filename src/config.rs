@@ -49,12 +49,6 @@ pub enum Action {
 }
 
 
-
-/* Config language (maybe):
-bind Win+Down center_active_window
-
-bind Win+Space $ rofi -show run
-*/
 pub struct Config {
   pub modifier: c_uint,
   pub key_binds: HashMap<Key, Action>,

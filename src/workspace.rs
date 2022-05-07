@@ -3,6 +3,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::client::Client;
 use super::focus_window;
+use super::property;
 
 #[macro_export]
 macro_rules! focused_client {
@@ -39,9 +40,12 @@ impl Workspace {
     if let Some (idx) = self.clients.iter ().position (|c| c.window == client.window) {
       self.clients.remove (idx);
       // Update focused window
-      if !self.clients.is_empty () {
-        unsafe {
+      unsafe {
+        if !self.clients.is_empty () {
           focus_window (self.clients[0].window);
+        }
+        else {
+          property::delete (root, property::Net::ActiveWindow);
         }
       }
     }
@@ -74,7 +78,6 @@ impl Workspace {
     if self.clients.len () <= 1 {
       return;
     }
-    // TODO: use actual keys defined in config
     // Create dummy window to handle window switch loop input
     let s = XDefaultScreen (display);
     let w = XCreateSimpleWindow (

@@ -18,12 +18,14 @@ mod color;
 #[macro_use]
 mod workspace;
 mod hibernate;
+mod property;
 
 use crate::core::*;
 use client::*;
 use geometry::*;
 use config::*;
 use workspace::*;
+use property::Net;
 
 unsafe extern "C" fn x_error (my_display: *mut Display, event: *mut XErrorEvent) -> c_int {
   const ERROR_TEXT_SIZE: usize = 1024;
@@ -129,6 +131,7 @@ unsafe fn select_input (mut mask: c_long) {
 
 unsafe fn init () {
   // Create workspaces
+  workspaces.reserve ((*config).workspace_count);
   for _ in 0..(*config).workspace_count {
     workspaces.push (Workspace::new ());
   }
@@ -137,6 +140,9 @@ unsafe fn init () {
   // Colors
   XSetWindowBackground (display, root, (*config).colors.background.pixel);
   XClearWindow (display, root);
+  // Properties
+  property::load_atoms ();
+  property::init_set_root_properties ();
   // Hibernation
   if (*config).hibernate {
     select_input (SubstructureRedirectMask);
@@ -191,7 +197,7 @@ unsafe fn run () {
 
 
 unsafe fn cleanup () {
-  // Hibernation
+  // HibernationA
   if (*config).hibernate {
     if hibernate::store ().is_err () {
       log::error! ("Could not write hiberfile");
@@ -235,8 +241,10 @@ unsafe fn cleanup () {
     (*config).modifier,
     root
   );
+  // Properties
+  XDestroyWindow (display, property::wm_check_window);
+  property::delete (root, Net::ActiveWindow);
   // Close display
-  XCloseDisplay (display);
 }
 
 
@@ -273,7 +281,9 @@ fn get_window_geometry (window: Window) -> Geometry {
 unsafe fn window_title (window: Window) -> String {
   let mut title_c_str: *mut c_char = std::ptr::null_mut ();
   XFetchName (display, window, &mut title_c_str);
-  std::ffi::CStr::from_ptr (title_c_str).to_str ().unwrap ().to_owned ()
+  let title = std::ffi::CStr::from_ptr (title_c_str).to_str ().unwrap ().to_owned ();
+  XFree (title_c_str as *mut c_void);
+  title
 }
 
 
@@ -281,6 +291,7 @@ unsafe fn focus_window (window: Window) {
   XSetWindowBorder (display, window, (*config).colors.focused.pixel);
   XSetInputFocus (display, window, RevertToParent, CurrentTime);
   XRaiseWindow (display, window);
+  property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &window, 1);
 }
 
 
@@ -326,6 +337,7 @@ fn main () {
     run ();
     log::trace! ("Cleaning up");
     cleanup ();
+    XCloseDisplay (display);
   }
 }
 

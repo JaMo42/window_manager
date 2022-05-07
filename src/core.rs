@@ -16,7 +16,6 @@ macro_rules! uninitialized {
   };
 }
 
-#[allow(dead_code)]
 pub const X_FALSE: c_int = 0;
 pub const X_TRUE: c_int = 1;
 pub const X_NONE: c_ulong = 0;

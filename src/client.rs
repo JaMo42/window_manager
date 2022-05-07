@@ -12,19 +12,17 @@ pub struct Client {
 }
 
 impl Client {
-  pub fn new (window: Window) -> Self {
-    unsafe {
-      let mut wc: XWindowChanges = uninitialized! ();
-      wc.border_width = (*config).border_width;
-      XConfigureWindow (display, window, CWBorderWidth as u32, &mut wc);
-      XMapWindow (display, window);
-      let geometry = get_window_geometry (window);
-      Client {
-        window: window,
-        geometry: geometry,
-        prev_geometry: geometry,
-        is_snapped: false
-      }
+  pub unsafe fn new (window: Window) -> Self {
+    let mut wc: XWindowChanges = uninitialized! ();
+    wc.border_width = (*config).border_width;
+    XConfigureWindow (display, window, CWBorderWidth as u32, &mut wc);
+    XMapWindow (display, window);
+    let geometry = get_window_geometry (window);
+    Client {
+      window: window,
+      geometry: geometry,
+      prev_geometry: geometry,
+      is_snapped: false
     }
   }
 

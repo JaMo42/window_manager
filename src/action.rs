@@ -10,10 +10,23 @@ pub unsafe fn quit () {
 }
 
 
+unsafe fn update_client_list () {
+  // We can't delete a window from the client list proprty so we have to
+  // rebuild it when deleting a window
+  property::delete (root, Net::ClientList);
+  for ws in workspaces.iter () {
+    for c in ws.iter () {
+      property::append (root, Net::ClientList, XA_WINDOW, 32, &c.window, 1);
+    }
+  }
+}
+
+
 pub unsafe fn close_client (client: &mut Client) {
   // TODO: use WM_DELETE_WINDOW if applicable
   XKillClient (display, client.window);
   workspaces[active_workspace].remove (client);
+  update_client_list ();
 }
 
 
