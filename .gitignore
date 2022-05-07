@@ -6,4 +6,6 @@ log.txt
 
 # When running `./run.sh 2> err`
 err
+# When using valgrind
+vgerr
 
