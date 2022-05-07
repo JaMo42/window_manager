@@ -18,7 +18,8 @@ pub struct Color_Scheme {
   pub focused: Color,
   pub normal: Color,
   pub background: Color,
-  pub selected: Color
+  pub selected: Color,
+  pub urgent: Color
 }
 
 impl Color_Scheme {
@@ -27,7 +28,8 @@ impl Color_Scheme {
       focused: xft_color_new! (),
       normal: xft_color_new! (),
       background: xft_color_new! (),
-      selected: xft_color_new! ()
+      selected: xft_color_new! (),
+      urgent: xft_color_new! ()
     }
   }
 
@@ -48,6 +50,7 @@ impl Color_Scheme {
     set_color! (self.normal, "#444444");
     set_color! (self.background, "#000000");
     set_color! (self.selected, "#007755");
+    set_color! (self.urgent, "#770000");
   }
 
   pub fn set (&mut self, element: &String, color_hex: &String) {
@@ -56,6 +59,7 @@ impl Color_Scheme {
       "Normal" => &mut self.normal,
       "Background" => &mut self.background,
       "Selected" => &mut self.selected,
+      "Urgent" => &mut self.urgent,
       _ => panic! ("Color_Scheme::set: unknown element: {}", element)
     };
     unsafe {

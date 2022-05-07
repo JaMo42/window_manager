@@ -248,14 +248,6 @@ unsafe fn cleanup () {
 }
 
 
-unsafe fn win2client (window: Window) -> &'static mut Client {
-  workspaces[active_workspace]
-    .iter_mut ()
-    .find (|c| c.window == window)
-    .unwrap ()
-}
-
-
 fn get_window_geometry (window: Window) -> Geometry {
   let mut x: c_int = 0;
   let mut y: c_int = 0;
@@ -292,6 +284,18 @@ unsafe fn focus_window (window: Window) {
   XSetInputFocus (display, window, RevertToParent, CurrentTime);
   XRaiseWindow (display, window);
   property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &window, 1);
+}
+
+
+unsafe fn update_client_list () {
+  // We can't delete a window from the client list proprty so we have to
+  // rebuild it when deleting a window
+  property::delete (root, Net::ClientList);
+  for ws in workspaces.iter () {
+    for c in ws.iter () {
+      property::append (root, Net::ClientList, XA_WINDOW, 32, &c.window, 1);
+    }
+  }
 }
 
 

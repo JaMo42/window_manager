@@ -4,6 +4,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::config::*;
 use super::action;
+use super::property::{Net};
 use super::*;
 
 macro_rules! ignore_meta_window {
@@ -12,6 +13,18 @@ macro_rules! ignore_meta_window {
       return;
     }
   }
+}
+
+
+unsafe fn win2client<'a> (window: Window) -> Option<&'a mut Client> {
+  for ws in workspaces.iter_mut () {
+    for c in ws.iter_mut () {
+      if c.window == window {
+        return Some (c);
+      }
+    }
+  }
+  None
 }
 
 
@@ -65,14 +78,14 @@ pub unsafe fn button_release (event: &XButtonEvent) {
       ignore_meta_window! (s.subwindow);
       if s.button == 1 && s.state == (*config).modifier | MOD_SHIFT {
         action::move_snap (
-          win2client (s.subwindow),
+          win2client (s.subwindow).unwrap (),
           event.x_root as u32,
           event.y_root as u32
         );
       }
       else {
         // Commit the new window geometry into the client
-        let c = &mut win2client (s.subwindow);
+        let c = &mut win2client (s.subwindow).unwrap ();
         c.geometry = get_window_geometry (s.subwindow);
         c.prev_geometry = c.geometry;
       }
@@ -179,8 +192,49 @@ pub unsafe fn configure_notify (_event: &XConfigureEvent) {
   log::trace! ("Event: configure_notify");
 }
 
-pub unsafe fn client_message (_event: &XClientMessageEvent) {
-  log::trace! ("Event: client_message");
+pub unsafe fn client_message (event: &XClientMessageEvent) {
+  if let Some (mut client) = win2client (event.window) {
+    log::debug! ("Client message: {}", event.message_type);
+    if event.message_type == property::atom (Net::WMState) {
+      // _NET_WM_STATE
+      let data = event.data.as_longs ();
+      log::debug! ("client_message: data = {{{}, {}, {}, {}, {}}}",
+        data[0], data[1], data[2], data[3], data[4]);
+      if data[1] as Atom == property::atom (Net::WMStateFullscreen)
+        || data[2] as Atom == property::atom (Net::WMStateFullscreen) {
+        // _NET_WM_STATE_FULLSCREEN
+        // TODO: for now uses the fullscreen snapping instead of actual fullscreen
+        // (the snapping should probably be renamed to 'maximized')
+        if data[0] == 1 || (data[0] == 2 && !client.is_snapped) {
+          log::debug! ("Set Fullscreen: {}", client);
+          action::snap (&mut client, SNAP_FULLSCREEN);
+          property::set (client.window, Net::WMState, XA_ATOM, 32,
+            &property::atom (Net::WMStateFullscreen), 1);
+        }
+        else {
+          log::debug! ("Restore Fullscreen: {}", client);
+          property::set (client.window, Net::WMState, XA_ATOM, 32,
+            std::ptr::null::<c_uchar> (), 1);
+          client.unsnap ();
+        }
+      }
+      if data[1] as Atom == property::atom (Net::WMStateDemandsAttention)
+        || data[2] as Atom == property::atom (Net::WMStateDemandsAttention) {
+        // _NET_WM_STATE_DEMANDS_ATTENTION
+        client.set_urgency (data[0] == 1 || (data[0] == 2 && !client.is_urgent));
+      }
+    }
+    else if event.message_type == property::atom (Net::ActiveWindow) {
+      {
+        let f = focused_client! ();
+        if f.is_some () && *f.unwrap () == *client {
+          return;
+        }
+      }
+      log::debug! ("Set Urgent: {}", client);
+      client.set_urgency (true);
+    }
+  }
 }
 
 pub unsafe fn mapping_notify (event: &XMappingEvent) {
@@ -200,5 +254,6 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
       }
     }
   }
+  update_client_list ();
 }
 

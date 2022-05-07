@@ -9,6 +9,7 @@ pub struct Client {
   pub geometry: Geometry,
   pub prev_geometry: Geometry,
   pub is_snapped: bool,
+  pub is_urgent: bool
 }
 
 impl Client {
@@ -22,7 +23,8 @@ impl Client {
       window: window,
       geometry: geometry,
       prev_geometry: geometry,
-      is_snapped: false
+      is_snapped: false,
+      is_urgent: false
     }
   }
 
@@ -49,6 +51,43 @@ impl Client {
   pub unsafe fn unsnap (&mut self) {
     self.is_snapped = false;
     self.move_and_resize (self.prev_geometry);
+  }
+
+  pub unsafe fn focus (&mut self) {
+    if self.is_urgent {
+      self.set_urgency (false);
+    }
+    focus_window (self.window);
+  }
+
+  pub unsafe fn set_urgency (&mut self, urgency: bool) {
+    self.is_urgent = urgency;
+    if urgency {
+      XSetWindowBorder (display, self.window, (*config).colors.urgent.pixel);
+    }
+    let hints = XGetWMHints (display, self.window);
+    if !hints.is_null () {
+      (*hints).flags = if urgency {
+        (*hints).flags | XUrgencyHint
+      } else {
+        (*hints).flags & !XUrgencyHint
+      };
+      XSetWMHints (display, self.window, hints);
+      XFree (hints as *mut c_void);
+    }
+
+  }
+}
+
+impl PartialEq for Client {
+  fn eq (&self, other: &Self) -> bool {
+    self.window == other.window
+  }
+}
+
+impl std::fmt::Display for Client {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write! (f, "{} ({})", unsafe { window_title (self.window) }, self.window)
   }
 }
 

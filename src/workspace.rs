@@ -23,17 +23,15 @@ impl Workspace {
     }
   }
 
-  pub fn push (&mut self, client: Client) {
-    unsafe {
-      if !self.clients.is_empty () {
-        XSetWindowBorder (
-          display, self.clients[0].window, (*config).colors.normal.pixel
-        );
-      }
-      XSetWindowBorder (display, client.window, (*config).colors.focused.pixel);
-      focus_window (client.window);
+  pub unsafe fn push (&mut self, client: Client) {
+    if !self.clients.is_empty () {
+      XSetWindowBorder (
+        display, self.clients[0].window, (*config).colors.normal.pixel
+      );
     }
+    XSetWindowBorder (display, client.window, (*config).colors.focused.pixel);
     self.clients.insert (0, client);
+    self.clients[0].focus ();
   }
 
   pub fn remove (&mut self, client: &Client) {
@@ -42,7 +40,7 @@ impl Workspace {
       // Update focused window
       unsafe {
         if !self.clients.is_empty () {
-          focus_window (self.clients[0].window);
+          self.clients[0].focus ();
         }
         else {
           property::delete (root, property::Net::ActiveWindow);
@@ -63,11 +61,11 @@ impl Workspace {
     }
     else if let Some (idx) = self.clients.iter ().position (|c| c.window == window) {
       if idx != 0 {
-        //self.clients.swap (0, idx);
         let c = self.clients.remove (idx);
         self.clients.insert (0, c);
       }
-      focus_window (window);
+      self.clients[0].focus ();
+      //focus_window (window);
     }
     else {
       panic! ("Trying to focus window on a different workspace");

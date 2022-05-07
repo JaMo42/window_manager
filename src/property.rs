@@ -14,6 +14,9 @@ pub enum Net {
   ActiveWindow,
   SupportingWMCheck,
   WMName,
+  WMState,
+  WMStateFullscreen,
+  WMStateDemandsAttention,
   Last
 }
 
@@ -70,6 +73,12 @@ pub unsafe fn load_atoms () {
   N! (Net::ActiveWindow, "_NET_ACTIVE_WINDOW");
   N! (Net::SupportingWMCheck, "_NET_SUPPORTING_WM_CHECK");
   N! (Net::WMName, "_NET_WM_NAME");
+  N! (Net::WMState, "_NET_WM_STATE");
+  N! (Net::WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
+  N! (Net::WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
+
+  log::debug! ("Net Properties: {:?}", net);
+  log::debug! ("WM Properties: {:?}", wm);
 }
 
 pub unsafe fn init_set_root_properties () {
@@ -86,9 +95,9 @@ pub unsafe fn init_set_root_properties () {
   delete (root, Net::ClientList);
 }
 
-/*pub unsafe fn atom<P: Into_Atom> (property: P) -> Atom {
+pub unsafe fn atom<P: Into_Atom> (property: P) -> Atom {
   property.into_atom ()
-}*/
+}
 
 pub unsafe fn delete<P: Into_Atom> (window: Window, property: P) {
   XDeleteProperty (display, window, property.into_atom ());
