@@ -273,6 +273,9 @@ fn get_window_geometry (window: Window) -> Geometry {
 unsafe fn window_title (window: Window) -> String {
   let mut title_c_str: *mut c_char = std::ptr::null_mut ();
   XFetchName (display, window, &mut title_c_str);
+  if title_c_str.is_null () {
+    return "?".to_string ();
+  }
   let title = std::ffi::CStr::from_ptr (title_c_str).to_str ().unwrap ().to_owned ();
   XFree (title_c_str as *mut c_void);
   title
