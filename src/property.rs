@@ -45,6 +45,12 @@ impl Into_Atom for WM {
   }
 }
 
+impl Into_Atom for Atom {
+  unsafe fn into_atom (&self) -> Atom {
+    *self
+  }
+}
+
 
 pub static mut net: [Atom; Net::Last as usize] = [X_NONE; Net::Last as usize];
 pub static mut wm: [Atom; WM::Last as usize] = [X_NONE; WM::Last as usize];
@@ -131,5 +137,28 @@ pub unsafe fn append<P: Into_Atom, T> (
     data as *const c_uchar,
     n
   );
+}
+
+pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<String> {
+  let mut a: Atom = X_NONE;
+  let mut i: c_int = 0;
+  let mut l: c_ulong = 0;
+  let mut text: *mut c_uchar = std::ptr::null_mut ();
+  if XGetWindowProperty (
+    display, window, property.into_atom (), 0, 1000, X_FALSE, AnyPropertyType as u64,
+    &mut a, &mut i, &mut l, &mut l, &mut text
+  ) == Success as i32 {
+    if a == X_NONE {
+      None
+    }
+    else {
+      let string = string_from_ptr! (text as *mut c_char);
+      XFree (text as *mut c_void);
+      Some (string)
+    }
+  }
+  else {
+    None
+  }
 }
 

@@ -308,14 +308,28 @@ fn get_window_geometry (window: Window) -> Geometry {
 
 
 unsafe fn window_title (window: Window) -> String {
-  let mut title_c_str: *mut c_char = std::ptr::null_mut ();
-  XFetchName (display, window, &mut title_c_str);
-  if title_c_str.is_null () {
-    return "?".to_string ();
+  // _NET_WM_NAME
+  if let Some (net_wm_name) = property::get_string (window, Net::WMName) {
+    net_wm_name
   }
-  let title = std::ffi::CStr::from_ptr (title_c_str).to_str ().unwrap ().to_owned ();
-  XFree (title_c_str as *mut c_void);
-  title
+  // XA_WM_NAME
+  else if let Some (xa_wm_name) = property::get_string (window, XA_WM_NAME) {
+    xa_wm_name
+  }
+  // XFetchName / Default
+  else
+  {
+    let mut title_c_str: *mut c_char = std::ptr::null_mut ();
+    XFetchName (display, window, &mut title_c_str);
+    if title_c_str.is_null () {
+      "?".to_string ()
+    }
+    else {
+      let title = string_from_ptr! (title_c_str);
+      XFree (title_c_str as *mut c_void);
+      title
+    }
+  }
 }
 
 

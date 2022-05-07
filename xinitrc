@@ -7,7 +7,7 @@ case $VALGRIND in
     exec valgrind --track-origins=yes --leak-check=full ./target/debug/window_manager 2>vgerr
     ;;
   *)
-    exec ./target/debug/window_manager
+    exec ./target/debug/window_manager 2>err
     ;;
 esac
 

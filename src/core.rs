@@ -10,6 +10,12 @@ macro_rules! c_str {
   };
 }
 
+macro_rules! string_from_ptr {
+  ($ptr:expr) => {
+    std::ffi::CStr::from_ptr ($ptr).to_str ().unwrap ().to_owned ()
+  }
+}
+
 macro_rules! uninitialized {
   () => {
     std::mem::MaybeUninit::uninit ().assume_init ()
