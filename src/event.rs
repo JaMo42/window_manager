@@ -164,7 +164,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     c.move_and_resize (g);
     workspaces[active_workspace].push (c);
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
-    log::info! ("Mapped new client: {} ({})", name, window);
+    log::info! ("Mapped new client: '{}' ({})", name, window);
   }
 }
 
@@ -173,7 +173,7 @@ pub unsafe fn enter (event: &XCrossingEvent) {
   if event.subwindow == X_NONE {
     return;
   }
-  log::info! ("EnterNotify: {} ({})", window_title (event.subwindow), event.subwindow);
+  log::info! ("EnterNotify: '{}' ({})", window_title (event.subwindow), event.subwindow);
 }
 
 

@@ -194,14 +194,19 @@ unsafe fn init () {
   select_input (0);
   // Run autostart script
   // TODO: don't rely on relative path
-  if std::path::Path::new (&paths::autostartrc).exists () {
-    std::process::Command::new ("bash")
-      .arg ("./autostartrc")
-      .spawn ()
-      .expect ("failed to run autostartrc");
-  }
-  else {
-    log::info! ("No autostartrc found");
+  {
+    use std::process::{Command, Stdio};
+    if std::path::Path::new (&paths::autostartrc).exists () {
+      Command::new ("bash")
+        .arg ("./autostartrc")
+        .stdout (Stdio::null ())
+        .stderr (Stdio::null ())
+        .spawn ()
+        .expect ("failed to run autostartrc");
+    }
+    else {
+      log::info! ("No autostartrc found");
+    }
   }
 }
 
@@ -354,11 +359,14 @@ unsafe fn update_client_list () {
 
 
 fn run_process (command_line: &String) {
+  use std::process::{Command, Stdio};
   let mut parts = command_line.split (' ');
   let program = parts.next ().unwrap ();
   let args = parts.collect::<Vec<&str>> ();
-  let r = std::process::Command::new (program)
+  let r = Command::new (program)
     .args (args)
+    .stdout (Stdio::null ())
+    .stderr (Stdio::null ())
     .spawn ();
   if r.is_err () {
     log::error! ("Failed to run program: {}", command_line);
