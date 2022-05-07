@@ -144,12 +144,23 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     let mut rng = rand::thread_rng ();
     let mut c = Client::new (window);
     let mut g = c.geometry;
-    let max_x = (window_area.w - g.w) as i32;
-    let max_y = (window_area.h - g.h) as i32;
-    c.move_and_resize (g.move_ (
-      rng.gen_range (window_area.x..=max_x),
-      rng.gen_range (window_area.y..=max_y)
-    ));
+    if g.w < window_area.w {
+      let max_x = (window_area.w - g.w) as i32 + window_area.x;
+      g.x = rng.gen_range (window_area.x..=max_x);
+    }
+    else {
+      g.x = window_area.x;
+      g.w = window_area.w;
+    }
+    if g.h < window_area.h {
+      let max_y = (window_area.h - g.h) as i32 + window_area.y;
+      g.y = rng.gen_range (window_area.y..=max_y);
+    }
+    else {
+      g.y = window_area.y;
+      g.h = window_area.h;
+    }
+    c.move_and_resize (g);
     workspaces[active_workspace].push (c);
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
     log::info! ("Mapped new client: {} ({})", name, window);

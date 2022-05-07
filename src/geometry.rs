@@ -29,11 +29,5 @@ impl Geometry {
       self.h -= -by as u32;
     }
   }
-
-  pub fn move_ (&mut self, x: i32, y: i32) -> Self {
-    self.x += x;
-    self.y += y;
-    return *self;
-  }
 }
 
