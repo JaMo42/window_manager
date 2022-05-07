@@ -198,23 +198,19 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
     if event.message_type == property::atom (Net::WMState) {
       // _NET_WM_STATE
       let data = event.data.as_longs ();
-      log::debug! ("client_message: data = {{{}, {}, {}, {}, {}}}",
-        data[0], data[1], data[2], data[3], data[4]);
       if data[1] as Atom == property::atom (Net::WMStateFullscreen)
         || data[2] as Atom == property::atom (Net::WMStateFullscreen) {
         // _NET_WM_STATE_FULLSCREEN
         // TODO: for now uses the fullscreen snapping instead of actual fullscreen
         // (the snapping should probably be renamed to 'maximized')
         if data[0] == 1 || (data[0] == 2 && !client.is_snapped) {
-          log::debug! ("Set Fullscreen: {}", client);
           action::snap (&mut client, SNAP_FULLSCREEN);
           property::set (client.window, Net::WMState, XA_ATOM, 32,
             &property::atom (Net::WMStateFullscreen), 1);
         }
-        else {
-          log::debug! ("Restore Fullscreen: {}", client);
+        else if client.is_snapped {
           property::set (client.window, Net::WMState, XA_ATOM, 32,
-            std::ptr::null::<c_uchar> (), 1);
+            std::ptr::null::<c_uchar> (), 0);
           client.unsnap ();
         }
       }
@@ -225,13 +221,13 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
       }
     }
     else if event.message_type == property::atom (Net::ActiveWindow) {
+      // This is what DWM uses for urgency
       {
         let f = focused_client! ();
         if f.is_some () && *f.unwrap () == *client {
           return;
         }
       }
-      log::debug! ("Set Urgent: {}", client);
       client.set_urgency (true);
     }
   }

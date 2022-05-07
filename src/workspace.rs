@@ -2,7 +2,6 @@ use std::ops::{Deref, DerefMut};
 use x11::xlib::*;
 use super::core::*;
 use super::client::Client;
-use super::focus_window;
 use super::property;
 
 #[macro_export]
