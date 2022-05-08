@@ -36,7 +36,7 @@ pub const SNAP_LEFT: u8 = 0x1;
 pub const SNAP_RIGHT: u8 = 0x2;
 pub const SNAP_TOP: u8 = 0x4;
 pub const SNAP_BOTTOM: u8 = 0x8;
-pub const SNAP_FULLSCREEN: u8 = 0x10;
+pub const SNAP_MAXIMIZED: u8 = 0x10;
 
 pub static mut display: *mut Display = std::ptr::null_mut ();
 pub static mut root: Window = X_NONE;

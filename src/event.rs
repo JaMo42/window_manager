@@ -231,7 +231,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
         // TODO: for now uses the fullscreen snapping instead of actual fullscreen
         // (the snapping should probably be renamed to 'maximized')
         if data[0] == 1 || (data[0] == 2 && !client.is_snapped) {
-          action::snap (&mut client, SNAP_FULLSCREEN);
+          action::snap (&mut client, SNAP_MAXIMIZED);
           property::set (client.window, Net::WMState, XA_ATOM, 32,
             &property::atom (Net::WMStateFullscreen), 1);
         }

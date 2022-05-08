@@ -59,9 +59,9 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
     target.w = window_area.w / 2;
   }
   // Fullscreen
-  if (flags & SNAP_FULLSCREEN) != 0 {
+  if (flags & SNAP_MAXIMIZED) != 0 {
     target = window_area;
-    // We don't care about the gap for fullscreen windows so we add it here
+    // We don't care about the gap for maximized windows so we add it here
     // since it gets removed inside `client.move_and_resize` again.
     target.expand ((*config).gap as i32);
   }
@@ -115,7 +115,7 @@ pub fn from_str (s: &String) -> super::config::Action {
   match s.as_str  () {
     "close_window" => Action::WM (close_client),
     "quit" => Action::Generic (quit),
-    "snap_fullscreen" => Action::WM (|c| unsafe { snap (c, SNAP_FULLSCREEN) }),
+    "snap_maximized" => Action::WM (|c| unsafe { snap (c, SNAP_MAXIMIZED) }),
     "snap_left" => Action::WM (|c| unsafe { snap (c, SNAP_LEFT) }),
     "snap_right" => Action::WM (|c| unsafe { snap (c, SNAP_RIGHT) }),
     "unsnap_or_center" =>
