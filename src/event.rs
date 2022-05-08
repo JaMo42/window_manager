@@ -175,6 +175,7 @@ pub unsafe fn enter (event: &XCrossingEvent) {
 
 
 pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
+  log::trace! ("configure_request: '{}' ({})", window_title (event.window), event.window);
   XConfigureWindow (
     display, event.window, event.value_mask as u32,
     &mut XWindowChanges {
@@ -207,12 +208,7 @@ pub unsafe fn unmap_notify (_event: &XUnmapEvent) {
 }
 
 pub unsafe fn configure_notify (event: &XConfigureEvent) {
-  log::trace! ("configure_notify");
-  log::debug! ("  event.window: '{}' ({})", window_title (event.window), event.window);
-  log::debug! ("       .x: {}", event.x);
-  log::debug! ("       .y: {}", event.y);
-  log::debug! ("       .w: {}", event.width);
-  log::debug! ("       .h: {}", event.height);
+  log::trace! ("configure_notify: '{}' ({})", window_title (event.window), event.window);
 }
 
 pub unsafe fn client_message (event: &XClientMessageEvent) {
