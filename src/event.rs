@@ -141,7 +141,8 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     log::info! ("New meta window: {} ({})", name, window);
   }
   else {
-    // Give client random position inside window area
+    // Give client random position inside window area and clamp its size into
+    // the window area
     let mut rng = rand::thread_rng ();
     let mut c = Client::new (window);
     let mut g = c.geometry;
@@ -151,7 +152,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     }
     else {
       g.x = window_area.x;
-      g.w = window_area.w;
+      g.w = window_area.w - ((*config).border_width << 1) as u32;
     }
     if g.h < window_area.h {
       let max_y = (window_area.h - g.h) as i32 + window_area.y;
@@ -159,7 +160,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     }
     else {
       g.y = window_area.y;
-      g.h = window_area.h;
+      g.h = window_area.h - ((*config).border_width << 1) as u32;
     }
     c.move_and_resize (g);
     workspaces[active_workspace].push (c);
@@ -192,16 +193,30 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
   );
 }
 
-pub unsafe fn property_notify (_event: &XPropertyEvent) {
-  log::trace! ("Event: property_notify");
+pub unsafe fn property_notify (event: &XPropertyEvent) {
+  log::trace! ("property_notify");
+  if event.state == PropertyDelete {
+    return;
+  }
+  else if let Some (client) = win2client (event.window) {
+    match event.atom {
+      XA_WM_HINTS => { client.update_hints (); }
+      _ => {}
+    }
+  }
 }
 
 pub unsafe fn unmap_notify (_event: &XUnmapEvent) {
-  log::trace! ("Event: unmap_notify ");
+  log::trace! ("unmap_notify ");
 }
 
-pub unsafe fn configure_notify (_event: &XConfigureEvent) {
-  log::trace! ("Event: configure_notify");
+pub unsafe fn configure_notify (event: &XConfigureEvent) {
+  log::trace! ("configure_notify");
+  log::debug! ("  event.window: '{}' ({})", window_title (event.window), event.window);
+  log::debug! ("       .x: {}", event.x);
+  log::debug! ("       .y: {}", event.y);
+  log::debug! ("       .w: {}", event.width);
+  log::debug! ("       .h: {}", event.height);
 }
 
 pub unsafe fn client_message (event: &XClientMessageEvent) {
@@ -229,6 +244,13 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
       if data[1] as Atom == property::atom (Net::WMStateDemandsAttention)
         || data[2] as Atom == property::atom (Net::WMStateDemandsAttention) {
         // _NET_WM_STATE_DEMANDS_ATTENTION
+        {
+          // Don't set if already focused
+          let f = focused_client! ();
+          if f.is_some () && *f.unwrap () == *client {
+            return;
+          }
+        }
         client.set_urgency (data[0] == 1 || (data[0] == 2 && !client.is_urgent));
       }
     }

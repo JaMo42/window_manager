@@ -210,12 +210,51 @@ unsafe fn init () {
   }
 }
 
+const EVENT_NAME: [&str; 36] = [
+  "",
+  "",
+  "KeyPress",
+  "KeyRelease",
+  "ButtonPress",
+  "ButtonRelease",
+  "MotionNotify",
+  "EnterNotify",
+  "LeaveNotify",
+  "FocusIn",
+  "FocusOut",
+  "KeymapNotify",
+  "Expose",
+  "GraphicsExpose",
+  "NoExpose",
+  "VisibilityNotify",
+  "CreateNotify",
+  "DestroyNotify",
+  "UnmapNotify",
+  "MapNotify",
+  "MapRequest",
+  "ReparentNotify",
+  "ConfigureNotify",
+  "ConfigureRequest",
+  "GravityNotify",
+  "ResizeRequest",
+  "CirculateNotify",
+  "CirculateRequest",
+  "PropertyNotify",
+  "SelectionClear",
+  "SelectionRequest",
+  "SelectionNotify",
+  "ColormapNotify",
+  "ClientMessage",
+  "MappingNotify",
+  "GenericEvent"
+];
 
 unsafe fn run () {
   let mut event: XEvent = uninitialized! ();
   running = true;
   while running {
     XNextEvent (display, &mut event);
+    log::trace! ("\x1b[2mEvent: {:>2} {}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
     match event.type_ {
       ButtonPress => event::button_press (&event.button),
       ButtonRelease => event::button_release (&event.button),
@@ -243,7 +282,7 @@ unsafe fn cleanup () {
   if (*config).hibernate {
     if hibernate::store ().is_err () {
       log::error! ("Could not write hiberfile");
-      std::fs::remove_file ("./.window_manager_hiberfile").ok ();
+      std::fs::remove_file (&paths::hiberfile).ok ();
     }
   }
   // Close all open clients
@@ -286,7 +325,6 @@ unsafe fn cleanup () {
   // Properties
   XDestroyWindow (display, property::wm_check_window);
   property::delete (root, Net::ActiveWindow);
-  // Close display
 }
 
 

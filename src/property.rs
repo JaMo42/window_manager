@@ -73,6 +73,7 @@ pub unsafe fn load_atoms () {
   W! (WM::Protocols, "WM_PROTOCOLS");
   W! (WM::DeleteWindow, "WM_DELETE_WINDOW");
   W! (WM::TakeFocus, "WM_TAKE_FOCUS");
+  W! (WM::DeleteWindow, "WM_DELETE_WINDOW");
 
   N! (Net::Supported, "_NET_SUPPORTED");
   N! (Net::ClientList, "_NET_CLIENT_LIST");

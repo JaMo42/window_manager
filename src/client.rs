@@ -2,6 +2,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::geometry::*;
 use super::*;
+use super::property::WM;
 
 #[derive(Copy, Clone)]
 pub struct Client {
@@ -58,6 +59,7 @@ impl Client {
       self.set_urgency (false);
     }
     focus_window (self.window);
+    self.send_event (property::atom (WM::TakeFocus));
   }
 
   pub unsafe fn set_urgency (&mut self, urgency: bool) {
@@ -75,7 +77,51 @@ impl Client {
       XSetWMHints (display, self.window, hints);
       XFree (hints as *mut c_void);
     }
+  }
 
+  pub unsafe fn update_hints (&mut self) {
+    let hints = XGetWMHints (display, self.window);
+    if !hints.is_null () {
+      if let Some (focused) = focused_client! () {
+        if *focused == *self && ((*hints).flags & XUrgencyHint) == 1 {
+          // It's being made urgent but it's already the active window
+          (*hints).flags &= !XUrgencyHint;
+          XSetWMHints (display, self.window, hints);
+        }
+      }
+      else {
+        self.is_urgent = ((*hints).flags & XUrgencyHint) == 1;
+      }
+      XFree (hints as *mut c_void);
+    }
+  }
+
+  pub unsafe fn send_event (&self, protocol: Atom) -> bool {
+    let mut protocols: *mut Atom = std::ptr::null_mut ();
+    let mut is_supported = false;
+    let mut count: c_int = 0;
+    if XGetWMProtocols (display, self.window, &mut protocols, &mut count) != 0 {
+      for i in 0..count {
+        is_supported = *protocols.add (i as usize) == protocol;
+        if is_supported {
+          break;
+        }
+      }
+      XFree (protocols as *mut c_void);
+    }
+    if is_supported {
+      let mut event: XEvent = uninitialized! ();
+      event.type_ = ClientMessage;
+      event.client_message.window = self.window;
+      event.client_message.message_type = property::atom (WM::Protocols);
+      event.client_message.format = 32;
+      event.client_message.data.set_long (0, protocol as i64);
+      event.client_message.data.set_long (1, CurrentTime as i64);
+      XSendEvent (display, self.window, X_FALSE, NoEventMask, &mut event) != 0
+    }
+    else {
+      false
+    }
   }
 }
 
@@ -87,7 +133,7 @@ impl PartialEq for Client {
 
 impl std::fmt::Display for Client {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-    write! (f, "{} ({})", unsafe { window_title (self.window) }, self.window)
+    write! (f, "'{}' ({})", unsafe { window_title (self.window) }, self.window)
   }
 }
 

@@ -4,6 +4,7 @@ use super::core::*;
 use super::geometry::*;
 use super::client::*;
 use super::*;
+use super::property::WM;
 
 pub unsafe fn quit () {
   running = false;
@@ -11,8 +12,9 @@ pub unsafe fn quit () {
 
 
 pub unsafe fn close_client (client: &mut Client) {
-  // TODO: use WM_DELETE_WINDOW if applicable
-  XKillClient (display, client.window);
+  if !client.send_event (property::atom (WM::DeleteWindow)) {
+    XKillClient (display, client.window);
+  }
   workspaces[active_workspace].remove (client);
   update_client_list ();
 }
@@ -59,8 +61,8 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
   // Fullscreen
   if (flags & SNAP_FULLSCREEN) != 0 {
     target = window_area;
-    // @hack: We don't care about the gap for fullscreen windows so we add it
-    // here since it gets removed inside `client.move_and_resize` again.
+    // We don't care about the gap for fullscreen windows so we add it here
+    // since it gets removed inside `client.move_and_resize` again.
     target.expand ((*config).gap as i32);
   }
   client.is_snapped = true;
