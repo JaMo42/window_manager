@@ -35,6 +35,9 @@ pub unsafe fn move_snap (client: &mut Client, x: c_uint, y: c_uint) {
 
 
 pub unsafe fn snap (client: &mut Client, flags: u8) {
+  if client.is_fullscreen {
+    return;
+  }
   let mut target = Geometry::new ();
   // Top / Bottom / Full height
   if (flags & SNAP_TOP) != 0 {
@@ -71,6 +74,9 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
 
 
 pub unsafe fn center (client: &mut Client) {
+  if client.is_fullscreen {
+    return;
+  }
   let x = window_area.x + (window_area.w - client.geometry.w) as i32 / 2;
   let y = window_area.y + (window_area.h - client.geometry.h) as i32 / 2;
   client.unsnap ();

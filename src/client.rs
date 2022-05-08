@@ -10,7 +10,8 @@ pub struct Client {
   pub geometry: Geometry,
   pub prev_geometry: Geometry,
   pub is_snapped: bool,
-  pub is_urgent: bool
+  pub is_urgent: bool,
+  pub is_fullscreen: bool
 }
 
 impl Client {
@@ -25,7 +26,8 @@ impl Client {
       geometry: geometry,
       prev_geometry: geometry,
       is_snapped: false,
-      is_urgent: false
+      is_urgent: false,
+      is_fullscreen: false
     }
   }
 
@@ -63,6 +65,9 @@ impl Client {
   }
 
   pub unsafe fn set_urgency (&mut self, urgency: bool) {
+    if urgency == self.is_urgent {
+      return;
+    }
     self.is_urgent = urgency;
     if urgency {
       XSetWindowBorder (display, self.window, (*config).colors.urgent.pixel);
@@ -121,6 +126,29 @@ impl Client {
     }
     else {
       false
+    }
+  }
+
+  pub unsafe fn set_fullscreen (&mut self, state: bool) {
+    if state == self.is_fullscreen {
+      return;
+    }
+    self.is_fullscreen = state;
+    if state {
+      property::set (self.window, Net::WMState, XA_ATOM, 32,
+        &property::atom (Net::WMStateFullscreen), 1);
+      self.is_snapped = false;
+      let border = (*config).border_width;
+      self.move_and_resize (Geometry::from_parts (
+        -border, -border,
+        screen_size.w, screen_size.h
+      ));
+      XRaiseWindow (display, self.window);
+    }
+    else {
+      property::set (self.window, Net::WMState, XA_ATOM, 32,
+        std::ptr::null::<c_uchar> (), 0);
+      self.move_and_resize (self.prev_geometry);
     }
   }
 }
