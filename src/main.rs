@@ -18,6 +18,7 @@ mod color;
 #[macro_use]
 mod workspace;
 mod hibernate;
+#[macro_use]
 mod property;
 
 use crate::core::*;

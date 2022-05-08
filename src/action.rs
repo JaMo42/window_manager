@@ -101,6 +101,7 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
   if let Some (focused) = focused_client! () {
     XSetInputFocus (display, focused.window, RevertToParent, CurrentTime);
   }
+  set_cardinal! (root, property::atom (Net::CurrentDesktop), active_workspace);
 }
 
 

@@ -3,6 +3,14 @@ use std::ffi::CString;
 use x11::xlib::*;
 use super::core::*;
 
+#[macro_export]
+macro_rules! set_cardinal {
+  ($w:expr, $p:expr, $v:expr) => {
+    let data = $v as c_uint;
+    crate::property::set ($w, $p, XA_CARDINAL, 32, &data as *const c_uint as *const c_uchar, 1);
+  }
+}
+
 // TODO: _NET_NUMBER_OF_DESKTOPS, _NET_CURRENT_DESKTOP, _NET_DESKTOP_NAMES
 //       These seem to be the best way to implement a external program that
 //       prints desktop information for something like a polybar widget.
@@ -13,6 +21,8 @@ pub enum Net {
   ClientList,
   ActiveWindow,
   SupportingWMCheck,
+  NumberOfDesktops,
+  CurrentDesktop,
   WMName,
   WMState,
   WMStateFullscreen,
@@ -79,6 +89,8 @@ pub unsafe fn load_atoms () {
   N! (Net::ClientList, "_NET_CLIENT_LIST");
   N! (Net::ActiveWindow, "_NET_ACTIVE_WINDOW");
   N! (Net::SupportingWMCheck, "_NET_SUPPORTING_WM_CHECK");
+  N! (Net::NumberOfDesktops, "_NET_NUMBER_OF_DESKTOPS");
+  N! (Net::CurrentDesktop, "_NET_CURRENT_DESKTOP");
   N! (Net::WMName, "_NET_WM_NAME");
   N! (Net::WMState, "_NET_WM_STATE");
   N! (Net::WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
@@ -100,6 +112,9 @@ pub unsafe fn init_set_root_properties () {
   set (root, Net::Supported, XA_ATOM, 32, &net, Net::Last as i32);
   delete (root, Net::ActiveWindow);
   delete (root, Net::ClientList);
+
+  set_cardinal! (root, Net::NumberOfDesktops, (*config).workspace_count);
+  set_cardinal! (root, Net::CurrentDesktop, active_workspace);
 }
 
 pub unsafe fn atom<P: Into_Atom> (property: P) -> Atom {

@@ -175,6 +175,7 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     log::warn! ("Hibernated active workspace is greater than current workspace count");
     active_workspace = 0;
   }
+  super::set_cardinal! (root, super::property::Net::CurrentDesktop, active_workspace);
   // Clients
   loop {
     // Check if empty

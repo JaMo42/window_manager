@@ -214,6 +214,8 @@ pub unsafe fn configure_notify (event: &XConfigureEvent) {
 pub unsafe fn client_message (event: &XClientMessageEvent) {
   if let Some (client) = win2client (event.window) {
     log::debug! ("Client message: {}", event.message_type);
+    log::debug! ("  Recipient: {}", client);
+    log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
     if event.message_type == property::atom (Net::WMState) {
       // _NET_WM_STATE
       let data = event.data.as_longs ();
@@ -249,6 +251,14 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
         }
       }
       client.set_urgency (true);
+    }
+  }
+  else if event.window == root {
+    log::debug! ("Client message: {}", event.message_type);
+    log::debug! ("  Recipient: <root> ({})", event.window);
+    log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
+    if event.message_type == property::atom (Net::CurrentDesktop) {
+      action::select_workspace (event.data.get_long (0) as usize, None);
     }
   }
 }
