@@ -1,7 +1,7 @@
 # Set wallpaper
-feh --bg-scale ~/Pictures/annie-spratt-zWCUF5pTIM4-unsplash.jpg
+feh --bg-fill ~/.config/wallpaper
 # Run compositor
-#picom &
+picom &
 # Status bar
 $HOME/.config/polybar/launch.sh &
 
