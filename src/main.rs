@@ -41,7 +41,7 @@ mod paths {
       format! ("{}/.config/window_manager", std::env::var ("HOME").unwrap ())
     };
     if std::fs::create_dir_all (&config_dir).is_err () {
-      panic! ("Could not configuration directory: {}", config_dir);
+      panic! ("Could not create configuration directory: {}", config_dir);
     }
     config = format! ("{}/config", config_dir);
     autostartrc = format! ("{}/autostartrc", config_dir);
@@ -198,7 +198,7 @@ unsafe fn init () {
     use std::process::{Command, Stdio};
     if std::path::Path::new (&paths::autostartrc).exists () {
       Command::new ("bash")
-        .arg ("./autostartrc")
+        .arg (paths::autostartrc.as_str ())
         .stdout (Stdio::null ())
         .stderr (Stdio::null ())
         .spawn ()
