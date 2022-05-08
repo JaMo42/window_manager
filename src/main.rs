@@ -358,19 +358,25 @@ unsafe fn update_client_list () {
 }
 
 
-fn run_process (command_line: &String) {
+fn run_process (command_line: String) {
   use std::process::{Command, Stdio};
-  let mut parts = command_line.split (' ');
-  let program = parts.next ().unwrap ();
-  let args = parts.collect::<Vec<&str>> ();
-  let r = Command::new (program)
-    .args (args)
-    .stdout (Stdio::null ())
-    .stderr (Stdio::null ())
-    .spawn ();
-  if r.is_err () {
-    log::error! ("Failed to run program: {}", command_line);
-  }
+  std::thread::spawn (move || {
+    let mut parts = command_line.split (' ');
+    let program = parts.next ().unwrap ();
+    let args = parts.collect::<Vec<&str>> ();
+    log::trace! ("Running process: {}", command_line);
+    if let Ok (mut process) = Command::new (program)
+      .args (args)
+      .stdout (Stdio::null ())
+      .stderr (Stdio::null ())
+      .spawn () {
+      process.wait ().ok ();
+      log::debug! ("Process finished: {}", command_line);
+    }
+    else {
+      log::error! ("Failed to run program: {}", command_line);
+    }
+  });
 }
 
 
