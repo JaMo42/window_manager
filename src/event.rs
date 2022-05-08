@@ -131,8 +131,6 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   let name = window_title (window);
   if name == "window_manager_bar" || (*config).meta_window_names.contains (&name) {
     meta_windows.push (window);
-    XSelectInput (display, window, NoEventMask);
-    XUngrabKey (display, AnyKey, AnyModifier, window);
     XMapWindow (display, window);
     log::info! ("New meta window: {} ({})", name, window);
   }
