@@ -432,6 +432,7 @@ fn main () {
     .unwrap ();
   log4rs::init_config (log_config).unwrap ();
   // Run window manager
+  std::env::set_var ("WM", "window_manager");
   unsafe {
     paths::load ();
     log::trace! ("Connecting to X server");
