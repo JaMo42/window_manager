@@ -254,7 +254,7 @@ unsafe fn run () {
   running = true;
   while running {
     XNextEvent (display, &mut event);
-    log::trace! ("\x1b[2mEvent: {:>2} {}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
+    log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
     match event.type_ {
       ButtonPress => event::button_press (&event.button),
       ButtonRelease => event::button_release (&event.button),
@@ -263,15 +263,15 @@ unsafe fn run () {
       ConfigureNotify => event::configure_notify (&event.configure),
       DestroyNotify => event::destroy_notify (&event.destroy_window),
       EnterNotify => event::enter (&event.crossing),
-      Expose => todo! (),
-      FocusIn => todo! (),
       KeyPress => event::key_press (&event.key),
       MappingNotify => event::mapping_notify (&event.mapping),
       MapRequest => event::map_request (&event.map_request),
       MotionNotify => event::motion (&event.button),
       PropertyNotify => event::property_notify (&event.property),
       UnmapNotify => event::unmap_notify (&event.unmap),
-      _ => {}
+      _ => {
+        log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
+      }
     }
   }
 }
@@ -421,7 +421,7 @@ fn run_process (command_line: String) {
 fn main () {
   // Configure logging
   let log_file = log4rs::append::file::FileAppender::builder ()
-    .encoder (Box::new (log4rs::encode::pattern::PatternEncoder::new ("{l} - {m}\n")))
+    .encoder (Box::new (log4rs::encode::pattern::PatternEncoder::new ("{l:<5}| {m}\n")))
     .build ("log.txt")
     .unwrap ();
   let log_config = log4rs::config::Config::builder ()
