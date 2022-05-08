@@ -193,7 +193,6 @@ unsafe fn init () {
   // Select input
   select_input (0);
   // Run autostart script
-  // TODO: don't rely on relative path
   {
     use std::process::{Command, Stdio};
     if std::path::Path::new (&paths::autostartrc).exists () {

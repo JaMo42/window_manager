@@ -103,7 +103,6 @@ impl Config {
       self.colors.load_defaults ()
     };
     // Parse file
-    // TODO: don't rely on relative path
     let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
     let parser = config_parser::Parser::new (source.chars ());
     for def in parser {
