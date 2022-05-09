@@ -39,7 +39,7 @@ pub unsafe fn move_snap (client: &mut Client, x: c_uint, y: c_uint) {
 
 
 pub unsafe fn snap (client: &mut Client, flags: u8) {
-  if client.is_fullscreen {
+  if !client.may_resize () {
     return;
   }
   let mut target = Geometry::new ();
@@ -78,7 +78,7 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
 
 
 pub unsafe fn center (client: &mut Client) {
-  if client.is_fullscreen {
+  if !client.may_move () {
     return;
   }
   let x = window_area.x + (window_area.w - client.geometry.w) as i32 / 2;
@@ -111,6 +111,7 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
 
 pub unsafe fn move_to_workspace (idx: usize, client_: Option<&mut Client>) {
   let client = client_.unwrap ();
+  client.workspace = idx;
   workspaces[idx].push (*client);
   workspaces[active_workspace].remove (client);
   XUnmapWindow (display, client.window);

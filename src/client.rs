@@ -9,9 +9,11 @@ pub struct Client {
   pub window: Window,
   pub geometry: Geometry,
   pub prev_geometry: Geometry,
+  pub workspace: usize,
   pub is_snapped: bool,
   pub is_urgent: bool,
-  pub is_fullscreen: bool
+  pub is_fullscreen: bool,
+  pub is_dialog: bool
 }
 
 impl Client {
@@ -19,16 +21,25 @@ impl Client {
     let mut wc: XWindowChanges = uninitialized! ();
     wc.border_width = (*config).border_width;
     XConfigureWindow (display, window, CWBorderWidth as u32, &mut wc);
-    XMapWindow (display, window);
     let geometry = get_window_geometry (window);
     Client {
       window: window,
       geometry: geometry,
       prev_geometry: geometry,
+      workspace: active_workspace,
       is_snapped: false,
       is_urgent: false,
-      is_fullscreen: false
+      is_fullscreen: false,
+      is_dialog: false
     }
+  }
+
+  pub fn may_move (&self) -> bool {
+    !self.is_fullscreen
+  }
+
+  pub fn may_resize (&self) -> bool {
+    !(self.is_fullscreen || self.is_dialog)
   }
 
   pub unsafe fn move_and_resize (&mut self, target: Geometry) {

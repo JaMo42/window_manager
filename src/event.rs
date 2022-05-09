@@ -4,7 +4,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::config::*;
 use super::action;
-use super::property::{Net};
+use super::property::{Net, atom, get_atom};
 use super::*;
 
 pub const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
@@ -33,7 +33,8 @@ pub unsafe fn button_press (event: &XButtonEvent) {
     return;
   }
   if let Some (client) = win2client (event.subwindow) {
-    if client.is_fullscreen {
+    if event.button == 1 && !client.may_move ()
+      || event.button == 3 && !client.may_resize () {
       return;
     }
   }
@@ -269,32 +270,59 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     log::info! ("New meta window: {} ({})", name, window);
   }
   else {
-    // Give client random position inside window area and clamp its size into
-    // the window area
-    let mut rng = rand::thread_rng ();
     let mut c = Client::new (window);
     let mut g = c.geometry;
-    if g.w < window_area.w {
-      let max_x = (window_area.w - g.w) as i32 + window_area.x;
-      g.x = rng.gen_range (window_area.x..=max_x);
+    // Window type
+    if get_atom (window, Net::WMWindowType) == atom (Net::WMWindowTypeDialog) {
+      c.is_dialog = true;
     }
-    else {
-      g.x = window_area.x;
-      g.w = window_area.w - ((*config).border_width << 1) as u32;
+    // Transient for
+    let mut target_workspace = active_workspace;
+    let mut trans_win: Window = X_NONE;
+    let mut has_trans_client: bool = false;
+    if XGetTransientForHint (display, window, &mut trans_win) != 0 {
+      if let Some (trans) = win2client (trans_win) {
+        has_trans_client = true;
+        target_workspace = trans.workspace;
+        // Position 10% offset from the top-left corner inside the client this
+        // window is transient for
+        g.x = trans.geometry.x + (trans.geometry.w / 10) as c_int;
+        g.y = trans.geometry.y + (trans.geometry.w / 10) as c_int;
+      }
     }
-    if g.h < window_area.h {
-      let max_y = (window_area.h - g.h) as i32 + window_area.y;
-      g.y = rng.gen_range (window_area.y..=max_y);
-    }
-    else {
-      g.y = window_area.y;
-      g.h = window_area.h - ((*config).border_width << 1) as u32;
+    if !has_trans_client {
+      // Give client random position inside window area and clamp its size into
+      // the window area
+      let mut rng = rand::thread_rng ();
+      if g.w < window_area.w {
+        let max_x = (window_area.w - g.w) as c_int + window_area.x;
+        g.x = rng.gen_range (window_area.x..=max_x);
+      }
+      else {
+        g.x = window_area.x;
+        g.w = window_area.w - ((*config).border_width << 1) as c_uint;
+      }
+      if g.h < window_area.h {
+        let max_y = (window_area.h - g.h) as c_int + window_area.y;
+        g.y = rng.gen_range (window_area.y..=max_y);
+      }
+      else {
+        g.y = window_area.y;
+        g.h = window_area.h - ((*config).border_width << 1) as c_uint;
+      }
     }
     c.move_and_resize (g);
     c.prev_geometry = c.geometry;
-    workspaces[active_workspace].push (c);
+    // Add client
+    if target_workspace == active_workspace {
+      XMapWindow (display, window);
+    }
+    workspaces[target_workspace].push (c);
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
     log::info! ("Mapped new client: '{}' ({})", name, window);
+    if trans_win != X_NONE {
+      log::info! ("    Transient for: '{}' ({})", window_title (trans_win), trans_win);
+    }
   }
 }
 
@@ -348,7 +376,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
     log::debug! ("Client message: {}", event.message_type);
     log::debug! ("  Recipient: {}", client);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
-    if event.message_type == property::atom (Net::WMState) {
+    if event.message_type == atom (Net::WMState) {
       // _NET_WM_STATE
       let data = event.data.as_longs ();
       macro_rules! new_state {
@@ -356,13 +384,13 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
           data[0] == 1 || (data[0] == 2 && !client.$member)
         }
       }
-      if data[1] as Atom == property::atom (Net::WMStateFullscreen)
-        || data[2] as Atom == property::atom (Net::WMStateFullscreen) {
+      if data[1] as Atom == atom (Net::WMStateFullscreen)
+        || data[2] as Atom == atom (Net::WMStateFullscreen) {
         // _NET_WM_STATE_FULLSCREEN
         client.set_fullscreen (new_state! (is_fullscreen));
       }
-      if data[1] as Atom == property::atom (Net::WMStateDemandsAttention)
-        || data[2] as Atom == property::atom (Net::WMStateDemandsAttention) {
+      if data[1] as Atom == atom (Net::WMStateDemandsAttention)
+        || data[2] as Atom == atom (Net::WMStateDemandsAttention) {
         // _NET_WM_STATE_DEMANDS_ATTENTION
         {
           // Don't set if already focused
@@ -374,7 +402,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
         client.set_urgency (new_state! (is_urgent));
       }
     }
-    else if event.message_type == property::atom (Net::ActiveWindow) {
+    else if event.message_type == atom (Net::ActiveWindow) {
       // This is what DWM uses for urgency
       {
         let f = focused_client! ();
@@ -389,7 +417,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
     log::debug! ("Client message: {}", event.message_type);
     log::debug! ("  Recipient: <root> ({})", event.window);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
-    if event.message_type == property::atom (Net::CurrentDesktop) {
+    if event.message_type == atom (Net::CurrentDesktop) {
       action::select_workspace (event.data.get_long (0) as usize, None);
     }
   }
