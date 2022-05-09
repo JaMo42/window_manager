@@ -84,7 +84,7 @@ unsafe fn connect () {
 unsafe fn update_numlock_mask () {
   let modmap = XGetModifierMapping (display);
   numlock_mask = 0;
-  for i in 0..9 {
+  for i in 0..8 {
     for j in 0..(*modmap).max_keypermod {
       let check = *(*modmap).modifiermap.add ((i * (*modmap).max_keypermod + j) as usize);
       if check == XKeysymToKeycode (display, x11::keysym::XK_Num_Lock as u64) {
