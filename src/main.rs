@@ -20,6 +20,7 @@ mod workspace;
 mod hibernate;
 #[macro_use]
 mod property;
+mod cursor;
 
 use crate::core::*;
 use client::*;
@@ -188,6 +189,8 @@ unsafe fn init () {
       log::error! ("Could not read hiberfile");
     }
   }
+  // Cursors
+  cursor::load_cursors ();
   // Grab input
   grab_keys ();
   grab_buttons ();
@@ -294,6 +297,8 @@ unsafe fn cleanup () {
   for w in meta_windows.iter () {
     XKillClient (display, *w);
   }
+  // Cursors
+  cursor::free_cursors ();
   // Un-grab keys and buttons
   for (key, _) in &(*config).key_binds {
     XUngrabKey (
