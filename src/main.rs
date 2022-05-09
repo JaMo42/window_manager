@@ -260,7 +260,6 @@ unsafe fn run () {
     log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
     match event.type_ {
       ButtonPress => event::button_press (&event.button),
-      ButtonRelease => event::button_release (&event.button),
       ClientMessage => event::client_message (&event.client_message),
       ConfigureRequest => event::configure_request (&event.configure_request),
       ConfigureNotify => event::configure_notify (&event.configure),

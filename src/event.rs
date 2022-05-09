@@ -7,7 +7,7 @@ use super::action;
 use super::property::{Net};
 use super::*;
 
-const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
+pub const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
 
 
 unsafe fn win2client<'a> (window: Window) -> Option<&'a mut Client> {
@@ -46,6 +46,7 @@ pub unsafe fn motion (event: &XButtonEvent) {
       3 => mouse_resize (event.subwindow),
       _ => {}
     }
+    mouse_held = 0;
   }
 }
 
@@ -207,11 +208,6 @@ unsafe fn mouse_resize (window: Window) {
   client.geometry = get_window_geometry (window);
   client.prev_geometry = client.geometry;
   client.is_snapped = false;
-}
-
-
-pub unsafe fn button_release (_: &XButtonEvent) {
-  mouse_held = 0;
 }
 
 
