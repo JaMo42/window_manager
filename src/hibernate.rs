@@ -197,17 +197,18 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
       }
     }
     // Program
-    let program = read_until (&mut it, b'\0');
+    let mut program = read_until (&mut it, b'\0');
     it.next ().unwrap ();
     // Args
-    let mut args = Vec::<String>::new ();
     loop {
       let arg = read_until (&mut it, b'\0');
       if arg.is_empty () {
         it.next ().unwrap ();
         break;
       }
-      args.push (arg);
+      //args.push (arg);
+      program.push (' ');
+      program.push_str (&arg);
       it.next ().unwrap ();
     }
     // Geometry
@@ -245,10 +246,7 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
       _ => unreachable! ()
     }
     // Run the program
-    std::process::Command::new (program)
-      .args (args)
-      .spawn ()
-      .expect ("Failed to run program");
+    crate::run_process (program);
     // Get the window
     let w: Window;
     let mut event: XEvent = uninitialized! ();
@@ -267,10 +265,11 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     c.is_snapped = snapped;
     c.move_and_resize (g);
     c.prev_geometry = pg;
+    c.workspace = ws_idx;
     // Add client to workspace
     workspaces[ws_idx].push (c);
-    if ws_idx != active_workspace {
-      XUnmapWindow (display, c.window);
+    if ws_idx == active_workspace {
+      XMapWindow (display, c.window);
     }
   }
   // Set input focus
