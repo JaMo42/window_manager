@@ -8,6 +8,7 @@ use super::config_parser;
 use super::color::Color_Scheme;
 use super::paths;
 
+#[macro_export]
 macro_rules! clean_mods {
   ($mods:expr) => {
     $mods

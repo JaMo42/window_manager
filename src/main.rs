@@ -10,6 +10,7 @@ use x11::xlib::*;
 mod core;
 mod client;
 mod geometry;
+#[macro_use]
 mod config;
 mod action;
 mod event;

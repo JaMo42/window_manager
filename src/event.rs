@@ -7,6 +7,9 @@ use super::action;
 use super::property::{Net};
 use super::*;
 
+const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
+
+
 unsafe fn win2client<'a> (window: Window) -> Option<&'a mut Client> {
   for ws in workspaces.iter_mut () {
     for c in ws.iter_mut () {
@@ -31,63 +34,184 @@ pub unsafe fn button_press (event: &XButtonEvent) {
       return;
     }
   }
-  mouse = (Some (*event), get_window_geometry (event.subwindow));
+  mouse_held = event.button;
   workspaces[active_workspace].focus (event.subwindow);
 }
 
 
 pub unsafe fn motion (event: &XButtonEvent) {
-  if let Some (s) = mouse.0 {
-    if s.subwindow == X_NONE {
-      return;
-    }
-    let xd = event.x_root - s.x_root;
-    let yd = event.y_root - s.y_root;
-    if s.button == 1 {
-      // Move
-      XMoveResizeWindow (
-        display,
-        s.subwindow,
-        mouse.1.x + xd,
-        mouse.1.y + yd,
-        mouse.1.w as c_uint,
-        mouse.1.h as c_uint
-      );
-    }
-    else if s.button == 3 {
-      // Resize
-      XMoveResizeWindow (
-        display,
-        s.subwindow,
-        mouse.1.x,
-        mouse.1.y,
-        max (1, mouse.1.w as c_int + xd) as c_uint,
-        max (1, mouse.1.h as c_int + yd) as c_uint
-      );
+  if mouse_held != 0 {
+    match mouse_held {
+      1 => mouse_move (event.subwindow),
+      3 => mouse_resize (event.subwindow),
+      _ => {}
     }
   }
 }
 
 
-pub unsafe fn button_release (event: &XButtonEvent) {
-  if let Some (s) = mouse.0 {
-    if s.subwindow != X_NONE {
-      if s.button == 1 && s.state == (*config).modifier | MOD_SHIFT {
-        action::move_snap (
-          win2client (s.subwindow).unwrap (),
-          event.x_root as u32,
-          event.y_root as u32
+unsafe fn pointer_position () -> Option<(c_int, c_int)> {
+  let mut x: c_int = 0;
+  let mut y: c_int = 0;
+  // Dummy values
+  let mut i: c_int = 0;
+  let mut u: c_uint = 0;
+  let mut w: Window = X_NONE;
+  if XQueryPointer (
+    display, root, &mut w, &mut w, &mut x, &mut y, &mut i, &mut i, &mut u
+  ) == X_TRUE {
+    Some ((x, y))
+  }
+  else {
+    None
+  }
+}
+
+
+unsafe fn mouse_move (window: Window) {
+  let client: &mut Client;
+  if let Some (c) = win2client (window) {
+    client = c;
+  }
+  else {
+    return;
+  }
+  if XGrabPointer (
+    display,
+    root,
+    X_FALSE,
+    MOUSE_MASK as u32,
+    GrabModeAsync,
+    GrabModeAsync,
+    X_NONE,
+    cursor::moving,
+    CurrentTime
+  ) != GrabSuccess {
+    return;
+  }
+  let start_x: c_int;
+  let start_y: c_int;
+  if let Some ((x, y)) = pointer_position () {
+    start_x = x;
+    start_y = y;
+  }
+  else {
+    return;
+  }
+  let mut event: XEvent = uninitialized! ();
+  let mut last_time: Time = 0;
+  let client_x = client.geometry.x;
+  let client_y = client.geometry.y;
+  let mut mouse_x = 0;
+  let mut mouse_y = 0;
+  let mut state = 0;
+  loop {
+    XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
+    match event.type_ {
+      ConfigureRequest => configure_request (&event.configure_request),
+      MapRequest => map_request (&event.map_request),
+      MotionNotify => {
+        let motion = event.motion;
+        // Only handle at 60 FPS
+        if (motion.time - last_time) <= (1000 / 60) {
+          continue;
+        }
+        last_time = motion.time;
+        let new_x = client_x + (motion.x - start_x);
+        let new_y = client_y + (motion.y - start_y);
+        XMoveResizeWindow (
+          display, window,
+          new_x, new_y,
+          client.prev_geometry.w, client.prev_geometry.h
         );
+        mouse_x = motion.x_root;
+        mouse_y = motion.y_root;
+        state = motion.state;
       }
-      else {
-        // Commit the new window geometry into the client
-        let c = &mut win2client (s.subwindow).unwrap ();
-        c.geometry = get_window_geometry (s.subwindow);
-        c.prev_geometry = c.geometry;
-      }
+      ButtonRelease => break,
+      _ => {}
     }
   }
-  mouse.0 = None;
+  XUngrabPointer (display, CurrentTime);
+  #[allow(unused_unsafe)]  // `clean_mods` contains an unsafe block
+  if clean_mods! (state) == (*config).modifier | MOD_SHIFT {
+    action::move_snap (client, mouse_x as u32, mouse_y as u32);
+  }
+  else {
+    client.geometry = get_window_geometry (window);
+    client.prev_geometry = client.geometry;
+    client.is_snapped = false;
+  }
+}
+
+
+unsafe fn mouse_resize (window: Window) {
+  let client: &mut Client;
+  if let Some (c) = win2client (window) {
+    client = c;
+  }
+  else {
+    return;
+  }
+  if XGrabPointer (
+    display,
+    root,
+    X_FALSE,
+    MOUSE_MASK as u32,
+    GrabModeAsync,
+    GrabModeAsync,
+    X_NONE,
+    cursor::resizing,
+    CurrentTime
+  ) != GrabSuccess {
+    return;
+  }
+  let start_x: c_int;
+  let start_y: c_int;
+  if let Some ((x, y)) = pointer_position () {
+    start_x = x;
+    start_y = y;
+  }
+  else {
+    return;
+  }
+  let mut event: XEvent = uninitialized! ();
+  let mut last_time: Time = 0;
+  let client_w = client.geometry.w as i32;
+  let client_h = client.geometry.h as i32;
+  loop {
+    XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
+    match event.type_ {
+      ConfigureRequest => configure_request (&event.configure_request),
+      MapRequest => map_request (&event.map_request),
+      MotionNotify => {
+        let motion = event.motion;
+        // Only handle at 60 FPS
+        if (motion.time - last_time) <= (1000 / 60) {
+          continue;
+        }
+        last_time = motion.time;
+        let new_w = max (10, client_w + (motion.x - start_x)) as u32;
+        let new_h = max (10, client_h + (motion.y - start_y)) as u32;
+        XMoveResizeWindow (
+          display, window,
+          client.geometry.x, client.geometry.y,
+          new_w, new_h
+        );
+      }
+      ButtonRelease => break,
+      _ => {}
+    }
+  }
+  XUngrabPointer (display, CurrentTime);
+  client.geometry = get_window_geometry (window);
+  client.prev_geometry = client.geometry;
+  client.is_snapped = false;
+}
+
+
+pub unsafe fn button_release (_: &XButtonEvent) {
+  mouse_held = 0;
 }
 
 
@@ -157,6 +281,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       g.h = window_area.h - ((*config).border_width << 1) as u32;
     }
     c.move_and_resize (g);
+    c.prev_geometry = c.geometry;
     workspaces[active_workspace].push (c);
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
     log::info! ("Mapped new client: '{}' ({})", name, window);
