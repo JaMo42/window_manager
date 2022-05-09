@@ -11,6 +11,9 @@ pub const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
 
 
 unsafe fn win2client<'a> (window: Window) -> Option<&'a mut Client> {
+  if window == X_NONE {
+    return None;
+  }
   for ws in workspaces.iter_mut () {
     for c in ws.iter_mut () {
       if c.window == window {
@@ -321,7 +324,6 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
 }
 
 pub unsafe fn property_notify (event: &XPropertyEvent) {
-  log::trace! ("property_notify");
   if event.state == PropertyDelete {
     return;
   }

@@ -255,6 +255,7 @@ unsafe fn run () {
   ];
   let mut event: XEvent = uninitialized! ();
   running = true;
+  XSync (display, X_FALSE);
   while running {
     XNextEvent (display, &mut event);
     log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
@@ -288,9 +289,9 @@ unsafe fn cleanup () {
     }
   }
   // Close all open clients
-  for ws in workspaces.iter_mut () {
-    for mut c in ws.iter_mut () {
-      action::close_client (&mut c);
+  for ws in workspaces.iter () {
+    for c in ws.iter () {
+      XDestroyWindow (display, c.window);
     }
   }
   // Close meta windows
@@ -329,6 +330,7 @@ unsafe fn cleanup () {
   // Properties
   XDestroyWindow (display, property::wm_check_window);
   property::delete (root, Net::ActiveWindow);
+  XSync (display, X_FALSE);
 }
 
 

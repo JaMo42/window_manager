@@ -13,7 +13,11 @@ pub unsafe fn quit () {
 
 pub unsafe fn close_client (client: &mut Client) {
   if !client.send_event (property::atom (WM::DeleteWindow)) {
+    XGrabServer (display);
+    XSetCloseDownMode (display, DestroyAll);
     XKillClient (display, client.window);
+    XSync (display, X_FALSE);
+    XUngrabServer (display);
   }
   workspaces[active_workspace].remove (client);
   update_client_list ();
