@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=window_manager
+Comment=Session running window_manager
+Exec=window_manager
+Type=Application
