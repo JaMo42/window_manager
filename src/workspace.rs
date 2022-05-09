@@ -100,7 +100,7 @@ impl Workspace {
     let mut switch_idx = 0;
     let mut event: XEvent = uninitialized! ();
     loop {
-      XNextEvent (display, &mut event);
+      XMaskEvent (display, KeyPressMask|KeyReleaseMask, &mut event);
       match event.type_ {
         KeyPress => {
           if event.key.keycode == 0x17 {
@@ -123,9 +123,7 @@ impl Workspace {
             break;
           }
         }
-        _ => {
-          log::error! ("Bad event in window switcher: {}", event.type_);
-        }
+        _ => unreachable! ()
       }
     }
     // Clean up
