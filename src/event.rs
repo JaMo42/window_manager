@@ -48,6 +48,17 @@ pub unsafe fn motion (event: &XButtonEvent) {
     }
     mouse_held = 0;
   }
+  else {
+    // Ignore all subsequent MotionNotify events
+    let mut my_event: XEvent = uninitialized! ();
+    loop {
+      XNextEvent (display, &mut my_event);
+      if my_event.type_ != MotionNotify {
+        break;
+      }
+    }
+    XPutBackEvent (display, &mut my_event);
+  }
 }
 
 
