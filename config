@@ -1,5 +1,5 @@
 # Number of workspaces
-workspaces 2
+workspaces 4
 
 # Inner gap for snapped clients
 gaps 5
@@ -23,27 +23,24 @@ bind Mod+Q close_window
 bind Mod+Shift+Q quit
 bind Mod+space $ rofi -show run
 bind Mod+Return $ xfce4-terminal
-bind Mod+Up snap_fullscreen
+bind Mod+Up snap_maximized
 bind Mod+Down unsnap_or_center
 bind Mod+Left snap_left
 bind Mod+Right snap_right
-#bind Alt+Tab switch_window
+bind Mod+Print $ scrot ~/Pictures/Screenshots/%Y-%m-%d-%T-screenshot.jpg
 
 # Define colors
 
-# Palette used here:
-# https://www.color-hex.com/color-palette/2017
-
 # Border of focused window
-color Focused #2793e8
+color Focused #428bca
 # Border of other windows
-color Normal #666666
+color Normal #777777
 # Color or pending window druing window switching
-color Selected #559900
+color Selected #5cb85c
 # Color of a window that demands attention
-color Urgent #cc181e
+color Urgent #d9534f
 # Solid background color
-color Background #f1f1f1
+color Background #111111
 
 # Enable hibernation
 #hibernate
