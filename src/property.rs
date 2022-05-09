@@ -27,6 +27,8 @@ pub enum Net {
   WMState,
   WMStateFullscreen,
   WMStateDemandsAttention,
+  WMWindowType,
+  WMWindowTypeDialog,
   Last
 }
 
@@ -95,6 +97,8 @@ pub unsafe fn load_atoms () {
   N! (Net::WMState, "_NET_WM_STATE");
   N! (Net::WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
   N! (Net::WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
+  N! (Net::WMWindowType, "_NET_WM_WINDOW_TYPE");
+  N! (Net::WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
 
   log::debug! ("Net Properties: {:?}", net);
   log::debug! ("WM Properties: {:?}", wm);
@@ -175,6 +179,29 @@ pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<S
   }
   else {
     None
+  }
+}
+
+pub unsafe fn get_atom<P: Into_Atom> (window: Window, property: P) -> Atom {
+  let mut a: Atom = X_NONE;
+  let mut i: c_int = 0;
+  let mut l: c_ulong = 0;
+  let mut p: *mut c_uchar = std::ptr::null_mut ();
+  if XGetWindowProperty (
+    display, window, property.into_atom (), 0, std::mem::size_of::<Atom> () as i64,
+    X_FALSE, XA_ATOM, &mut a, &mut i, &mut l, &mut l, &mut p
+  ) == Success as i32 {
+    if p.is_null () {
+      X_NONE
+    }
+    else {
+      let atom: Atom = *(p as *mut Atom);
+      XFree (p as *mut c_void);
+      atom
+    }
+  }
+  else {
+    X_NONE
   }
 }
 
