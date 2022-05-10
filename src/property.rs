@@ -11,9 +11,6 @@ macro_rules! set_cardinal {
   }
 }
 
-// TODO: _NET_NUMBER_OF_DESKTOPS, _NET_CURRENT_DESKTOP, _NET_DESKTOP_NAMES
-//       These seem to be the best way to implement a external program that
-//       prints desktop information for something like a polybar widget.
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub enum Net {
@@ -71,34 +68,34 @@ pub static mut wm_check_window: Window = X_NONE;
 
 
 pub unsafe fn load_atoms () {
-  macro_rules! N {
-    ($property:expr, $name:expr) => {
-      net[$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
-    }
-  }
   macro_rules! W {
-    ($property:expr, $name:expr) => {
-      wm[$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
+    ($property:ident, $name:expr) => {
+      wm[WM::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
+    }
+  }
+  macro_rules! N {
+    ($property:ident, $name:expr) => {
+      net[Net::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
     }
   }
 
-  W! (WM::Protocols, "WM_PROTOCOLS");
-  W! (WM::DeleteWindow, "WM_DELETE_WINDOW");
-  W! (WM::TakeFocus, "WM_TAKE_FOCUS");
-  W! (WM::DeleteWindow, "WM_DELETE_WINDOW");
+  W! (Protocols, "WM_PROTOCOLS");
+  W! (DeleteWindow, "WM_DELETE_WINDOW");
+  W! (TakeFocus, "WM_TAKE_FOCUS");
+  W! (DeleteWindow, "WM_DELETE_WINDOW");
 
-  N! (Net::Supported, "_NET_SUPPORTED");
-  N! (Net::ClientList, "_NET_CLIENT_LIST");
-  N! (Net::ActiveWindow, "_NET_ACTIVE_WINDOW");
-  N! (Net::SupportingWMCheck, "_NET_SUPPORTING_WM_CHECK");
-  N! (Net::NumberOfDesktops, "_NET_NUMBER_OF_DESKTOPS");
-  N! (Net::CurrentDesktop, "_NET_CURRENT_DESKTOP");
-  N! (Net::WMName, "_NET_WM_NAME");
-  N! (Net::WMState, "_NET_WM_STATE");
-  N! (Net::WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
-  N! (Net::WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
-  N! (Net::WMWindowType, "_NET_WM_WINDOW_TYPE");
-  N! (Net::WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
+  N! (Supported, "_NET_SUPPORTED");
+  N! (ClientList, "_NET_CLIENT_LIST");
+  N! (ActiveWindow, "_NET_ACTIVE_WINDOW");
+  N! (SupportingWMCheck, "_NET_SUPPORTING_WM_CHECK");
+  N! (NumberOfDesktops, "_NET_NUMBER_OF_DESKTOPS");
+  N! (CurrentDesktop, "_NET_CURRENT_DESKTOP");
+  N! (WMName, "_NET_WM_NAME");
+  N! (WMState, "_NET_WM_STATE");
+  N! (WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
+  N! (WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
+  N! (WMWindowType, "_NET_WM_WINDOW_TYPE");
+  N! (WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
 
   log::debug! ("Net Properties: {:?}", net);
   log::debug! ("WM Properties: {:?}", wm);
