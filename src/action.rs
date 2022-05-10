@@ -19,8 +19,6 @@ pub unsafe fn close_client (client: &mut Client) {
     XSync (display, X_FALSE);
     XUngrabServer (display);
   }
-  workspaces[active_workspace].remove (client);
-  update_client_list ();
 }
 
 
