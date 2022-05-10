@@ -80,8 +80,8 @@ pub unsafe fn center (client: &mut Client) {
     return;
   }
   client.unsnap ();
-  let x = window_area.x + (window_area.w - client.geometry.w) as i32 / 2;
-  let y = window_area.y + (window_area.h - client.geometry.h) as i32 / 2;
+  let x = window_area.x + (window_area.w as i32 - client.geometry.w as i32) / 2;
+  let y = window_area.y + (window_area.h as i32 - client.geometry.h as i32) / 2;
   client.move_and_resize (Geometry::from_parts (
       x, y, client.geometry.w, client.geometry.h
   ));
