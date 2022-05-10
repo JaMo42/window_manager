@@ -284,10 +284,9 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       if let Some (trans) = win2client (trans_win) {
         has_trans_client = true;
         target_workspace = trans.workspace;
-        // Position 10% offset from the top-left corner inside the client this
-        // window is transient for
-        g.x = trans.geometry.x + (trans.geometry.w / 10) as c_int;
-        g.y = trans.geometry.y + (trans.geometry.w / 10) as c_int;
+        // Center inside parent
+        g.x = trans.geometry.x + (trans.geometry.w as i32 - g.w as i32) / 2;
+        g.y = trans.geometry.y + (trans.geometry.h as i32 - g.h as i32) / 2;
       }
     }
     if !has_trans_client {
