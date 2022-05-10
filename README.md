@@ -101,7 +101,7 @@ This is simply a bash script that is run on startup (so don't forget to add `&` 
 
 - `Mod + Left Mouse Hold` Move the clicked window
 
-- `Mod + Shift + Left Mouse Hold` Mode the clicked window and snap it based on the resulting position
+- `Mod + Shift + Left Mouse Hold` Move the clicked window and snap it based on the resulting position
   - Left half:
     - Top/Bottom quarter: Snap to Top-/Bottom- Left
     - Otherwise: Snap to Left
@@ -157,12 +157,12 @@ Example for a polybar module that displays the active workspace and lets you swi
 ```
 [module/window_manager]
   type = custom/script
-  exec = python /home/j/src/window_manager/ws_tool format '' ''
+  exec = ws_tool format '' ''
   interval = 1
-  scroll-up = python /home/j/src/window_manager/ws_tool set prev
-  scroll-down = python /home/j/src/window_manager/ws_tool set next
-  click-left = python /home/j/src/window_manager/ws_tool set next
-  click-right = python /home/j/src/window_manager/ws_tool set prev
+  scroll-up = ws_tool set prev
+  scroll-down = ws_tool set next
+  click-left = ws_tool set next
+  click-right = ws_tool set prev
 ```
 
 ### Acknowledgments
