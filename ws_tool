@@ -5,6 +5,7 @@ from Xlib import X
 from Xlib.display import Display
 from Xlib.protocol.event import ClientMessage
 
+display_address = None
 display = None
 root = None
 number_of_desktops_atom = None
@@ -54,11 +55,17 @@ class Action:
 
 def get_number_of_desktops ():
   prop = root.get_full_property (number_of_desktops_atom, X.AnyPropertyType)
+  if prop is None:
+    print (f"Property not found, is this the correct dispaly: '{display_address}'?")
+    exit (1)
   return prop.value[0]
 
 
 def get_current_desktop ():
   prop = root.get_full_property (current_desktop_atom, X.AnyPropertyType)
+  if prop is None:
+    print (f"Property not found, is this the correct display: '{display_address}'?")
+    exit (1)
   return prop.value[0]
 
 
@@ -87,6 +94,8 @@ def parse_args ():
     if len (args) != 3 and len (args) != 4:
       usage ("format")
     Args.args = (args[1], args[2], (args[3] if len (args) == 4 else None))
+  else:
+    usage ()
   return Args
 
 
@@ -110,7 +119,7 @@ def usage (action=None):
 
 
 def main ():
-  global display, root, number_of_desktops_atom, current_desktop_atom
+  global display_address, display, root, number_of_desktops_atom, current_desktop_atom
   args = parse_args ()
   display_address = os.getenv ("DISPLAY")
   if display_address is None:
