@@ -374,7 +374,9 @@ pub unsafe fn configure_notify (event: &XConfigureEvent) {
 pub unsafe fn client_message (event: &XClientMessageEvent) {
   if let Some (client) = win2client (event.window) {
     log::debug! ("Client message: {}", event.message_type);
-    log::debug! ("  Recipient: {}", client);
+    // Something about just printing 'client' here sometimes just freezes the
+    // entire program (TODO)
+    log::debug! ("  Recipient: {}", client.window);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
     if event.message_type == atom (Net::WMState) {
       // _NET_WM_STATE

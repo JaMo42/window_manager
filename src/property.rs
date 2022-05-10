@@ -168,7 +168,7 @@ pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<S
     display, window, property.into_atom (), 0, 1000, X_FALSE, AnyPropertyType as u64,
     &mut a, &mut i, &mut l, &mut l, &mut text
   ) == Success as i32 {
-    if a == X_NONE {
+    if a == X_NONE || text.is_null () {
       None
     }
     else {
@@ -191,7 +191,7 @@ pub unsafe fn get_atom<P: Into_Atom> (window: Window, property: P) -> Atom {
     display, window, property.into_atom (), 0, std::mem::size_of::<Atom> () as i64,
     X_FALSE, XA_ATOM, &mut a, &mut i, &mut l, &mut l, &mut p
   ) == Success as i32 {
-    if p.is_null () {
+    if a == X_NONE || p.is_null () {
       X_NONE
     }
     else {
