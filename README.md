@@ -145,7 +145,7 @@ See the [Polybar](#polybar) section for an example usage of the `format` command
 ## Polybar
 
 Make polybar a meta-window:
-```
+```ini
 wm-name = window_manager_bar
 ```
 (`window_manager_bar` is always defined to be a meta-window).
@@ -154,7 +154,7 @@ wm-name = window_manager_bar
 Example for a polybar module that displays the active workspace and lets you switch workspace by scrolling/clicking on the module using the `ws_tool` script.
 (uses the `circle` and `dot-circle` characters from [Font Awesome Free Regular](https://fontawesome.com/docs/desktop/setup/get-started))
 
-```
+```ini
 [module/window_manager]
   type = custom/script
   exec = ws_tool format '' ''
