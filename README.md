@@ -167,6 +167,8 @@ Example for a polybar module that displays the active workspace and lets you swi
 
 ### Acknowledgments
 
+Some projects I used to learn how windows managers work.
+
 - [qpwm](https://github.com/ssleert/qpwm/)
 - [dwm](https://dwm.suckless.org/)
 - [tinywm](https://github.com/mackstann/tinywm)
