@@ -326,14 +326,6 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
 }
 
 
-pub unsafe fn enter (event: &XCrossingEvent) {
-  if event.subwindow == X_NONE {
-    return;
-  }
-  log::info! ("EnterNotify: '{}' ({})", window_title (event.subwindow), event.subwindow);
-}
-
-
 pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
   log::trace! ("configure_request: '{}' ({})", window_title (event.window), event.window);
   XConfigureWindow (
@@ -362,14 +354,6 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
   }
 }
 
-pub unsafe fn unmap_notify (_event: &XUnmapEvent) {
-  log::trace! ("unmap_notify ");
-}
-
-pub unsafe fn configure_notify (event: &XConfigureEvent) {
-  log::trace! ("configure_notify: '{}' ({})", window_title (event.window), event.window);
-}
-
 pub unsafe fn client_message (event: &XClientMessageEvent) {
   if let Some (client) = win2client (event.window) {
     log::debug! ("Client message: {}", event.message_type);
@@ -381,9 +365,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
       // _NET_WM_STATE
       let data = event.data.as_longs ();
       macro_rules! new_state {
-        ($member:ident) => {
-          data[0] == 1 || (data[0] == 2 && !client.$member)
-        }
+        ($member:ident) => { data[0] == 1 || (data[0] == 2 && !client.$member) }
       }
       if data[1] as Atom == atom (Net::WMStateFullscreen)
         || data[2] as Atom == atom (Net::WMStateFullscreen) {

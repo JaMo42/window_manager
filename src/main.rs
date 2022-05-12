@@ -263,15 +263,12 @@ unsafe fn run () {
       ButtonPress => event::button_press (&event.button),
       ClientMessage => event::client_message (&event.client_message),
       ConfigureRequest => event::configure_request (&event.configure_request),
-      ConfigureNotify => event::configure_notify (&event.configure),
       DestroyNotify => event::destroy_notify (&event.destroy_window),
-      EnterNotify => event::enter (&event.crossing),
       KeyPress => event::key_press (&event.key),
       MappingNotify => event::mapping_notify (&event.mapping),
       MapRequest => event::map_request (&event.map_request),
       MotionNotify => event::motion (&event.button),
       PropertyNotify => event::property_notify (&event.property),
-      UnmapNotify => event::unmap_notify (&event.unmap),
       _ => {
         log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
       }
