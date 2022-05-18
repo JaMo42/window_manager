@@ -246,7 +246,7 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
       _ => unreachable! ()
     }
     // Run the program
-    crate::run_process (program);
+    crate::run_process (&program);
     // Get the window
     let w: Window;
     let mut event: XEvent = uninitialized! ();

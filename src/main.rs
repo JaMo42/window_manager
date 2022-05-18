@@ -197,6 +197,8 @@ unsafe fn init () {
   grab_buttons ();
   // Select input
   select_input (0);
+  // Ignore SIGCHLD so we don't leave defunct processes behind
+  libc::signal (libc::SIGCHLD, libc::SIG_IGN);
   // Run autostart script
   {
     use std::process::{Command, Stdio};
@@ -399,25 +401,22 @@ unsafe fn update_client_list () {
 }
 
 
-fn run_process (command_line: String) {
+fn run_process (command_line: &String) {
   use std::process::{Command, Stdio};
-  std::thread::spawn (move || {
-    let mut parts = command_line.split (' ');
-    let program = parts.next ().unwrap ();
-    let args = parts.collect::<Vec<&str>> ();
-    log::trace! ("Running process: {}", command_line);
-    if let Ok (mut process) = Command::new (program)
-      .args (args)
-      .stdout (Stdio::null ())
-      .stderr (Stdio::null ())
-      .spawn () {
-      process.wait ().ok ();
-      log::debug! ("Process finished: {}", command_line);
-    }
-    else {
-      log::error! ("Failed to run program: {}", command_line);
-    }
-  });
+  let mut parts = command_line.split (' ');
+  let program = parts.next ().unwrap ();
+  let args = parts.collect::<Vec<&str>> ();
+  if Command::new (program)
+    .args (args)
+    .stdout (Stdio::null ())
+    .stderr (Stdio::null ())
+    .spawn ()
+    .is_ok () {
+    log::trace! ("Launched process: {}", command_line);
+  }
+  else {
+    log::error! ("Failed to run process: {}", command_line);
+  }
 }
 
 

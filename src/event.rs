@@ -242,7 +242,7 @@ pub unsafe fn key_press (event: &XKeyEvent) {
         f (*workspace_index, maybe_client);
       },
       Action::Launch (cmd) => {
-        run_process (cmd.clone ());
+        run_process (cmd);
       },
       Action::Generic (f) => {
         f ();
