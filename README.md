@@ -125,7 +125,7 @@ This also does not work if one process owns multiple windows.
 
 ## ws_tool
 
-A basic python script that lets you interact with workspaces
+A basic python script that lets you interact with workspaces.
 
 ```sh
 $ ./ws_tool get
@@ -141,6 +141,8 @@ $ ./ws_tool format inactive active join
 ```
 
 See the [Polybar](#polybar) section for an example usage of the `format` command.
+
+Rquires the XLib package: `pip install python3-xlib`.
 
 ## Polybar
 
