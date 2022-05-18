@@ -12,7 +12,7 @@ use super::paths;
 macro_rules! clean_mods {
   ($mods:expr) => {
     $mods
-      & unsafe { !(LockMask | numlock_mask) }
+      & !(LockMask | unsafe { numlock_mask })
       & (MOD_WIN | MOD_ALT | MOD_SHIFT | MOD_CTRL)
   }
 }
@@ -71,7 +71,7 @@ pub struct Config {
   // Window border width
   pub border_width: c_int,
   pub workspace_count: usize,
-  pub meta_window_names: Vec<String>,
+  pub meta_window_classes: Vec<String>,
   pub colors: Color_Scheme,
   pub hibernate: bool
 }
@@ -85,7 +85,7 @@ impl Config {
       gap: 0,
       border_width: 0,
       workspace_count: 1,
-      meta_window_names: Vec::new (),
+      meta_window_classes: Vec::new (),
       colors: Color_Scheme::new (),
       hibernate: false
     }
@@ -129,7 +129,7 @@ impl Config {
         }
         Meta (title) => {
           log::info! ("config: meta window: {}", title);
-          self.meta_window_names.push (title);
+          self.meta_window_classes.push (title);
         }
         Mod (modifier) => {
           log::info! ("config: user modifier: {}", modifier);

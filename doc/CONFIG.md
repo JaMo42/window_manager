@@ -27,10 +27,10 @@ border <N>
 Sets the width of window borders.
 
 ```
-meta <Title>
+meta <Class>
 ```
-Specifies windows with title `<Title>` to be meta-windows, these windows are mostly ignored by the window manager.
-`window_manager_bar` is always defined as a meta window.
+Specifies windows with class `<Class>` to be meta-windows, these windows are visible from each workspace, are undecorated, and cannot be interacted with.
+Additionally, windows with the title `window_manager_bar` are also meta windows.
 
 ```
 mod <Mod>

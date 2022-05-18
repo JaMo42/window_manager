@@ -64,7 +64,6 @@ impl Workspace {
         self.clients.insert (0, c);
       }
       self.clients[0].focus ();
-      //focus_window (window);
     }
     else {
       panic! ("Trying to focus window on a different workspace");

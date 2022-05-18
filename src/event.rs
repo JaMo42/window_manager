@@ -264,7 +264,9 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   // New client
   let window = event.window;
   let name = window_title (window);
-  if name == "window_manager_bar" || (*config).meta_window_names.contains (&name) {
+  let class_hints = property::Class_Hints::new (window);
+  if name == "window_manager_bar"
+    || (*config).meta_window_classes.contains (&class_hints.class) {
     meta_windows.push (window);
     XMapWindow (display, window);
     log::info! ("New meta window: {} ({})", name, window);
@@ -322,6 +324,8 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     if trans_win != X_NONE {
       log::info! ("    Transient for: '{}' ({})", window_title (trans_win), trans_win);
     }
+    log::info! ("            Class: {}", class_hints.class);
+    log::info! ("             Name: {}", class_hints.name);
   }
 }
 

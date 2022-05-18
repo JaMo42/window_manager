@@ -9,8 +9,8 @@ pad 45 5 5 5
 # Width of border around windows
 border 10
 
-# Define a window to be a meta-window by its title
-meta xclock
+# Define a window to be a meta-window by its class
+meta XClock
 
 # Defines the 'Mod' key in bind statements
 # Defines the modifier key for pre-defined bindings (anything mouse related

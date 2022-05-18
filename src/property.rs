@@ -60,6 +60,22 @@ impl Into_Atom for Atom {
   }
 }
 
+pub struct Class_Hints {
+  pub class: String,
+  pub name: String
+}
+
+impl Class_Hints {
+  pub unsafe fn new(window: Window) -> Class_Hints {
+    let mut class_hints: XClassHint = uninitialized! ();
+    XGetClassHint (display, window, &mut class_hints);
+    Class_Hints {
+      class: string_from_ptr! (class_hints.res_class),
+      name: string_from_ptr! (class_hints.res_name)
+    }
+  }
+}
+
 
 pub static mut net: [Atom; Net::Last as usize] = [X_NONE; Net::Last as usize];
 pub static mut wm: [Atom; WM::Last as usize] = [X_NONE; WM::Last as usize];
