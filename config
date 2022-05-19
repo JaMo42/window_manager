@@ -27,6 +27,8 @@ bind Mod+Up snap_maximized
 bind Mod+Down unsnap_or_center
 bind Mod+Left snap_left
 bind Mod+Right snap_right
+bind Mod+Alt+Up snap_up
+bind Mod+Alt+Down snap_down
 bind Mod+Print $ scrot ~/Pictures/Screenshots/%Y-%m-%d-%T-screenshot.jpg
 
 # Define colors
