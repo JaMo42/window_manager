@@ -390,7 +390,7 @@ unsafe fn focus_window (window: Window) {
 
 
 unsafe fn update_client_list () {
-  // We can't delete a window from the client list proprty so we have to
+  // We can't delete a window from the client list property so we have to
   // rebuild it when deleting a window
   property::delete (root, Net::ClientList);
   for ws in workspaces.iter () {

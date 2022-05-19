@@ -84,9 +84,11 @@ Enable the fake-hibernation.
 
 - `snap_maximized` Snaps the focused window into the maximized position (not fullscreen).
 
-- `snap_left` Snaps the focused window to the left half of the screen.
+- `snap_left` / `snap_right` Snap the focused window to the left/right half of the screen.
+  If the window was snapped to the top/bottom on the opposite side, it stays at the top/bottom.
+  If it was snapped to the top/bottom on the same side, it gets snapped to the full height.
 
-- `snap_right` Snaps the focused window to the right half of the screen.
+- `snap_up` / `snap_down` If the focused window is snapped to the left/right, snap it to the top/bottom quarter.
 
 - `unsnap_or_center` If the focused window is snapped, un-snap it, restoring it to it's position before it was last snapped. If it is not snapped, center it.
 

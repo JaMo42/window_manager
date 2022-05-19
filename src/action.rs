@@ -75,10 +75,16 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
 }
 
 pub unsafe fn snap_left (client: &mut Client) {
+  if (client.snap_state & SNAP_LEFT) == SNAP_LEFT {
+    client.snap_state &= !(SNAP_TOP | SNAP_BOTTOM);
+  }
   snap (client, SNAP_LEFT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)));
 }
 
 pub unsafe fn snap_right (client: &mut Client) {
+  if (client.snap_state & SNAP_RIGHT) == SNAP_RIGHT {
+    client.snap_state &= !(SNAP_TOP | SNAP_BOTTOM);
+  }
   snap (client, SNAP_RIGHT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)));
 }
 
@@ -102,7 +108,7 @@ pub unsafe fn center (client: &mut Client) {
   let x = window_area.x + (window_area.w as i32 - client.geometry.w as i32) / 2;
   let y = window_area.y + (window_area.h as i32 - client.geometry.h as i32) / 2;
   client.move_and_resize (Geometry::from_parts (
-      x, y, client.geometry.w, client.geometry.h
+    x, y, client.geometry.w, client.geometry.h
   ));
   client.prev_geometry = client.geometry;
 }
