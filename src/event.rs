@@ -156,7 +156,7 @@ unsafe fn mouse_move (window: Window) {
   else {
     client.geometry = get_window_geometry (window);
     client.prev_geometry = client.geometry;
-    client.is_snapped = false;
+    client.snap_state = SNAP_NONE;
   }
 }
 
@@ -222,7 +222,7 @@ unsafe fn mouse_resize (window: Window) {
   XUngrabPointer (display, CurrentTime);
   client.geometry = get_window_geometry (window);
   client.prev_geometry = client.geometry;
-  client.is_snapped = false;
+  client.snap_state = SNAP_NONE;
 }
 
 

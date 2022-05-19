@@ -70,10 +70,29 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
     // since it gets removed inside `client.move_and_resize` again.
     target.expand ((*config).gap as i32);
   }
-  client.is_snapped = true;
+  client.snap_state = flags;
   client.move_and_resize (target);
 }
 
+pub unsafe fn snap_left (client: &mut Client) {
+  snap (client, SNAP_LEFT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)));
+}
+
+pub unsafe fn snap_right (client: &mut Client) {
+  snap (client, SNAP_RIGHT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)));
+}
+
+pub unsafe fn snap_down (client: &mut Client) {
+  if client.is_snapped () && client.snap_state != SNAP_MAXIMIZED {
+    snap (client, client.snap_state & !SNAP_TOP | SNAP_BOTTOM);
+  }
+}
+
+pub unsafe fn snap_up (client: &mut Client) {
+  if client.is_snapped () && client.snap_state != SNAP_MAXIMIZED {
+    snap (client, client.snap_state & !SNAP_BOTTOM | SNAP_TOP);
+  }
+}
 
 pub unsafe fn center (client: &mut Client) {
   if !client.may_move () {
@@ -131,12 +150,12 @@ pub fn from_str (s: &String) -> super::config::Action {
     "close_window" => Action::WM (close_client),
     "quit" => Action::Generic (quit),
     "snap_maximized" => Action::WM (|c| unsafe { snap (c, SNAP_MAXIMIZED) }),
-    "snap_left" => Action::WM (|c| unsafe { snap (c, SNAP_LEFT) }),
-    "snap_right" => Action::WM (|c| unsafe { snap (c, SNAP_RIGHT) }),
+    "snap_left" => Action::WM (snap_left),
+    "snap_right" => Action::WM (snap_right),
     "unsnap_or_center" =>
       Action::WM (
         |c| unsafe {
-          if c.is_snapped {
+          if c.is_snapped () {
             c.unsnap ();
           }
           else {
@@ -144,6 +163,8 @@ pub fn from_str (s: &String) -> super::config::Action {
           }
         }
       ),
+    "snap_up" => Action::WM (snap_up),
+    "snap_down" => Action::WM (snap_down),
     _ => panic! ("action::from_str: unknown action: {}", s)
   }
 }

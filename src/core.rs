@@ -32,6 +32,7 @@ pub const MOD_SHIFT: c_uint = ShiftMask;
 pub const MOD_CTRL: c_uint = ControlMask;
 pub static mut numlock_mask: c_uint = 0;
 
+pub const SNAP_NONE: u8 = 0x0;
 pub const SNAP_LEFT: u8 = 0x1;
 pub const SNAP_RIGHT: u8 = 0x2;
 pub const SNAP_TOP: u8 = 0x4;

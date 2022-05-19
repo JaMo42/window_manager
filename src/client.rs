@@ -10,7 +10,7 @@ pub struct Client {
   pub geometry: Geometry,
   pub prev_geometry: Geometry,
   pub workspace: usize,
-  pub is_snapped: bool,
+  pub snap_state: u8,
   pub is_urgent: bool,
   pub is_fullscreen: bool,
   pub is_dialog: bool
@@ -27,11 +27,15 @@ impl Client {
       geometry: geometry,
       prev_geometry: geometry,
       workspace: active_workspace,
-      is_snapped: false,
+      snap_state: 0,
       is_urgent: false,
       is_fullscreen: false,
       is_dialog: false
     }
+  }
+
+  pub fn is_snapped (&self) -> bool {
+    self.snap_state != SNAP_NONE
   }
 
   pub fn may_move (&self) -> bool {
@@ -44,7 +48,7 @@ impl Client {
 
   pub unsafe fn move_and_resize (&mut self, target: Geometry) {
     self.geometry = target;
-    if self.is_snapped {
+    if self.is_snapped () {
       XMoveResizeWindow (
         display, self.window,
         target.x + (*config).gap as i32,
@@ -63,7 +67,7 @@ impl Client {
   }
 
   pub unsafe fn unsnap (&mut self) {
-    self.is_snapped = false;
+    self.snap_state = SNAP_NONE;
     self.move_and_resize (self.prev_geometry);
   }
 
@@ -148,7 +152,7 @@ impl Client {
     if state {
       property::set (self.window, Net::WMState, XA_ATOM, 32,
         &property::atom (Net::WMStateFullscreen), 1);
-      self.is_snapped = false;
+      self.snap_state = SNAP_NONE;
       let border = (*config).border_width;
       self.move_and_resize (Geometry::from_parts (
         -border, -border,

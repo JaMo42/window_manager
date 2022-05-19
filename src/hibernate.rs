@@ -102,10 +102,11 @@ pub unsafe fn store () -> Result<(), std::io::Error> {
       file.write (commandline.as_bytes ())?;
       file.write (b"\0")?;
       // Geometry
-      if client.is_snapped {
+      if client.is_snapped () {
         let g = client.geometry;
         let pg = client.prev_geometry;
         file.write (b"S")?;
+        file.write (&client.snap_state.to_le_bytes ())?;
         file.write (&g.x.to_le_bytes ())?;
         file.write (&g.y.to_le_bytes ())?;
         file.write (&g.w.to_le_bytes ())?;
@@ -214,11 +215,11 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     // Geometry
     let g: Geometry;
     let pg: Geometry;
-    let snapped: bool;
+    let snap_state: u8;
     match it.next ().unwrap () {
       b'S' => {
         // Snapped
-        snapped = true;
+        snap_state = it.next ().unwrap ();
         g = Geometry::from_parts (
           read_c_int (&mut it),
           read_c_int (&mut it),
@@ -234,7 +235,7 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
       },
       b'F' => {
         // Floating
-        snapped = false;
+        snap_state = SNAP_NONE;
         g = Geometry::from_parts (
           read_c_int (&mut it),
           read_c_int (&mut it),
@@ -262,8 +263,13 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     }
     // Create client
     let mut c = Client::new (w);
-    c.is_snapped = snapped;
-    c.move_and_resize (g);
+    if snap_state == SNAP_NONE {
+      c.snap_state = SNAP_NONE;
+      c.move_and_resize (g);
+    }
+    else {
+      crate::action::snap (&mut c, snap_state);
+    }
     c.prev_geometry = pg;
     c.workspace = ws_idx;
     // Add client to workspace
