@@ -17,7 +17,7 @@ macro_rules! clean_mods {
   }
 }
 
-#[derive(Eq, Hash, Copy, Clone)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone)]
 pub struct Key {
   pub modifiers: c_uint,
   pub code: c_uint,
@@ -26,7 +26,7 @@ pub struct Key {
 impl Key {
   pub fn from_str (key: *const c_char, modifiers: c_uint) -> Self {
     Key {
-      modifiers: modifiers,
+      modifiers,
       code: unsafe {
         XKeysymToKeycode (display, XStringToKeysym (key)) as c_uint
       }
@@ -35,20 +35,13 @@ impl Key {
 
   pub fn from_sym (sym: c_uint, modifiers: c_uint) -> Self {
     Key {
-      modifiers: modifiers,
+      modifiers,
       code: unsafe {
         XKeysymToKeycode (display, sym as c_ulong) as c_uint
       }
     }
   }
 }
-
-impl PartialEq for Key {
-  fn eq (&self, other: &Self) -> bool {
-    self.modifiers == other.modifiers && self.code == other.code
-  }
-}
-
 
 
 pub enum Action {

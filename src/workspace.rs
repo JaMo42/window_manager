@@ -56,7 +56,6 @@ impl Workspace {
     }
     if window == X_NONE {
       log::warn! ("Tried to focus None");
-      return;
     }
     else if let Some (idx) = self.clients.iter ().position (|c| c.window == window) {
       if idx != 0 {

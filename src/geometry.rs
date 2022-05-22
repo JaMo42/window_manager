@@ -14,7 +14,7 @@ impl Geometry {
   }
 
   pub fn from_parts (x: c_int, y: c_int, w: c_uint, h: c_uint) -> Self {
-    Geometry { x: x, y: y, w: w, h: h }
+    Geometry { x, y, w, h }
   }
 
   pub fn expand (&mut self, by: i32) {

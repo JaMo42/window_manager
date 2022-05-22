@@ -86,43 +86,45 @@ pub unsafe fn store () -> Result<(), std::io::Error> {
   log::info! ("Writing hibernation info");
   let mut file = File::create (&paths::hiberfile).unwrap ();
   // Active workspace
-  file.write (&active_workspace.to_le_bytes ())?;
+  file.write_all (&active_workspace.to_le_bytes ())?;
   // Clients
-  for ws_idx in 0..workspaces.len () {
-    if workspaces[ws_idx].clients.is_empty () {
+  //for ws_idx in 0..workspaces.len () {
+  for (ws_idx, workspace) in workspaces.iter ().enumerate () {
+    //if workspaces[ws_idx].clients.is_empty () {
+    if workspace.clients.is_empty () {
       continue;
     }
     // Workspace identifier
-    file.write (b"#")?;
-    file.write (&ws_idx.to_le_bytes ())?;
+    file.write_all (b"#")?;
+    file.write_all (&ws_idx.to_le_bytes ())?;
     for client in workspaces[ws_idx].iter ().rev () {
       let pid = pid_of_window (client.window);
       let commandline = commandline_of_pid (pid);
       // Command
-      file.write (commandline.as_bytes ())?;
-      file.write (b"\0")?;
+      file.write_all (commandline.as_bytes ())?;
+      file.write_all (b"\0")?;
       // Geometry
       if client.is_snapped () {
         let g = client.geometry;
         let pg = client.prev_geometry;
-        file.write (b"S")?;
-        file.write (&client.snap_state.to_le_bytes ())?;
-        file.write (&g.x.to_le_bytes ())?;
-        file.write (&g.y.to_le_bytes ())?;
-        file.write (&g.w.to_le_bytes ())?;
-        file.write (&g.h.to_le_bytes ())?;
-        file.write (&pg.x.to_le_bytes ())?;
-        file.write (&pg.y.to_le_bytes ())?;
-        file.write (&pg.w.to_le_bytes ())?;
-        file.write (&pg.h.to_le_bytes ())?;
+        file.write_all (b"S")?;
+        file.write_all (&client.snap_state.to_le_bytes ())?;
+        file.write_all (&g.x.to_le_bytes ())?;
+        file.write_all (&g.y.to_le_bytes ())?;
+        file.write_all (&g.w.to_le_bytes ())?;
+        file.write_all (&g.h.to_le_bytes ())?;
+        file.write_all (&pg.x.to_le_bytes ())?;
+        file.write_all (&pg.y.to_le_bytes ())?;
+        file.write_all (&pg.w.to_le_bytes ())?;
+        file.write_all (&pg.h.to_le_bytes ())?;
       }
       else {
         let g = client.geometry;
-        file.write (b"F")?;
-        file.write (&g.x.to_le_bytes ())?;
-        file.write (&g.y.to_le_bytes ())?;
-        file.write (&g.w.to_le_bytes ())?;
-        file.write (&g.h.to_le_bytes ())?;
+        file.write_all (b"F")?;
+        file.write_all (&g.x.to_le_bytes ())?;
+        file.write_all (&g.y.to_le_bytes ())?;
+        file.write_all (&g.w.to_le_bytes ())?;
+        file.write_all (&g.h.to_le_bytes ())?;
       }
     }
   }
@@ -138,8 +140,8 @@ fn read_until (s: &mut Peekable<impl Iterator<Item=u8>>, delim: u8) -> String {
 }
 
 fn read_bytes (s: &mut Peekable<impl Iterator<Item=u8>>, n: usize, out: &mut [u8])  {
-  for i in 0..n {
-    out[i] = s.next ().unwrap ();
+  for x in out.iter_mut ().take (n) {
+    *x = s.next ().unwrap ();
   }
 }
 
@@ -253,12 +255,9 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     let mut event: XEvent = uninitialized! ();
     loop {
       XNextEvent (display, &mut event);
-      match event.type_ {
-        MapRequest => {
-          w = event.map_request.window;
-          break;
-        }
-        _ => {}
+      if event.type_ == MapRequest {
+        w = event.map_request.window;
+        break;
       }
     }
     // Create client

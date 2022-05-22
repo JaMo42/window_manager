@@ -36,7 +36,7 @@ mod paths {
   pub static mut hiberfile: String = String::new ();
 
   pub unsafe fn load () {
-    let config_dir = if let Some (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME").ok () {
+    let config_dir = if let Ok (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME") {
       format! ("{}/window_manager", xdg_config_home)
     }
     else {
@@ -62,7 +62,7 @@ unsafe extern "C" fn x_error (my_display: *mut Display, event: *mut XErrorEvent)
   let error_msg = std::ffi::CStr::from_ptr (error_text).to_str ().unwrap ().to_string ();
   eprintln! ("window_manager|x-error: {}", error_msg);
   log::error! ("X Error: {}", error_msg);
-  return 0;
+  0
 }
 
 
@@ -99,7 +99,7 @@ unsafe fn update_numlock_mask () {
 unsafe fn grab_keys () {
   update_numlock_mask ();
   XUngrabKey (display, AnyKey as i32, AnyModifier, root);
-  for (key, _) in &(*config).key_binds {
+  for key in (*config).key_binds.keys () {
     for extra in [0, LockMask, numlock_mask, LockMask|numlock_mask] {
       XGrabKey (
         display,
@@ -280,7 +280,8 @@ unsafe fn run () {
 
 
 unsafe fn cleanup () {
-  // HibernationA
+  // Hibernation
+  #[allow(clippy::collapsible_if)]
   if (*config).hibernate {
     if hibernate::store ().is_err () {
       log::error! ("Could not write hiberfile");
@@ -300,7 +301,7 @@ unsafe fn cleanup () {
   // Cursors
   cursor::free_cursors ();
   // Un-grab keys and buttons
-  for (key, _) in &(*config).key_binds {
+  for key in (*config).key_binds.keys () {
     XUngrabKey (
       display,
       key.code as c_int,
@@ -351,7 +352,7 @@ fn get_window_geometry (window: Window) -> Geometry {
     );
   }
 
-  return Geometry { x, y, w, h };
+  Geometry { x, y, w, h }
 }
 
 
@@ -365,8 +366,7 @@ unsafe fn window_title (window: Window) -> String {
     xa_wm_name
   }
   // XFetchName / Default
-  else
-  {
+  else {
     let mut title_c_str: *mut c_char = std::ptr::null_mut ();
     XFetchName (display, window, &mut title_c_str);
     if title_c_str.is_null () {
@@ -401,7 +401,7 @@ unsafe fn update_client_list () {
 }
 
 
-fn run_process (command_line: &String) {
+fn run_process (command_line: &str) {
   use std::process::{Command, Stdio};
   let mut parts = command_line.split (' ');
   let program = parts.next ().unwrap ();

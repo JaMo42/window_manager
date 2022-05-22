@@ -39,24 +39,24 @@ pub enum WM {
 }
 
 pub trait Into_Atom {
-  unsafe fn into_atom (&self) -> Atom;
+  unsafe fn into_atom (self) -> Atom;
 }
 
 impl Into_Atom for Net {
-  unsafe fn into_atom (&self) -> Atom {
-    net[*self as usize]
+  unsafe fn into_atom (self) -> Atom {
+    net[self as usize]
   }
 }
 
 impl Into_Atom for WM {
-  unsafe fn into_atom (&self) -> Atom {
-    wm[*self as usize]
+  unsafe fn into_atom (self) -> Atom {
+    wm[self as usize]
   }
 }
 
 impl Into_Atom for Atom {
-  unsafe fn into_atom (&self) -> Atom {
-    *self
+  unsafe fn into_atom (self) -> Atom {
+    self
   }
 }
 

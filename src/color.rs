@@ -53,8 +53,8 @@ impl Color_Scheme {
     set_color! (self.urgent, "#770000");
   }
 
-  pub fn set (&mut self, element: &String, color_hex: &String) {
-    let dest: *mut XftColor = match element.as_str () {
+  pub fn set (&mut self, element: &str, color_hex: &str) {
+    let dest: *mut XftColor = match element {
       "Focused" => &mut self.focused,
       "Normal" => &mut self.normal,
       "Background" => &mut self.background,
@@ -68,7 +68,7 @@ impl Color_Scheme {
         display,
         XDefaultVisual (display, scn),
         XDefaultColormap (display, scn),
-        c_str! (color_hex.as_str ()),
+        c_str! (color_hex),
         dest
       );
     }

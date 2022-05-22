@@ -151,8 +151,8 @@ pub unsafe fn switch_window () {
 }
 
 
-pub fn from_str (s: &String) -> super::config::Action {
-  match s.as_str  () {
+pub fn from_str (s: &str) -> super::config::Action {
+  match s {
     "close_window" => Action::WM (close_client),
     "quit" => Action::Generic (quit),
     "snap_maximized" => Action::WM (|c| unsafe { snap (c, SNAP_MAXIMIZED) }),

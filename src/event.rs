@@ -85,13 +85,12 @@ unsafe fn pointer_position () -> Option<(c_int, c_int)> {
 
 
 unsafe fn mouse_move (window: Window) {
-  let client: &mut Client;
-  if let Some (c) = win2client (window) {
-    client = c;
+  let client: &mut Client = if let Some (c) = win2client (window) {
+    c
   }
   else {
     return;
-  }
+  };
   if XGrabPointer (
     display,
     root,
@@ -162,13 +161,12 @@ unsafe fn mouse_move (window: Window) {
 
 
 unsafe fn mouse_resize (window: Window) {
-  let client: &mut Client;
-  if let Some (c) = win2client (window) {
-    client = c;
+  let client: &mut Client = if let Some (c) = win2client (window) {
+    c
   }
   else {
     return;
-  }
+  };
   if XGrabPointer (
     display,
     root,
@@ -348,12 +346,10 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
 
 pub unsafe fn property_notify (event: &XPropertyEvent) {
   if event.state == PropertyDelete {
-    return;
   }
   else if let Some (client) = win2client (event.window) {
-    match event.atom {
-      XA_WM_HINTS => { client.update_hints (); }
-      _ => {}
+    if event.atom == XA_WM_HINTS {
+      client.update_hints ();
     }
   }
 }
@@ -411,7 +407,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
 }
 
 pub unsafe fn mapping_notify (event: &XMappingEvent) {
-  let mut ev = event.clone ();
+  let mut ev = *event;
   XRefreshKeyboardMapping (&mut ev);
   if ev.request == MappingKeyboard {
     grab_keys ();
@@ -420,13 +416,15 @@ pub unsafe fn mapping_notify (event: &XMappingEvent) {
 
 pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
   let window = event.window;
+  #[allow(clippy::needless_range_loop)]
   for ws_idx in 0..workspaces.len () {
     for client in workspaces[ws_idx].iter () {
       if client.window == window {
         workspaces[ws_idx].remove (client);
+        update_client_list ();
+        return;
       }
     }
   }
-  update_client_list ();
 }
 

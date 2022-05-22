@@ -23,8 +23,8 @@ impl Client {
     XConfigureWindow (display, window, CWBorderWidth as u32, &mut wc);
     let geometry = get_window_geometry (window);
     Client {
-      window: window,
-      geometry: geometry,
+      window,
+      geometry,
       prev_geometry: geometry,
       workspace: active_workspace,
       snap_state: 0,
@@ -103,14 +103,14 @@ impl Client {
     let hints = XGetWMHints (display, self.window);
     if !hints.is_null () {
       if let Some (focused) = focused_client! () {
-        if *focused == *self && ((*hints).flags & XUrgencyHint) == 1 {
+        if *focused == *self && ((*hints).flags & XUrgencyHint) != 0 {
           // It's being made urgent but it's already the active window
           (*hints).flags &= !XUrgencyHint;
           XSetWMHints (display, self.window, hints);
         }
       }
       else {
-        self.is_urgent = ((*hints).flags & XUrgencyHint) == 1;
+        self.is_urgent = ((*hints).flags & XUrgencyHint) != 0;
       }
       XFree (hints as *mut c_void);
     }
