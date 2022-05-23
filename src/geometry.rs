@@ -20,13 +20,14 @@ impl Geometry {
   pub fn expand (&mut self, by: i32) {
     self.x -= by;
     self.y -= by;
+    let by2 = by << 1;
     if by >= 0 {
-      self.w += by as u32;
-      self.h += by as u32;
+      self.w += by2 as u32;
+      self.h += by2 as u32;
     }
     else {
-      self.w -= -by as u32;
-      self.h -= -by as u32;
+      self.w -= -by2 as u32;
+      self.h -= -by2 as u32;
     }
   }
 }
