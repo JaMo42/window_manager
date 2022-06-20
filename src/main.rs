@@ -262,7 +262,9 @@ unsafe fn run () {
   XSync (display, X_FALSE);
   while running {
     XNextEvent (display, &mut event);
-    log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
+    if cfg!(debug_assertions) {
+      log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
+    }
     match event.type_ {
       ButtonPress => event::button_press (&event.button),
       ClientMessage => event::client_message (&event.client_message),
@@ -274,7 +276,9 @@ unsafe fn run () {
       MotionNotify => event::motion (&event.button),
       PropertyNotify => event::property_notify (&event.property),
       _ => {
-        log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
+        if cfg!(debug_assertions) {
+          log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
+        }
       }
     }
   }
