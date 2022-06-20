@@ -34,6 +34,7 @@ mod paths {
   pub static mut config: String = String::new ();
   pub static mut autostartrc: String = String::new ();
   pub static mut hiberfile: String = String::new ();
+  pub static mut logfile: String = String::new ();
 
   pub unsafe fn load () {
     let config_dir = if let Ok (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME") {
@@ -48,6 +49,7 @@ mod paths {
     config = format! ("{}/config", config_dir);
     autostartrc = format! ("{}/autostartrc", config_dir);
     hiberfile = format! ("{}/.hiberfile", config_dir);
+    logfile = format! ("{}/log.txt", config_dir);
   }
 }
 
@@ -421,23 +423,23 @@ fn run_process (command_line: &str) {
 
 
 fn main () {
-  // Configure logging
-  let log_file = log4rs::append::file::FileAppender::builder ()
-    .encoder (Box::new (log4rs::encode::pattern::PatternEncoder::new ("{l:<5}| {m}\n")))
-    .build ("log.txt")
-    .unwrap ();
-  let log_config = log4rs::config::Config::builder ()
-    .appender (log4rs::config::Appender::builder ()
-      .build ("log_file", Box::new (log_file)))
-    .build (log4rs::config::Root::builder ()
-      .appender ("log_file")
-      .build (log::LevelFilter::Trace))
-    .unwrap ();
-  log4rs::init_config (log_config).unwrap ();
-  // Run window manager
-  std::env::set_var ("WM", "window_manager");
   unsafe {
     paths::load ();
+    // Configure logging
+    let log_file = log4rs::append::file::FileAppender::builder ()
+      .encoder (Box::new (log4rs::encode::pattern::PatternEncoder::new ("{l:<5}| {m}\n")))
+      .build (paths::logfile.as_str ())
+      .unwrap ();
+    let log_config = log4rs::config::Config::builder ()
+      .appender (log4rs::config::Appender::builder ()
+        .build ("log_file", Box::new (log_file)))
+      .build (log4rs::config::Root::builder ()
+        .appender ("log_file")
+        .build (log::LevelFilter::Trace))
+      .unwrap ();
+    log4rs::init_config (log_config).unwrap ();
+    // Run window manager
+    std::env::set_var ("WM", "window_manager");
     log::trace! ("Connecting to X server");
     connect ();
     log::info! ("Display size: {}x{}", screen_size.w, screen_size.h);

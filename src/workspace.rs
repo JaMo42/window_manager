@@ -23,9 +23,9 @@ impl Workspace {
   }
 
   pub unsafe fn push (&mut self, client: Client) {
-    if !self.clients.is_empty () {
+    if let Some (prev) = self.clients.first () {
       XSetWindowBorder (
-        display, self.clients[0].window, (*config).colors.normal.pixel
+        display, prev.window, (*config).colors.normal.pixel
       );
     }
     XSetWindowBorder (display, client.window, (*config).colors.focused.pixel);
@@ -38,8 +38,8 @@ impl Workspace {
       self.clients.remove (idx);
       // Update focused window
       unsafe {
-        if !self.clients.is_empty () {
-          self.clients[0].focus ();
+        if let Some (first) = self.clients.first_mut () {
+          first.focus ();
         }
         else {
           property::delete (root, property::Net::ActiveWindow);
@@ -49,9 +49,9 @@ impl Workspace {
   }
 
   pub unsafe fn focus (&mut self, window: Window) {
-    if !self.clients.is_empty () {
+    if let Some (prev) = self.clients.first () {
       XSetWindowBorder (
-        display, self.clients[0].window, (*config).colors.normal.pixel
+        display, prev.window, (*config).colors.normal.pixel
       );
     }
     if window == X_NONE {

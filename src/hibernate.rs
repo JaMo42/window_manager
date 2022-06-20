@@ -9,7 +9,6 @@ use super::geometry::Geometry;
 use super::paths;
 
 // XRes bindings
-// (source file locations based on the version I have on my machine :^))
 
 // X11/extensions/XRes.h:35
 #[repr(C)]
@@ -90,7 +89,6 @@ pub unsafe fn store () -> Result<(), std::io::Error> {
   // Clients
   //for ws_idx in 0..workspaces.len () {
   for (ws_idx, workspace) in workspaces.iter ().enumerate () {
-    //if workspaces[ws_idx].clients.is_empty () {
     if workspace.clients.is_empty () {
       continue;
     }
