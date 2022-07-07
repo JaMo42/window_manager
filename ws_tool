@@ -9,14 +9,30 @@ from Xlib.protocol.event import ClientMessage
 display_address = None
 display = None
 root = None
-number_of_desktops_atom = None
-current_desktop_atom = None
+number_of_desktops = None
+current_desktop = None
+
+
+class Atom:
+  def __init__ (self, name):
+    self._name = name
+    self._atom = display.intern_atom (name)
+
+  def unwrap (self):
+    return self._atom
+
+  def get_property (self):
+    p = root.get_full_property (self._atom, X.AnyPropertyType)
+    if p is None:
+      print (f"Property '{self._name}' not found; is this the correct display: '{display_address}'?")
+      exit (1)
+    return p.value[0]
 
 
 class Action:
   def get ():
-    print ("Number of workspaces:", get_number_of_desktops ())
-    print ("Current workspace:   ", get_current_desktop () + 1)
+    print ("Number of workspaces:", number_of_desktops.get_property ())
+    print ("Current workspace:   ", current_desktop.get_property () + 1)
 
 
   def set (ws):
@@ -24,19 +40,19 @@ class Action:
       data = idx.to_bytes (4, sys.byteorder).ljust (20)
       event = ClientMessage (
         window = root,
-        client_type = current_desktop_atom,
+        client_type = current_desktop.unwrap (),
         data = (32, data)
       )
       root.send_event (event, event_mask=X.SubstructureRedirectMask)
       # Without this the window manager does not receive a ClientMessage event???
-      get_current_desktop ()
-    N = get_number_of_desktops ()
+      current_desktop.get_property ()
+    N = number_of_desktops.get_property ()
     if ws == "next":
-      idx = (get_current_desktop () + 1) % N
+      idx = (current_desktop.get_property () + 1) % N
       do_set (idx)
       ws = idx + 1
     elif ws == "prev":
-      idx = (get_current_desktop () - 1) % N
+      idx = (current_desktop.get_property () - 1) % N
       do_set (idx)
       ws = idx + 1
     else:
@@ -48,31 +64,16 @@ class Action:
 
 
   def format (inactive, active, join):
-    N = get_number_of_desktops ()
-    C = get_current_desktop ()
+    N = number_of_desktops.get_property ()
+    C = current_desktop.get_property ()
     print ((join or ' ').join (
       [inactive, active][i==C].format (w=i+1) for i in range (N)))
-
-
-def get_number_of_desktops ():
-  prop = root.get_full_property (number_of_desktops_atom, X.AnyPropertyType)
-  if prop is None:
-    print (f"Property not found, is this the correct dispaly: '{display_address}'?")
-    exit (1)
-  return prop.value[0]
-
-
-def get_current_desktop ():
-  prop = root.get_full_property (current_desktop_atom, X.AnyPropertyType)
-  if prop is None:
-    print (f"Property not found, is this the correct display: '{display_address}'?")
-    exit (1)
-  return prop.value[0]
 
 
 def parse_args ():
   p = argparse.ArgumentParser ()
   s = p.add_subparsers (dest="sub_command", title="subcommands")
+  s.required = True
   # get
   get_p = s.add_parser ("get")
   # set
@@ -104,7 +105,7 @@ def parse_args ():
 
 
 def main ():
-  global display_address, display, root, number_of_desktops_atom, current_desktop_atom
+  global display_address, display, root, number_of_desktops, current_desktop
   args = parse_args ()
   display_address = os.getenv ("DISPLAY")
   if display_address is None:
@@ -112,8 +113,8 @@ def main ():
     return
   display = Display (display_address)
   root = display.screen ().root
-  number_of_desktops_atom = display.intern_atom ("_NET_NUMBER_OF_DESKTOPS")
-  current_desktop_atom = display.intern_atom ("_NET_CURRENT_DESKTOP")
+  number_of_desktops = Atom ("_NET_NUMBER_OF_DESKTOPS")
+  current_desktop = Atom ("_NET_CURRENT_DESKTOP")
   if args.sub_command == "get":
     Action.get ()
   elif args.sub_command == "set":
