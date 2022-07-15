@@ -74,4 +74,3 @@ impl Color_Scheme {
     }
   }
 }
-

@@ -1,3 +1,3 @@
 #!/usr/bin/sh
-> log.txt
+> $HOME/.config/window_manager/log.txt
 startx ./xinitrc

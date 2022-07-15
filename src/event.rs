@@ -427,4 +427,3 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
     }
   }
 }
-
