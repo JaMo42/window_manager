@@ -5,6 +5,7 @@ import argparse
 from Xlib import X
 from Xlib.display import Display
 from Xlib.protocol.event import ClientMessage
+from Xlib.error import DisplayNameError
 
 display_address = None
 display = None
@@ -111,7 +112,11 @@ def main ():
   if display_address is None:
     print ("No display set")
     return
-  display = Display (display_address)
+  try:
+    display = Display (display_address)
+  except DisplayNameError:
+    print (f"ws_tool: Can't open display '{display_address}'")
+    exit (1)
   root = display.screen ().root
   number_of_desktops = Atom ("_NET_NUMBER_OF_DESKTOPS")
   current_desktop = Atom ("_NET_CURRENT_DESKTOP")
