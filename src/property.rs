@@ -26,6 +26,7 @@ pub enum Net {
   WMStateDemandsAttention,
   WMWindowType,
   WMWindowTypeDialog,
+  WMWindowTypeDock,
   Last
 }
 
@@ -112,6 +113,7 @@ pub unsafe fn load_atoms () {
   N! (WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
   N! (WMWindowType, "_NET_WM_WINDOW_TYPE");
   N! (WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
+  N! (WMWindowTypeDock, "_NET_WM_WINDOW_TYPE_DOCK");
 
   log::debug! ("Net Properties: {:?}", net);
   log::debug! ("WM Properties: {:?}", wm);
@@ -130,7 +132,7 @@ pub unsafe fn init_set_root_properties () {
   delete (root, Net::ActiveWindow);
   delete (root, Net::ClientList);
 
-  set_cardinal! (root, Net::NumberOfDesktops, (*config).workspace_count);
+  set_cardinal! (root, Net::NumberOfDesktops, workspaces.len ());
   set_cardinal! (root, Net::CurrentDesktop, active_workspace);
 }
 
@@ -217,4 +219,3 @@ pub unsafe fn get_atom<P: Into_Atom> (window: Window, property: P) -> Atom {
     X_NONE
   }
 }
-

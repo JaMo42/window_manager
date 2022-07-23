@@ -99,6 +99,7 @@ impl Config {
     // Parse file
     let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
     let parser = config_parser::Parser::new (source.chars ());
+    let mut color_links = Vec::<(String, String)>::new ();
     for def in parser {
       use config_parser::Definition_Type::*;
       match def {
@@ -144,13 +145,21 @@ impl Config {
         }
         Color (element, color_hex) => {
           log::info! ("config: color: {} {}", element, color_hex);
-          self.colors.set (&element, &color_hex);
+          if color_hex.chars ().next ().unwrap () == '#' {
+            self.colors.set (&element, &color_hex);
+          }
+          else {
+            color_links.push ((element, color_hex));
+          }
         }
         Hibernate => {
           log::info! ("config: enable hibernation");
           self.hibernate = true;
         }
       }
+    }
+    for (dest, source) in color_links {
+      self.colors.link (dest.as_str (), source.as_str ());
     }
     // Pre-defined key bindings
     for ws_idx in 0..self.workspace_count {
@@ -179,4 +188,3 @@ impl Config {
     }
   }
 }
-

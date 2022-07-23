@@ -12,7 +12,7 @@ macro_rules! xft_color_new {
   }
 }
 
-type Color = XftColor;
+pub type Color = XftColor;
 
 pub struct Color_Scheme {
   pub focused: Color,
@@ -53,15 +53,30 @@ impl Color_Scheme {
     set_color! (self.urgent, "#770000");
   }
 
-  pub fn set (&mut self, element: &str, color_hex: &str) {
-    let dest: *mut XftColor = match element {
+  fn _get_elem (&self, element: &str) -> XftColor {
+    match element {
+      "Focused" => self.focused,
+      "Normal" => self.normal,
+      "Background" => self.background,
+      "Selected" => self.selected,
+      "Urgent" => self.urgent,
+      _ => panic! ("Color_Scheme::set: unknown element: {}", element)
+    }
+  }
+
+  fn _get_elem_mut (&mut self, element: &str) -> &mut XftColor {
+    match element {
       "Focused" => &mut self.focused,
       "Normal" => &mut self.normal,
       "Background" => &mut self.background,
       "Selected" => &mut self.selected,
       "Urgent" => &mut self.urgent,
       _ => panic! ("Color_Scheme::set: unknown element: {}", element)
-    };
+    }
+  }
+
+  pub fn set (&mut self, element: &str, color_hex: &str) {
+    let dest: *mut XftColor = self._get_elem_mut (element);
     unsafe {
       let scn = XDefaultScreen (display);
       XftColorAllocName (
@@ -72,5 +87,9 @@ impl Color_Scheme {
         dest
       );
     }
+  }
+
+  pub fn link (&mut self, dest: &str, source: &str) {
+    *self._get_elem_mut (dest) = self._get_elem (source);
   }
 }

@@ -174,4 +174,3 @@ pub fn from_str (s: &str) -> super::config::Action {
     _ => panic! ("action::from_str: unknown action: {}", s)
   }
 }
-

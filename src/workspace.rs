@@ -50,6 +50,9 @@ impl Workspace {
 
   pub unsafe fn focus (&mut self, window: Window) {
     if let Some (prev) = self.clients.first () {
+      if window == prev.window {
+        return;
+      }
       XSetWindowBorder (
         display, prev.window, (*config).colors.normal.pixel
       );
@@ -134,6 +137,10 @@ impl Workspace {
     // Re-grab main input
     super::grab_keys ();
   }
+
+  pub fn has_urgent (&self) -> bool {
+    self.clients.iter ().any (|&c| c.is_urgent)
+  }
 }
 
 /*impl IntoIterator for Workspace {
@@ -157,4 +164,3 @@ impl DerefMut for Workspace {
     &mut self.clients[..]
   }
 }
-

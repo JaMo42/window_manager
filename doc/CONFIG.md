@@ -60,6 +60,12 @@ color <Element> #RRGGBB
 Set the [`<Element>`](#color-elements) to the hex-color.
 
 ```
+color <Element1> <Element2>
+```
+Set the [`<Element1>`](#color-elements) to the same color as `<Element2>`.
+Can be used before `Element2` is defined.
+
+```
 hibernate
 ```
 Enable the fake-hibernation.

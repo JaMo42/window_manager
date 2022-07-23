@@ -263,7 +263,12 @@ unsafe fn run () {
   while running {
     XNextEvent (display, &mut event);
     if cfg!(debug_assertions) {
-      log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
+      if event.type_ as usize > 35 {
+        log::trace! ("Event: {:>2} ???", event.type_);
+      }
+      else {
+        log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
+      }
     }
     match event.type_ {
       ButtonPress => event::button_press (&event.button),
@@ -384,14 +389,6 @@ unsafe fn window_title (window: Window) -> String {
       title
     }
   }
-}
-
-
-unsafe fn focus_window (window: Window) {
-  XSetWindowBorder (display, window, (*config).colors.focused.pixel);
-  XSetInputFocus (display, window, RevertToParent, CurrentTime);
-  XRaiseWindow (display, window);
-  property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &window, 1);
 }
 
 

@@ -111,15 +111,15 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
     }
 
     match self.next_thing ().as_str () {
-      "workspaces" => Workspaces (self.parse_number::<usize> ()),
-      "gaps" => Gaps (self.parse_number::<c_uint> ()),
+      "workspaces" => Workspaces (self.parse_number ()),
+      "gaps" => Gaps (self.parse_number ()),
       "pad" => Padding (
-        self.parse_number::<c_int> (),
-        self.parse_number::<c_int> (),
-        self.parse_number::<c_int> (),
-        self.parse_number::<c_int> ()
+        self.parse_number (),
+        self.parse_number (),
+        self.parse_number (),
+        self.parse_number ()
       ),
-      "border" => Border (self.parse_number::<c_uint> ()),
+      "border" => Border (self.parse_number ()),
       "meta" => Meta (self.next_thing ()),
       "mod" => {
         let mods = modifiers_from_string (self.next_thing ());
@@ -203,4 +203,3 @@ fn mods_and_key_from_string (s: String, user_mod: c_uint) -> (c_uint, String) {
   }
   (mods, key)
 }
-

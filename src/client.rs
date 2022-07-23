@@ -21,6 +21,12 @@ impl Client {
     let mut wc: XWindowChanges = uninitialized! ();
     wc.border_width = (*config).border_width;
     XConfigureWindow (display, window, CWBorderWidth as u32, &mut wc);
+    XSelectInput (
+      display,
+      window,
+      //EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask
+      PropertyChangeMask
+    );
     let geometry = get_window_geometry (window);
     Client {
       window,
@@ -75,7 +81,10 @@ impl Client {
     if self.is_urgent {
       self.set_urgency (false);
     }
-    focus_window (self.window);
+    XSetWindowBorder (display, self.window, (*config).colors.focused.pixel);
+    XSetInputFocus (display, self.window, RevertToParent, CurrentTime);
+    XRaiseWindow (display, self.window);
+    property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &self.window, 1);
     self.send_event (property::atom (WM::TakeFocus));
   }
 
@@ -179,4 +188,3 @@ impl std::fmt::Display for Client {
     write! (f, "'{}' ({})", unsafe { window_title (self.window) }, self.window)
   }
 }
-

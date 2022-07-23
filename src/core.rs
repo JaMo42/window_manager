@@ -3,6 +3,8 @@ use x11::xlib::*;
 use super::config::Config;
 use super::geometry::Geometry;
 use super::workspace::Workspace;
+use super::draw::Drawing_Context;
+use super::bar::Bar;
 
 macro_rules! c_str {
   ($s:expr) => {

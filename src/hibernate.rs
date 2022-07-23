@@ -172,7 +172,7 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
   let mut ws_idx: usize = 0;
   // Active workspace
   active_workspace = read_usize (&mut it);
-  if active_workspace >= (*config).workspace_count {
+  if active_workspace >= workspaces.len () {
     log::warn! ("Hibernated active workspace is greater than current workspace count");
     active_workspace = 0;
   }
@@ -187,7 +187,7 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     if *it.peek ().unwrap () == b'#' {
       it.next ().unwrap ();
       ws_idx = read_usize (&mut it);
-      if ws_idx >= (*config).workspace_count {
+      if ws_idx >= workspaces.len () {
         log::warn! ("Cannot load workspace {} from hibernation (not enough workspaces)", ws_idx + 1);
         // Skip until next workspace identifier
         // We could just break here since we serealize workspaces in-order but
@@ -281,4 +281,3 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
   }
   Ok (())
 }
-
