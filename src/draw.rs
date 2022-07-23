@@ -57,6 +57,7 @@ impl Drawing_Context {
     self.pango_layout.set_font_description (Some (&pango::FontDescription::from_string (description)));
   }
 
+  #[allow(clippy::too_many_arguments)]
   pub unsafe fn text_in_rect (
     &mut self,
     mut x: i32,
@@ -73,10 +74,10 @@ impl Drawing_Context {
     tw /= pango::SCALE;
     th /= pango::SCALE;
     if center_vertically && th < h {
-      y = y + (h - th) / 2;
+      y += (h - th) / 2;
     }
     if center_horizontally && tw < w {
-      x = x + (w - tw) / 2;
+      x += (w - tw) / 2;
     }
     self.cairo_context.set_source_rgba (
       color.color.red as f64 / 65535.0,

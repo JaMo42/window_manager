@@ -149,7 +149,7 @@ impl Config {
         }
         Color (element, color_hex) => {
           log::info! ("config: color: {} {}", element, color_hex);
-          if color_hex.chars ().next ().unwrap () == '#' {
+          if color_hex.starts_with ('#') {
             self.colors.set (&element, &color_hex);
           }
           else {

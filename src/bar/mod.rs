@@ -1,7 +1,6 @@
 use x11::xlib::*;
 use std::ffi::CString;
 use libc::{c_char, c_uchar, c_uint};
-use chrono;
 use crate::core::*;
 use crate::cursor;
 use crate::property;
@@ -83,14 +82,14 @@ impl Bar {
     (*draw).rect (0, 0, bar.width, bar.height, (*config).colors.bar_background.pixel, true);
     // ==== LEFT ====
     // Workspaces
-    for i in 0..workspaces.len () {
+    for (idx, workspace) in workspaces.iter ().enumerate () {
       (*draw).rect (
-        (i as u32 * self.height) as i32, 0,
+        (idx as u32 * self.height) as i32, 0,
         self.height, self.height,
-        if workspaces[i].has_urgent () {
+        if workspace.has_urgent () {
           (*config).colors.bar_urgent_workspace.pixel
         }
-        else if i == active_workspace {
+        else if idx == active_workspace {
           (*config).colors.bar_active_workspace.pixel
         } else {
           (*config).colors.bar_workspace.pixel
@@ -98,13 +97,13 @@ impl Bar {
         true
       );
       (*draw).text_in_rect (
-        (i as u32 * self.height) as i32, 0,
+        (idx as u32 * self.height) as i32, 0,
         self.height as i32, self.height as i32,
-        format! ("{}", i+1).as_str (),
-        if workspaces[i].has_urgent () {
+        format! ("{}", idx+1).as_str (),
+        if workspace.has_urgent () {
           (*config).colors.bar_urgent_workspace_text
         }
-        else if i == active_workspace {
+        else if idx == active_workspace {
           (*config).colors.bar_active_workspace_text
         } else {
           (*config).colors.bar_text

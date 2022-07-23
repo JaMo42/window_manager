@@ -32,7 +32,7 @@ use config::*;
 use workspace::*;
 use property::Net;
 use draw::Drawing_Context;
-use bar::bar::Bar;
+use bar::Bar;
 
 mod paths {
   pub static mut config: String = String::new ();
