@@ -53,4 +53,4 @@ pub static mut window_area: Geometry = Geometry::new ();
 pub static mut mouse_held: c_uint = 0;
 // Windows we do not create clients for and that ignore workspaces (status bars)
 pub static mut meta_windows: Vec<Window> = Vec::new ();
-
+pub static mut draw: *mut Drawing_Context = std::ptr::null_mut ();

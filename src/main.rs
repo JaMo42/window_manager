@@ -22,6 +22,7 @@ mod hibernate;
 #[macro_use]
 mod property;
 mod cursor;
+mod draw;
 
 use crate::core::*;
 use client::*;
@@ -29,6 +30,7 @@ use geometry::*;
 use config::*;
 use workspace::*;
 use property::Net;
+use draw::Drawing_Context;
 
 mod paths {
   pub static mut config: String = String::new ();
@@ -448,6 +450,8 @@ fn main () {
     let mut config_instance = Config::new ();
     config_instance.load ();
     config = &config_instance;
+    let mut drawing_context_instance = Drawing_Context::new ();
+    draw = &mut drawing_context_instance;
     log::trace! ("Initializing");
     init ();
     log::trace! ("Running");
