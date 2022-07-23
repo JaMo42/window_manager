@@ -43,6 +43,7 @@ impl Workspace {
         }
         else {
           property::delete (root, property::Net::ActiveWindow);
+          bar.draw ();
         }
       }
     }

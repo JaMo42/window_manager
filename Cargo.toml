@@ -19,3 +19,6 @@ pango = "0.15.10"
 pangocairo = "0.15.1"
 chrono = "0.4.19"
 
+[features]
+default = ["bar"]
+bar = []

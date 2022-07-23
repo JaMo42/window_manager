@@ -132,6 +132,7 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
     property::set (
       root, Net::ActiveWindow, XA_WINDOW, 32, std::ptr::null_mut::<c_uchar> (), 0
     );
+    bar.draw ();
   }
   set_cardinal! (root, property::atom (Net::CurrentDesktop), active_workspace);
 }

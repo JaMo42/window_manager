@@ -70,6 +70,17 @@ hibernate
 ```
 Enable the fake-hibernation.
 
+```
+bar_font <font>
+```
+Set the font of the status bar.
+`<font>` is a pango font description, example: `Noto Sans 16` or `sans bold 18`.
+
+```
+bar_opacity <percentage>
+```
+Set the status bar opacity, `percentage` is a number between 0 and 100.
+
 ## Modifiers
 
 - `Win` Windows key
@@ -110,3 +121,20 @@ Enable the fake-hibernation.
 
 - `Background` the desktop background (use an external program like `feh` to set a background image)
 
+- Bar colors
+
+  - `Bar::Background` background color of the bar
+
+  - `Bar::Text` default text color
+
+  - `Bar::Workspace` background color for non-active workspace indicators
+
+  - `Bar::WorkspaceText` respective text color
+
+  - `Bar::ActiveWorkspace` background color for non-active workspace indicators
+
+  - `Bar::ActiveWorkspaceText` respective text color
+
+  - `Bar::UrgentWorkspace` background color for indicators of workspaces which contain windows demanding attention
+
+  - `Bar::UrgentWorkspaceText` respective text color

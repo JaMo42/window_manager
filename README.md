@@ -144,6 +144,19 @@ See the [Polybar](#polybar) section for an example usage of the `format` command
 
 Rquires the XLib package: `pip install python3-xlib`.
 
+## Status bar
+
+The window manager has a builtin status bar which is enabled by default.
+It can be disabled by calling `cargo build` with `--no-default-features`.
+See the [configuration file format](./doc/CONFIG.md) for customization options,
+currently only the font and colors can be changed.
+
+The bar contains a workspace switcher and active window title on the left and the current battery charge and time on the right.
+
+Preview:
+
+![window_manager](./doc/bar.png "Builtin status bar")
+
 ## Polybar
 
 Make polybar a meta-window:
@@ -175,4 +188,3 @@ Some projects I used to learn how windows managers work.
 - [dwm](https://dwm.suckless.org/)
 - [tinywm](https://github.com/mackstann/tinywm)
 - [How X Window Managers Work, And How To Write One](https://jichu4n.com/posts/how-x-window-managers-work-and-how-to-write-one-part-i/)
-

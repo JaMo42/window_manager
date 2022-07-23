@@ -47,3 +47,14 @@ color Background #111111
 # Enable hibernation
 #hibernate
 
+# Bar
+bar_font sans 18
+bar_opacity 80
+color Bar::Background #161514
+color Bar::Text #e9e9e9
+color Bar::Workspace Bar::Background
+color Bar::WorkspaceText Bar::Text
+color Bar::ActiveWorkspace Focused
+color Bar::ActiveWorkspaceText #030405
+color Bar::UrgentWorkspace Urgent
+color Bar::UrgentWorkspaceText #030405

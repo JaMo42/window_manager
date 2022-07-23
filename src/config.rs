@@ -66,7 +66,9 @@ pub struct Config {
   pub workspace_count: usize,
   pub meta_window_classes: Vec<String>,
   pub colors: Color_Scheme,
-  pub hibernate: bool
+  pub hibernate: bool,
+  pub bar_font: String,
+  pub bar_opacity: u8
 }
 
 impl Config {
@@ -80,7 +82,9 @@ impl Config {
       workspace_count: 1,
       meta_window_classes: Vec::new (),
       colors: Color_Scheme::new (),
-      hibernate: false
+      hibernate: false,
+      bar_font: String::new (),
+      bar_opacity: 100
     }
   }
 
@@ -155,6 +159,15 @@ impl Config {
         Hibernate => {
           log::info! ("config: enable hibernation");
           self.hibernate = true;
+        }
+        Bar_Font (description) => {
+          log::info! ("config: bar font: {}", description);
+          self.bar_font = description
+        },
+        Bar_Opacity (percent) => {
+          assert! (percent <= 100);
+          log::info! ("config: bar opacity: {}%", percent);
+          self.bar_opacity = percent;
         }
       }
     }

@@ -12,7 +12,9 @@ pub enum Definition_Type {
   Bind_Key (c_uint, String, String),
   Bind_Command (c_uint, String, String),
   Color (String, String),
-  Hibernate
+  Hibernate,
+  Bar_Font (String),
+  Bar_Opacity (u8)
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -138,7 +140,16 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       }
       "color" => Color (self.next_thing (), self.next_thing ()),
       "hibernate" => Hibernate,
-      _=> {
+      "bar_font" => Bar_Font (self.rest_of_line ().trim ().to_string ()),
+      "bar_opacity" => {
+        let percent: u8 = self.parse_number ();
+        if percent > 100 {
+          self.fail ("Bar opacity must be in range 0~100");
+          unreachable! ();
+        }
+        Bar_Opacity (percent)
+      }
+      _ => {
         self.fail ("Unknown keyword");
         unreachable! ();
       }

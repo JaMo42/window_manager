@@ -26,6 +26,13 @@ unsafe fn win2client<'a> (window: Window) -> Option<&'a mut Client> {
 
 
 pub unsafe fn button_press (event: &XButtonEvent) {
+  if cfg! (feature = "bar") {
+    // Meta key is ignored when clicking on bar
+    if event.window == bar.window || event.subwindow == bar.window {
+      bar.button_press (event);
+      return;
+    }
+  }
   if event.subwindow == X_NONE {
     return;
   }
@@ -352,6 +359,7 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
       client.update_hints ();
     }
   }
+  bar.draw ();
 }
 
 pub unsafe fn client_message (event: &XClientMessageEvent) {
@@ -425,5 +433,11 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
         return;
       }
     }
+  }
+}
+
+pub unsafe fn expose (event: &XExposeEvent) {
+  if event.count == 0 {
+    bar.draw ();
   }
 }

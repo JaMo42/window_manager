@@ -86,6 +86,7 @@ impl Client {
     XRaiseWindow (display, self.window);
     property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &self.window, 1);
     self.send_event (property::atom (WM::TakeFocus));
+    bar.draw ();
   }
 
   pub unsafe fn set_urgency (&mut self, urgency: bool) {
@@ -106,6 +107,7 @@ impl Client {
       XSetWMHints (display, self.window, hints);
       XFree (hints as *mut c_void);
     }
+    bar.draw ();
   }
 
   pub unsafe fn update_hints (&mut self) {

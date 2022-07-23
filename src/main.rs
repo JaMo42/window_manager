@@ -23,6 +23,7 @@ mod hibernate;
 mod property;
 mod cursor;
 mod draw;
+mod bar;
 
 use crate::core::*;
 use client::*;
@@ -31,6 +32,7 @@ use config::*;
 use workspace::*;
 use property::Net;
 use draw::Drawing_Context;
+use bar::Bar;
 
 mod paths {
   pub static mut config: String = String::new ();
@@ -218,6 +220,11 @@ unsafe fn init () {
       log::info! ("No autostartrc found");
     }
   }
+  log::info! ("Ran autostartrc");
+  // Bar
+  if cfg! (feature = "bar") {
+    bar = Bar::create ();
+  }
 }
 
 unsafe fn run () {
@@ -282,6 +289,7 @@ unsafe fn run () {
       MapRequest => event::map_request (&event.map_request),
       MotionNotify => event::motion (&event.button),
       PropertyNotify => event::property_notify (&event.property),
+      Expose => event::expose (&event.expose),
       _ => {
         if cfg!(debug_assertions) {
           log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
