@@ -2,10 +2,11 @@ use x11::xlib::*;
 use std::ffi::CString;
 use libc::{c_char, c_uchar, c_uint};
 use chrono;
-use super::core::*;
-use super::cursor;
-use super::property;
-use super::action::select_workspace;
+use crate::core::*;
+use crate::cursor;
+use crate::property;
+use crate::action::select_workspace;
+use crate::window_title;
 
 
 pub struct Bar {
@@ -114,7 +115,7 @@ impl Bar {
     }
     // Active window title
     if let Some (f) = focused_client! () {
-      let title = super::window_title (f.window);
+      let title = window_title (f.window);
       (*draw).text_in_rect(
         (self.height * workspaces.len () as u32 + 20) as i32,
         0,
@@ -187,3 +188,4 @@ impl Bar {
     }
   }
 }
+
