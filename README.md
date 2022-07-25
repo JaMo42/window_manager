@@ -20,6 +20,8 @@
 
 - Workspaces/Virtual Desktops
 
+- Builtin status bar
+
 - Fake [Hibernation](#hibernation)
 
 ## Dependencies

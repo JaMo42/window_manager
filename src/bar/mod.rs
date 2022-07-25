@@ -166,7 +166,7 @@ impl Bar {
     }
     self.last_scroll_time = event.time;
     // Ignore clicks outside of workspace widget
-    if event.x <= (self.height * workspaces.len () as u32) as i32 {
+    if event.x < (self.height * workspaces.len () as u32) as i32 {
       if event.button == Button1 || event.button == Button2 || event.button == Button3 {
         // Left/Middle/Right click selects workspace under cursor
         select_workspace (event.x as usize / self.height as usize, None);
