@@ -1,5 +1,4 @@
 use std::cmp::max;
-use rand::Rng;
 use x11::xlib::*;
 use super::core::*;
 use super::config::*;
@@ -291,31 +290,13 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       if let Some (trans) = win2client (trans_win) {
         has_trans_client = true;
         target_workspace = trans.workspace;
-        // Center inside parent
-        g.x = trans.geometry.x + (trans.geometry.w as i32 - g.w as i32) / 2;
-        g.y = trans.geometry.y + (trans.geometry.h as i32 - g.h as i32) / 2;
+        g.center (&trans.geometry);
+        g.clamp (&window_area);
       }
     }
     if !has_trans_client {
-      // Give client random position inside window area and clamp its size into
-      // the window area
       let mut rng = rand::thread_rng ();
-      if g.w < window_area.w {
-        let max_x = (window_area.w - g.w) as c_int + window_area.x;
-        g.x = rng.gen_range (window_area.x..=max_x);
-      }
-      else {
-        g.x = window_area.x;
-        g.w = window_area.w - ((*config).border_width << 1) as c_uint;
-      }
-      if g.h < window_area.h {
-        let max_y = (window_area.h - g.h) as c_int + window_area.y;
-        g.y = rng.gen_range (window_area.y..=max_y);
-      }
-      else {
-        g.y = window_area.y;
-        g.h = window_area.h - ((*config).border_width << 1) as c_uint;
-      }
+      g.random_inside (&window_area, &mut rng);
     }
     c.move_and_resize (g);
     c.prev_geometry = c.geometry;

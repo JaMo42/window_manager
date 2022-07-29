@@ -1,4 +1,5 @@
 use std::os::raw::*;
+use rand::{prelude::ThreadRng, Rng};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Geometry {
@@ -30,5 +31,48 @@ impl Geometry {
       self.h -= -by2 as u32;
     }
   }
-}
 
+  pub unsafe fn clamp (&mut self, parent: &Geometry) {
+    if self.x < parent.x {
+      self.x = parent.x;
+    }
+    if self.y < parent.y {
+      self.y = parent.y;
+    }
+    if self.w > parent.w {
+      self.w = parent.w;
+    }
+    if self.h > parent.h {
+      self.h = parent.h;
+    }
+  }
+
+  pub unsafe fn center (&mut self, parent: &Geometry) {
+    self.x = parent.x + (parent.w as i32 - self.w as i32) / 2;
+    self.y = parent.y + (parent.h as i32 - self.h as i32) / 2;
+  }
+
+  pub unsafe fn center_inside (&mut self, parent: &Geometry) {
+    self.center (parent);
+    self.clamp (parent);
+  }
+
+  pub unsafe fn random_inside (&mut self, parent: &Geometry, rng: &mut ThreadRng) {
+    if self.w >= parent.w {
+      self.w = parent.w;
+      self.x = parent.x;
+    }
+    else {
+      let max_x = (parent.w - self.w) as c_int + parent.x;
+      self.x = rng.gen_range (parent.x..=max_x);
+    }
+    if self.h >= parent.h {
+      self.h = parent.h;
+      self.y = parent.y;
+    }
+    else {
+      let max_y = (parent.h - self.h) as c_int + parent.y;
+      self.y = rng.gen_range (parent.y..=max_y);
+    }
+  }
+}

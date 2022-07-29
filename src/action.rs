@@ -104,13 +104,8 @@ pub unsafe fn center (client: &mut Client) {
   if !client.may_move () {
     return;
   }
+  client.prev_geometry.center_inside (&window_area);
   client.unsnap ();
-  let x = window_area.x + (window_area.w as i32 - client.geometry.w as i32) / 2;
-  let y = window_area.y + (window_area.h as i32 - client.geometry.h as i32) / 2;
-  client.move_and_resize (Geometry::from_parts (
-    x, y, client.geometry.w, client.geometry.h
-  ));
-  client.prev_geometry = client.geometry;
 }
 
 
