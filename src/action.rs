@@ -145,28 +145,3 @@ pub unsafe fn move_to_workspace (idx: usize, client_: Option<&mut Client>) {
 pub unsafe fn switch_window () {
   workspaces[active_workspace].switch_window ();
 }
-
-
-pub fn from_str (s: &str) -> super::config::Action {
-  match s {
-    "close_window" => Action::WM (close_client),
-    "quit" => Action::Generic (quit),
-    "snap_maximized" => Action::WM (|c| unsafe { snap (c, SNAP_MAXIMIZED) }),
-    "snap_left" => Action::WM (snap_left),
-    "snap_right" => Action::WM (snap_right),
-    "unsnap_or_center" =>
-      Action::WM (
-        |c| unsafe {
-          if c.is_snapped () {
-            c.unsnap ();
-          }
-          else {
-            center (c);
-          }
-        }
-      ),
-    "snap_up" => Action::WM (snap_up),
-    "snap_down" => Action::WM (snap_down),
-    _ => panic! ("action::from_str: unknown action: {}", s)
-  }
-}

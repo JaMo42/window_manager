@@ -51,6 +51,36 @@ pub enum Action {
   Generic (unsafe fn ())
 }
 
+impl Action {
+  pub fn from_str (s: &str) -> Self {
+    use Action::*;
+    match s {
+      "close_window" => WM (action::close_client),
+      "quit" => Generic (action::quit),
+      "snap_maximized" => WM (
+        |c| unsafe {
+          action::snap (c, SNAP_MAXIMIZED)
+        }
+      ),
+      "snap_left" => WM (action::snap_left),
+      "snap_right" => WM (action::snap_right),
+      "unsnap_or_center" => WM (
+        |c| unsafe {
+          if c.is_snapped () {
+            c.unsnap ();
+          }
+          else {
+            action::center (c);
+          }
+        }
+      ),
+      "snap_up" => WM (action::snap_up),
+      "snap_down" => WM (action::snap_down),
+      _ => panic! ("action::from_str: unknown action: {}", s)
+    }
+  }
+}
+
 
 pub struct Config {
   pub modifier: c_uint,
@@ -137,7 +167,7 @@ impl Config {
           log::info! ("config: bind: {}+{} -> {}", modifier, key_str, action_str);
           self.add (
             Key::from_str (c_str! (key_str.as_str ()), modifier),
-            action::from_str (&action_str)
+            Action::from_str (&action_str)
           );
         }
         Bind_Command (modifier, key_str, command) => {
