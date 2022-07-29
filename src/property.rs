@@ -67,13 +67,21 @@ pub struct Class_Hints {
 }
 
 impl Class_Hints {
-  pub unsafe fn new(window: Window) -> Class_Hints {
+  pub unsafe fn new (window: Window) -> Option<Class_Hints> {
     let mut class_hints: XClassHint = uninitialized! ();
-    XGetClassHint (display, window, &mut class_hints);
-    Class_Hints {
-      class: string_from_ptr! (class_hints.res_class),
-      name: string_from_ptr! (class_hints.res_name)
+    if XGetClassHint (display, window, &mut class_hints) == 0 {
+      None
     }
+    else {
+      Some (Class_Hints {
+        class: string_from_ptr! (class_hints.res_class),
+        name: string_from_ptr! (class_hints.res_name)
+      })
+    }
+  }
+
+  pub unsafe fn is_meta (&self) -> bool {
+    (*config).meta_window_classes.contains (&self.class)
   }
 }
 
