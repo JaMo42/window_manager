@@ -14,7 +14,8 @@ pub enum Definition_Type {
   Color (String, String),
   Hibernate,
   Bar_Font (String),
-  Bar_Opacity (u8)
+  Bar_Opacity (u8),
+  Bar_Time_Format (String)
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -149,6 +150,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
         }
         Bar_Opacity (percent)
       }
+      "bar_time_format" => Bar_Time_Format (self.rest_of_line ()),
       _ => {
         self.fail ("Unknown keyword");
         unreachable! ();

@@ -98,7 +98,8 @@ pub struct Config {
   pub colors: Color_Scheme,
   pub hibernate: bool,
   pub bar_font: String,
-  pub bar_opacity: u8
+  pub bar_opacity: u8,
+  pub bar_time_format: String
 }
 
 impl Config {
@@ -113,8 +114,9 @@ impl Config {
       meta_window_classes: Vec::new (),
       colors: Color_Scheme::new (),
       hibernate: false,
-      bar_font: String::new (),
-      bar_opacity: 100
+      bar_font: "sans".to_string (),
+      bar_opacity: 100,
+      bar_time_format: "%a %b %e %T %Y".to_string ()
     }
   }
 
@@ -193,11 +195,15 @@ impl Config {
         Bar_Font (description) => {
           log::info! ("config: bar font: {}", description);
           self.bar_font = description
-        },
+        }
         Bar_Opacity (percent) => {
           assert! (percent <= 100);
           log::info! ("config: bar opacity: {}%", percent);
           self.bar_opacity = percent;
+        }
+        Bar_Time_Format (format) => {
+          log::info! ("config: bar time format: '{}'", format);
+          self.bar_time_format = format;
         }
       }
     }

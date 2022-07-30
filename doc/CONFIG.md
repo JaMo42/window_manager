@@ -81,6 +81,11 @@ bar_opacity <percentage>
 ```
 Set the status bar opacity, `percentage` is a number between 0 and 100.
 
+```
+bar_time_format <format>
+```
+Set the format string for the time widget (man strftime).
+
 ## Modifiers
 
 - `Win` Windows key

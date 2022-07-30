@@ -125,7 +125,7 @@ impl Bar {
     // ==== RIGHT ====
     // Time
     let now= chrono::Local::now ();
-    let time_text = format! ("{}", now.format ("%a %b %e %T %Y"));
+    let time_text = format! ("{}", now.format ((*config).bar_time_format.as_str ()));
     let x = (*draw).text (time_text.as_str ())
       .at_right (self.width as i32 - 10, 0)
       .align_vertically (Alignment::Centered, self.height as i32)
