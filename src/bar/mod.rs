@@ -6,6 +6,7 @@ use crate::cursor;
 use crate::property;
 use crate::action::select_workspace;
 use crate::window_title;
+use crate::draw::Alignment;
 
 
 pub struct Bar {
@@ -96,46 +97,40 @@ impl Bar {
         },
         true
       );
-      (*draw).text_in_rect (
-        (idx as u32 * self.height) as i32, 0,
-        self.height as i32, self.height as i32,
-        format! ("{}", idx+1).as_str (),
-        if workspace.has_urgent () {
-          (*config).colors.bar_urgent_workspace_text
-        }
-        else if idx == active_workspace {
-          (*config).colors.bar_active_workspace_text
-        } else {
-          (*config).colors.bar_text
-        },
-        true,
-        true
-      );
+      (*draw).text (format! ("{}", idx+1).as_str ())
+        .at ((idx as u32 * self.height) as i32, 0)
+        .align_horizontally (Alignment::Centered, self.height as i32)
+        .align_vertically (Alignment::Centered, self.height as i32)
+        .color (
+          if workspace.has_urgent () {
+            (*config).colors.bar_urgent_workspace_text
+          }
+          else if idx == active_workspace {
+            (*config).colors.bar_active_workspace_text
+          } else {
+            (*config).colors.bar_text
+          }
+        )
+        .draw ();
     }
+    (*draw).text_color((*config).colors.bar_text);
     // Active window title
     if let Some (f) = focused_client! () {
       let title = window_title (f.window);
-      (*draw).text_in_rect(
-        (self.height * workspaces.len () as u32 + 20) as i32,
-        0,
-        0,
-        self.height as i32,
-        title.as_str (),
-        (*config).colors.bar_text,
-        true,
-        false
-      );
+      (*draw).text (title.as_str ())
+        .at ((self.height * workspaces.len () as u32 + 20) as i32, 0)
+        .align_vertically (Alignment::Centered, self.height as i32)
+        .draw ();
     }
     // ==== RIGHT ====
     // Time
     let now= chrono::Local::now ();
     let time_text = format! ("{}", now.format ("%a %b %e %T %Y"));
-    let x = (*draw).text_right(
-      (self.width - 10) as i32,
-      self.height as i32,
-      time_text.as_str (),
-      (*config).colors.bar_text
-    );
+    let x = (*draw).text (time_text.as_str ())
+      .at_right (self.width as i32 - 10, 0)
+      .align_vertically (Alignment::Centered, self.height as i32)
+      .draw ()
+      .x;
     // Battery
     let power_supply = "BAT0";
     let mut capacity = std::fs::read_to_string (
@@ -147,12 +142,10 @@ impl Bar {
     ).expect("Could not read battery status");
     status.pop ();
     let battery_text = format! ("{}:{}%({})", power_supply, capacity, status);
-    (*draw).text_right (
-      x - 20,
-      self.height as i32,
-      battery_text.as_str (),
-      (*config).colors.bar_text
-    );
+    (*draw).text (battery_text.as_str ())
+      .at_right (x - 20, 0)
+      .align_vertically (Alignment::Centered, self.height as i32)
+      .draw ();
 
     (*draw).render (bar.window, 0, 0, bar.width, bar.height);
   }
@@ -187,4 +180,3 @@ impl Bar {
     }
   }
 }
-

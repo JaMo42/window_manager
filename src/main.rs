@@ -271,7 +271,7 @@ unsafe fn run () {
   XSync (display, X_FALSE);
   while running {
     XNextEvent (display, &mut event);
-    if cfg!(debug_assertions) {
+    if cfg! (debug_assertions) {
       if event.type_ as usize > 35 {
         log::trace! ("Event: {:>2} ???", event.type_);
       }
@@ -446,7 +446,13 @@ fn main () {
         .build ("log_file", Box::new (log_file)))
       .build (log4rs::config::Root::builder ()
         .appender ("log_file")
-        .build (log::LevelFilter::Trace))
+        .build (
+          if cfg! (debug_assertions) {
+            log::LevelFilter::Trace
+          }
+          else {
+            log::LevelFilter::Info
+          }))
       .unwrap ();
     log4rs::init_config (log_config).unwrap ();
     // Run window manager

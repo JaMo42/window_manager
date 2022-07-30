@@ -2,6 +2,7 @@ use super::core::*;
 use cairo::ffi::*;
 use x11::xlib::*;
 use super::color::Color;
+use super::geometry::Geometry;
 
 pub struct Drawing_Context {
   drawable: Drawable,
@@ -57,58 +58,17 @@ impl Drawing_Context {
     self.pango_layout.set_font_description (Some (&pango::FontDescription::from_string (description)));
   }
 
-  #[allow(clippy::too_many_arguments)]
-  pub unsafe fn text_in_rect (
-    &mut self,
-    mut x: i32,
-    mut y: i32,
-    w: i32,
-    h: i32,
-    text: &str,
-    color: Color,
-    center_vertically: bool,
-    center_horizontally: bool,
-  ) -> i32 {
-    self.pango_layout.set_text (text);
-    let (mut tw, mut th) = self.pango_layout.size ();
-    tw /= pango::SCALE;
-    th /= pango::SCALE;
-    if center_vertically && th < h {
-      y += (h - th) / 2;
-    }
-    if center_horizontally && tw < w {
-      x += (w - tw) / 2;
-    }
-    self.cairo_context.set_source_rgba (
+  pub fn text_color (&mut self, color: Color) {
+    self.cairo_context.set_source_rgb (
       color.color.red as f64 / 65535.0,
       color.color.green as f64 / 65535.0,
-      color.color.blue as f64 / 65535.0,
-      color.color.alpha as f64 / 65535.0
+      color.color.blue as f64 / 65535.0
     );
-    self.cairo_context.move_to (x as f64, y as f64);
-    pangocairo::show_layout (&self.cairo_context, &self.pango_layout);
-    tw
   }
 
-  pub unsafe fn text_right (&mut self, mut x: i32, h: i32, text: &str, color: Color) -> i32 {
+  pub unsafe fn text (&mut self, text: &str) -> Rendered_Text {
     self.pango_layout.set_text (text);
-    let (tw, mut th) = self.pango_layout.size ();
-    th /= pango::SCALE;
-    x -= tw / pango::SCALE;
-    let y = if th < h {
-      (h - th) / 2
-    } else {
-      0
-    };
-    self.cairo_context.set_source_rgba (
-      color.color.red as f64 / 65535.0,
-      color.color.green as f64 / 65535.0,
-      color.color.blue as f64 / 65535.0,
-      color.color.alpha as f64 / 65535.0
-    );
-    self.cairo_context.move_to (x as f64, y as f64);
-    pangocairo::show_layout (&self.cairo_context, &self.pango_layout);
-    x
+    Rendered_Text::from_context (self)
   }
 
   pub unsafe fn render (&mut self, win: Window, xoff: i32, yoff: i32, width: u32, height: u32) {
@@ -126,5 +86,88 @@ impl Drawing_Context {
       yoff,
     );
     XSync (display, X_FALSE);
+  }
+}
+
+
+pub enum Alignment {
+  // Left is excluded as it is the default
+  Centered,
+  //Right,
+  //Bottom
+}
+
+
+pub struct Rendered_Text<'a> {
+  layout: &'a mut pango::Layout,
+  context: &'a mut cairo::Context,
+  width: i32,
+  height: i32,
+  x: i32,
+  y: i32
+}
+
+impl<'a> Rendered_Text<'a> {
+  pub unsafe fn from_context (context: &'a mut Drawing_Context) -> Self {
+    let (width, height) = context.pango_layout.size ();
+    Self {
+      layout: &mut context.pango_layout,
+      context: &mut context.cairo_context,
+      width: width / pango::SCALE,
+      height: height / pango::SCALE,
+      x: 0,
+      y: 0
+    }
+  }
+
+  pub fn at (&mut self, x: i32, y: i32) -> &mut Self {
+    self.x = x;
+    self.y = y;
+    self
+  }
+
+  pub fn at_right (&mut self, x: i32, y: i32) -> &mut Self {
+    self.x = x - self.width;
+    self.y = y;
+    self
+  }
+
+  pub fn align_horizontally (&mut self, alignment: Alignment, width: i32) -> &mut Self {
+    if self.width < width {
+      if matches! (alignment, Alignment::Centered) {
+        self.x += (width - self.width) / 2;
+      }
+      else {
+        self.x += width - self.width;
+      }
+    }
+    self
+  }
+
+  pub fn align_vertically (&mut self, alignment: Alignment, height: i32) -> &mut Self {
+    if self.height < height {
+      if matches! (alignment, Alignment::Centered) {
+        self.y += (height - self.height) / 2;
+      }
+      else {
+        self.y += height - self.height;
+      }
+    }
+    self
+  }
+
+  pub fn color (&mut self, color: Color) -> &mut Self {
+    self.context.set_source_rgb (
+      color.color.red as f64 / 65535.0,
+      color.color.green as f64 / 65535.0,
+      color.color.blue as f64 / 65535.0
+    );
+    self
+  }
+
+  pub fn draw (&mut self) -> Geometry {
+    self.context.move_to (self.x as f64, self.y as f64);
+    pangocairo::show_layout (self.context, self.layout);
+    Geometry::from_parts (self.x, self.y, self.width as u32, self.height as u32)
   }
 }
