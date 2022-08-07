@@ -272,6 +272,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     log::info! ("New meta window: {} ({})", name, window);
   }
   else {
+    XGrabServer (display);
     let mut wa: XWindowAttributes = uninitialized !();
     if XGetWindowAttributes (display, window, &mut wa) == 0
       || wa.override_redirect != X_FALSE {
@@ -317,6 +318,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       log::info! ("            Class: {}", class_hints.class);
       log::info! ("             Name: {}", class_hints.name);
     }
+    XUngrabServer (display);
   }
 }
 
@@ -343,7 +345,7 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
       client.configure ();
     }
     if !client.is_snapped() {
-      client.prev_geometry = *client.geometry.clone ().expand ((*config).border_width);
+      client.prev_geometry = client.geometry.get_frame (&client::frame_offset);
     }
     client.set_position_and_size (client.geometry);
   }
@@ -371,8 +373,11 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
     if event.atom == XA_WM_HINTS {
       client.update_hints ();
     }
+    else if event.atom == XA_WM_NAME || event.atom == atom (Net::WMName) {
+      client.set_title (&window_title (client.window));
+      bar.draw ();
+    }
   }
-  bar.draw ();
 }
 
 pub unsafe fn client_message (event: &XClientMessageEvent) {
@@ -380,7 +385,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
     log::debug! ("Client message: {}", event.message_type);
     // Something about just printing 'client' here sometimes just freezes the
     // entire program (TODO)
-    log::debug! ("  Recipient: {}", client.window);
+    log::debug! ("  Recipient: {}", client);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
     if event.message_type == atom (Net::WMState) {
       // _NET_WM_STATE
@@ -441,6 +446,8 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
   for workspace in &mut workspaces {
     if workspace.contains (window) {
       let c = workspace.remove (&Client::dummy (window));
+      XDeleteContext (display, c.window, wm_context);
+      XDeleteContext (display, c.frame, wm_context);
       XSelectInput (display, c.frame, X_NONE as i64);
       XDestroyWindow (display, c.frame);
       update_client_list ();

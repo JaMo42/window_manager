@@ -4,8 +4,11 @@ use super::geometry::*;
 use super::*;
 use super::property::WM;
 
+pub static mut frame_offset: Geometry = Geometry::new ();
+
+
 unsafe fn create_frame (base_geometry: &Geometry) -> Window {
-  let g = *base_geometry.clone ().expand ((*config).border_width);
+  let g = base_geometry.get_frame (&frame_offset);
   let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.background_pixmap = X_NONE;
   attributes.cursor = cursor::normal;
@@ -26,7 +29,6 @@ unsafe fn create_frame (base_geometry: &Geometry) -> Window {
   )
 }
 
-#[derive(Copy, Clone)]
 pub struct Client {
   pub window: Window,
   pub frame: Window,
@@ -37,7 +39,8 @@ pub struct Client {
   pub is_urgent: bool,
   pub is_fullscreen: bool,
   pub is_dialog: bool,
-  border_color: c_ulong
+  border_color: c_ulong,
+  title: String
 }
 
 impl Client {
@@ -51,7 +54,7 @@ impl Client {
     XSetWindowBorderWidth (display, window, 0);
 
     let frame = create_frame (&geometry);
-    XReparentWindow (display, window, frame, (*config).border_width, (*config).border_width);
+    XReparentWindow (display, window, frame, frame_offset.x, frame_offset.y);
     XMapSubwindows (display, frame);
 
     let mut c = Box::new (Client {
@@ -64,7 +67,8 @@ impl Client {
       is_urgent: false,
       is_fullscreen: false,
       is_dialog: false,
-      border_color: (*config).colors.normal.pixel
+      border_color: (*config).colors.normal.pixel,
+      title: "".to_string ()
     });
     XSaveContext (display, window, wm_context, &mut *c as *mut Client as XPointer);
     XSaveContext (display, frame, wm_context, &mut *c as *mut Client as XPointer);
@@ -82,7 +86,8 @@ impl Client {
       is_urgent: false,
       is_fullscreen: false,
       is_dialog: false,
-      border_color: 0
+      border_color: 0,
+      title: String::new ()
     }
   }
 
@@ -111,17 +116,23 @@ impl Client {
     (*draw).rect (
       0,
       0,
-      self.geometry.w + 2 * (*config).border_width as u32,
-      self.geometry.h + 2 * (*config).border_width as u32,
+      self.geometry.w + frame_offset.w,
+      self.geometry.h + frame_offset.h,
       self.border_color,
       true
     );
+    (*draw).select_font (&(*config).title_font);
+    (*draw).text (&self.title)
+      .at (frame_offset.x, 0)
+      .align_vertically (draw::Alignment::Centered, frame_offset.y)
+      .color ((*config).colors.bar_active_workspace_text)
+      .draw ();
     (*draw).render (
       self.frame,
       0,
       0,
-      self.geometry.w + 2 * (*config).border_width as u32,
-      self.geometry.h + 2 * (*config).border_width as u32
+      self.geometry.w + frame_offset.w,
+      self.geometry.h + frame_offset.h
     );
   }
 
@@ -130,18 +141,23 @@ impl Client {
     self.draw_border ();
   }
 
+  pub unsafe fn set_title (&mut self, title: &str) {
+    self.title.clear ();
+    self.title.push_str (title);
+    self.draw_border ();
+  }
+
   pub unsafe fn move_and_resize (&mut self, target: Geometry) {
     let mut client_geometry = target;
     if self.is_snapped () {
       client_geometry.expand (-((*config).gap as i32));
     }
-    client_geometry.expand (-(*config).border_width);
-    self.set_position_and_size (client_geometry);
+    self.set_position_and_size (client_geometry.get_client (&frame_offset));
   }
 
   pub unsafe fn set_position_and_size (&mut self, target: Geometry) {
     self.geometry = target;
-    let fg = *target.clone ().expand((*config).border_width);
+    let fg = target.get_frame (&frame_offset);
     XMoveResizeWindow (
       display, self.frame,
       fg.x,
@@ -270,7 +286,7 @@ impl Client {
     else {
       property::set (self.window, Net::WMState, XA_ATOM, 32,
         std::ptr::null::<c_uchar> (), 0);
-      XReparentWindow (display, self.window, self.frame, (*config).border_width, (*config).border_width);
+      XReparentWindow (display, self.window, self.frame, frame_offset.x, frame_offset.y);
       self.move_and_resize (self.prev_geometry);
       self.focus ();
     }
@@ -310,4 +326,15 @@ impl std::fmt::Display for Client {
     let title = unsafe { window_title (self.window) };
     write! (f, "'{}' ({})", title, self.window)
   }
+}
+
+pub unsafe fn set_border_info () {
+  let title_height = (*config).title_height.get (Some (&(*config).title_font));
+  let b = (*config).border_width;
+  frame_offset = Geometry::from_parts  (
+    b,
+    title_height as i32,
+    2 * b as u32,
+    title_height + b as u32
+  );
 }

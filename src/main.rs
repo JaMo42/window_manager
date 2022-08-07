@@ -228,6 +228,8 @@ unsafe fn init () {
     bar = Bar::create ();
     log::info! ("Bar window: {}", bar.window);
   }
+  // Set window border size info
+  client::set_border_info ();
 }
 
 
@@ -477,19 +479,6 @@ fn main () {
     config = &config_instance;
     let mut drawing_context_instance = Drawing_Context::new ();
     draw = &mut drawing_context_instance;
-    // May become useful again in the near future
-    //XMapWindow (display, XCreateSimpleWindow (
-    //  display,
-    //  root,
-    //  window_area.x,
-    //  window_area.y,
-    //  window_area.w,
-    //  window_area.h,
-    //  0,
-    //  0,
-    //  config_instance.colors.urgent.pixel
-    //));
-    //log::info! ("\x1b[1;32mwindow area: {:?}\x1b[0m", window_area);
     log::trace! ("Initializing");
     init ();
     log::trace! ("Running");

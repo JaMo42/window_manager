@@ -1,6 +1,7 @@
 use std::iter::Peekable;
 use std::os::raw::{c_int, c_uint};
 use super::core::*;
+use super::config::Height;
 
 pub enum Definition_Type {
   Workspaces (usize),
@@ -16,7 +17,9 @@ pub enum Definition_Type {
   Bar_Font (String),
   Bar_Opacity (u8),
   Bar_Time_Format (String),
-  Bar_Height (crate::bar::Height)
+  Bar_Height (Height),
+  Title_Font (String),
+  Title_Height (Height)
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -104,8 +107,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
     }
   }
 
-  fn parse_bar_height (&mut self) -> crate::bar::Height {
-    type H = crate::bar::Height;
+  fn parse_height (&mut self) -> Height {
     let thing = self.next_thing ();
     let is_plus = thing.starts_with ("+");
     let num_str = if is_plus {
@@ -117,14 +119,11 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       thing.as_str ()
     };
     if let Ok (n) = num_str.parse::<u32> () {
-      if n == 0 {
-        H::Font
-      }
-      else if is_plus {
-        H::FontPlus (n)
+      if is_plus || n == 0 {
+        Height::FontPlus (n)
       }
       else {
-        H::Absolute (n)
+        Height::Absolute (n)
       }
     }
     else {
@@ -181,7 +180,9 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
         Bar_Opacity (percent)
       }
       "bar_time_format" => Bar_Time_Format (self.rest_of_line ()),
-      "bar_height" => Bar_Height (self.parse_bar_height ()),
+      "bar_height" => Bar_Height (self.parse_height ()),
+      "window_title_font" => Title_Font (self.rest_of_line ().trim ().to_string ()),
+      "window_title_height" => Title_Height (self.parse_height ()),
       _ => {
         self.fail ("Unknown keyword");
         unreachable! ();

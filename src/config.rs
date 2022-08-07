@@ -82,6 +82,35 @@ impl Action {
 }
 
 
+pub enum Height {
+  FontPlus (u32),
+  Absolute (u32)
+}
+
+impl Height {
+  pub unsafe fn get (&self, font: Option<&str>) -> u32 {
+    match *self {
+      Height::FontPlus (n) => n + (*draw).font_height (font),
+      Height::Absolute (n) => n
+    }
+  }
+}
+
+impl std::fmt::Display for Height {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+    match *self {
+      Height::FontPlus(n) => if n == 0 {
+        write! (f, "same as font height")
+      }
+      else {
+        write! (f, "font height + {}", n)
+      },
+      Height::Absolute(n) => write! (f, "{}", n)
+    }
+  }
+}
+
+
 pub struct Config {
   pub modifier: c_uint,
   pub key_binds: HashMap<Key, Action>,
@@ -100,7 +129,9 @@ pub struct Config {
   pub bar_font: String,
   pub bar_opacity: u8,
   pub bar_time_format: String,
-  pub bar_height: bar::Height
+  pub bar_height: Height,
+  pub title_font: String,
+  pub title_height: Height
 }
 
 impl Config {
@@ -118,7 +149,9 @@ impl Config {
       bar_font: "sans".to_string (),
       bar_opacity: 100,
       bar_time_format: "%a %b %e %T %Y".to_string (),
-      bar_height: bar::Height::FontPlus (5)
+      bar_height: Height::FontPlus (5),
+      title_font: "sans".to_string (),
+      title_height: Height::FontPlus (1)
     }
   }
 
@@ -208,12 +241,16 @@ impl Config {
           self.bar_time_format = format;
         }
         Bar_Height (height) => {
-          match height {
-            bar::Height::Font => log::info! ("config: bar height: same as font height"),
-            bar::Height::FontPlus(n) => log::info! ("config: bar height: font height + {}", n),
-            bar::Height::Absolute(n) => log::info! ("config: bar height: {}", n)
-          };
+          log::info! ("config: bar height: {}", height);
           self.bar_height = height;
+        }
+        Title_Font (description) => {
+          log::info! ("config: title bar font: {}", description);
+          self.title_font = description;
+        }
+        Title_Height (height) => {
+          log::info! ("config: title bar height: {}", height);
+          self.title_height = height;
         }
       }
     }

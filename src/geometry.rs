@@ -83,6 +83,29 @@ impl Geometry {
     }
     self
   }
+
+  // Get the geometry of a window frame around a window with this geometry
+  // frame_offset fields:
+  //   x, y: offset of the left corder of the window inside the frame
+  //   w, h: extra width/height
+  pub unsafe fn get_frame (&self, frame_offset: &Geometry) -> Geometry {
+    Geometry::from_parts (
+      self.x - frame_offset.x,
+      self.y - frame_offset.y,
+      self.w + frame_offset.w,
+      self.h + frame_offset.h
+    )
+  }
+
+  // Inverse of `get_frame`
+  pub unsafe fn get_client (&self, frame_offset: &Geometry) -> Geometry {
+    Geometry::from_parts (
+      self.x + frame_offset.x,
+      self.y + frame_offset.y,
+      self.w - frame_offset.w,
+      self.h - frame_offset.h
+    )
+  }
 }
 
 pub struct Preview {
@@ -165,7 +188,7 @@ impl Preview {
   }
 
   pub unsafe fn finish (&mut self, client: &mut Client) {
-    self.geometry.expand ((*config).border_width);
+    self.geometry = self.geometry.get_frame (&crate::client::frame_offset);
     XDestroyWindow (display, self.window);
     client.prev_geometry = self.geometry;
     client.snap_state = SNAP_NONE;
