@@ -1,6 +1,7 @@
 use std::os::raw::*;
 use rand::{prelude::ThreadRng, Rng};
 use x11::xlib::*;
+use crate::action::{move_snap_flags, snap_geometry};
 use crate::core::*;
 use crate::property;
 use crate::client::Client;
@@ -110,7 +111,9 @@ impl Geometry {
 
 pub struct Preview {
   window: Window,
-  geometry: Geometry
+  geometry: Geometry,
+  snap_geometry: Geometry,
+  is_snapped: bool
 }
 
 impl Preview {
@@ -150,13 +153,16 @@ impl Preview {
     XMapWindow (display, window);
     Preview {
       window,
-      geometry: initial_geometry
+      geometry: initial_geometry,
+      snap_geometry: Geometry::new (),
+      is_snapped: false
     }
   }
 
   pub unsafe fn move_by (&mut self, x: i32, y: i32) {
     self.geometry.x += x;
     self.geometry.y += y;
+    self.is_snapped = false;
   }
 
   pub unsafe fn resize_by (&mut self, w: i32, h: i32) {
@@ -174,24 +180,44 @@ impl Preview {
     }
   }
 
+  pub unsafe fn snap (&mut self, x: i32, y: i32) {
+    let flags = move_snap_flags (x as u32, y as u32);
+    self.is_snapped = true;
+    self.snap_geometry = snap_geometry (flags);
+  }
+
   pub unsafe fn update (&self) {
+    let g = if self.is_snapped {
+      let mut gg = self.snap_geometry;
+      gg.w -= 2 * (*config).gap;
+      gg.h -= 2 * (*config).gap;
+      gg
+    } else {
+      self.geometry
+    };
     XMoveResizeWindow (
       display,
       self.window,
-      self.geometry.x,
-      self.geometry.y,
-      self.geometry.w,
-      self.geometry.h
+      g.x,
+      g.y,
+      g.w,
+      g.h
     );
     XClearWindow (display, self.window);
     XSync (display, X_FALSE);
   }
 
-  pub unsafe fn finish (&mut self, client: &mut Client) {
-    self.geometry = self.geometry.get_frame (&crate::client::frame_offset);
+  pub unsafe fn finish (&mut self, client: &mut Client, snap: bool) {
     XDestroyWindow (display, self.window);
     client.prev_geometry = self.geometry;
-    client.snap_state = SNAP_NONE;
-    client.move_and_resize (self.geometry);
+    if snap {
+      client.snap_state = move_snap_flags (
+        self.geometry.x as u32, self.geometry.y as u32
+      );
+      client.move_and_resize (self.snap_geometry);
+    } else {
+      client.snap_state = SNAP_NONE;
+      client.move_and_resize (self.geometry);
+    }
   }
 }

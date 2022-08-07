@@ -129,7 +129,11 @@ unsafe fn mouse_move (window: Window) {
   let mut mouse_y = start_y;
   let mut state = 0;
   let mut preview = geometry::Preview::create (
-    if client.is_snapped () { client.prev_geometry } else { client.geometry }
+    if client.is_snapped () {
+      client.prev_geometry
+    } else {
+      client.geometry
+    }.get_frame(&client::frame_offset)
   );
   loop {
     XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
@@ -143,7 +147,12 @@ unsafe fn mouse_move (window: Window) {
           continue;
         }
         last_time = motion.time;
-        preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
+        if state & MOD_SHIFT == MOD_SHIFT {
+          preview.snap (motion.x, motion.y);
+        }
+        else {
+          preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
+        }
         preview.update ();
         mouse_x = motion.x;
         mouse_y = motion.y;
@@ -154,13 +163,7 @@ unsafe fn mouse_move (window: Window) {
     }
   }
   XUngrabPointer (display, CurrentTime);
-  #[allow(unused_unsafe)]  // `clean_mods` contains an unsafe block
-  if clean_mods! (state) == (*config).modifier | MOD_SHIFT {
-    action::move_snap (client, mouse_x as u32, mouse_y as u32);
-  }
-  else {
-    preview.finish (client);
-  }
+  preview.finish (client, state & MOD_SHIFT == MOD_SHIFT);
 }
 
 
@@ -198,7 +201,11 @@ unsafe fn mouse_resize (window: Window) {
   let mut prev_x = start_x;
   let mut prev_y = start_y;
   let mut preview = geometry::Preview::create (
-    if client.is_snapped () { client.prev_geometry } else { client.geometry }
+    if client.is_snapped () {
+      client.prev_geometry
+    } else {
+      client.geometry
+    }.get_frame(&client::frame_offset)
   );
   loop {
     XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
@@ -222,7 +229,7 @@ unsafe fn mouse_resize (window: Window) {
     }
   }
   XUngrabPointer (display, CurrentTime);
-  preview.finish (client);
+  preview.finish (client, false);
 }
 
 

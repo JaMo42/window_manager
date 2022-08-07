@@ -19,7 +19,7 @@ pub unsafe fn close_client (client: &mut Client) {
 }
 
 
-pub unsafe fn move_snap (client: &mut Client, x: c_uint, y: c_uint) {
+pub unsafe fn move_snap_flags (x: c_uint, y: c_uint) ->u8 {
   let mut snap_flags = 0u8;
   snap_flags |= if x > screen_size.w / 2 { SNAP_RIGHT } else { SNAP_LEFT };
   let v = screen_size.h / 4;
@@ -29,14 +29,11 @@ pub unsafe fn move_snap (client: &mut Client, x: c_uint, y: c_uint) {
   else if y > screen_size.h - v {
     snap_flags |= SNAP_BOTTOM;
   }
-  snap (client, snap_flags);
+  snap_flags
 }
 
 
-pub unsafe fn snap (client: &mut Client, flags: u8) {
-  if !client.may_resize () {
-    return;
-  }
+pub unsafe fn snap_geometry (flags: u8) -> Geometry {
   let mut target = Geometry::new ();
   // Top / Bottom / Full height
   if (flags & SNAP_TOP) != 0 {
@@ -67,8 +64,16 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
     // since it gets removed inside `client.move_and_resize` again.
     target.expand ((*config).gap as i32);
   }
+  target
+}
+
+
+pub unsafe fn snap (client: &mut Client, flags: u8) {
+  if !client.may_resize () {
+    return;
+  }
   client.snap_state = flags;
-  client.move_and_resize (target);
+  client.move_and_resize (snap_geometry (flags));
 }
 
 pub unsafe fn snap_left (client: &mut Client) {
