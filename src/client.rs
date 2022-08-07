@@ -164,13 +164,27 @@ impl Client {
     if self.is_urgent {
       self.set_urgency (false);
     }
-    self.set_border ((*config).colors.focused);
+    if self.is_fullscreen {
+      XRaiseWindow (display, self.window);
+    }
+    else {
+      self.set_border ((*config).colors.focused);
+      XRaiseWindow (display, self.frame);
+      bar.draw ();
+    }
     XSetInputFocus (display, self.window, RevertToParent, CurrentTime);
-    XRaiseWindow (display, self.frame);
-    property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &self.window, 1);
     self.send_event (property::atom (WM::TakeFocus));
-    bar.draw ();
+    property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &self.window, 1);
     XSync (display, X_FALSE);
+  }
+
+  pub unsafe fn raise (&self) {
+    if self.is_fullscreen {
+      XRaiseWindow (display, self.window);
+    }
+    else {
+      XRaiseWindow (display, self.frame);
+    }
   }
 
   pub unsafe fn set_urgency (&mut self, urgency: bool) {

@@ -120,7 +120,7 @@ impl Workspace {
             self.clients[switch_idx].set_border ((*config).colors.normal);
             switch_idx = (switch_idx + 1) % self.clients.len ();
             self.clients[switch_idx].set_border ((*config).colors.selected);
-            XRaiseWindow (display, self.clients[switch_idx].frame);
+            self.clients[switch_idx].raise ();
           }
         }
         KeyRelease => {
