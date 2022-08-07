@@ -28,6 +28,7 @@ pub enum Net {
   WMWindowTypeDialog,
   WMWindowTypeDock,
   WMWindowTypeDesktop,
+  WMUserTime,
   Last
 }
 
@@ -124,6 +125,7 @@ pub unsafe fn load_atoms () {
   N! (WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
   N! (WMWindowTypeDock, "_NET_WM_WINDOW_TYPE_DOCK");
   N! (WMWindowTypeDesktop, "_NET_WM_WINDOW_TYPE_DESKTOP");
+  N! (WMUserTime, "_NET_WM_USER_TIME");
 
   log::debug! ("Net Properties: {:?}", net);
   log::debug! ("WM Properties: {:?}", wm);

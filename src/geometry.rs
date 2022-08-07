@@ -200,14 +200,7 @@ impl Preview {
       gg.y -= Preview::border_width;
       gg
     };
-    XMoveResizeWindow (
-      display,
-      self.window,
-      g.x,
-      g.y,
-      g.w,
-      g.h
-    );
+    XMoveResizeWindow (display, self.window, g.x, g.y, g.w, g.h);
     XClearWindow (display, self.window);
     XSync (display, X_FALSE);
   }

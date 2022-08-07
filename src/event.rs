@@ -384,6 +384,16 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
       client.set_title (&window_title (client.window));
       bar.draw ();
     }
+    else if event.atom == atom (Net::WMUserTime)
+      && focused_client! ().map_or (true, |f| f.window != event.window)
+    {
+      if workspaces[active_workspace].contains (client.window) {
+        workspaces[active_workspace].focus (client.window);
+      }
+      else {
+        client.set_urgency (true);
+      }
+    }
   }
 }
 
@@ -426,7 +436,12 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
           return;
         }
       }
-      client.set_urgency (true);
+      if workspaces[active_workspace].contains (client.window) {
+        workspaces[active_workspace].focus (client.window);
+      }
+      else {
+        client.set_urgency (true);
+      }
     }
   }
   else if event.window == root {
