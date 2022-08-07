@@ -7,12 +7,16 @@ use super::property;
 #[macro_export]
 macro_rules! focused_client {
   () => {
-    workspaces[active_workspace].clients.first_mut ()
+    workspaces[active_workspace].clients.first_mut ().map (|box_| &mut **box_)
   }
 }
 
 pub struct Workspace {
-  pub clients: Vec<Client>
+  // Clients need to be boxed so they have the same address throughout their
+  // lifetime since we store the address of the client as context in its
+  // associated windows.
+  #[allow(clippy::vec_box)]
+  pub clients: Vec<Box<Client>>
 }
 
 impl Workspace {
@@ -22,20 +26,17 @@ impl Workspace {
     }
   }
 
-  pub unsafe fn push (&mut self, client: Client) {
-    if let Some (prev) = self.clients.first () {
-      XSetWindowBorder (
-        display, prev.window, (*config).colors.normal.pixel
-      );
+  pub unsafe fn push (&mut self, client: Box<Client>) {
+    if let Some (prev) = self.clients.first_mut () {
+      prev.set_border ((*config).colors.normal);
     }
-    XSetWindowBorder (display, client.window, (*config).colors.focused.pixel);
     self.clients.insert (0, client);
     self.clients[0].focus ();
   }
 
-  pub fn remove (&mut self, client: &Client) {
+  pub fn remove (&mut self, client: &Client) -> Box<Client> {
     if let Some (idx) = self.clients.iter ().position (|c| c.window == client.window) {
-      self.clients.remove (idx);
+      let c = self.clients.remove (idx);
       // Update focused window
       unsafe {
         if let Some (first) = self.clients.first_mut () {
@@ -43,25 +44,28 @@ impl Workspace {
         }
         else {
           property::delete (root, property::Net::ActiveWindow);
+          XSetInputFocus (display, PointerRoot as u64, RevertToPointerRoot, CurrentTime);
           bar.draw ();
         }
       }
+      return c;
     }
+    panic! ("tried to remove client not on workspace");
   }
 
   pub unsafe fn focus (&mut self, window: Window) {
-    if let Some (prev) = self.clients.first () {
+    if let Some (prev) = self.clients.first_mut () {
       if window == prev.window {
         return;
       }
-      XSetWindowBorder (
-        display, prev.window, (*config).colors.normal.pixel
-      );
+      prev.set_border ((*config).colors.normal);
     }
     if window == X_NONE {
       log::warn! ("Tried to focus None");
     }
-    else if let Some (idx) = self.clients.iter ().position (|c| c.window == window) {
+    else if let Some (idx) = self.clients.iter ().position (
+      |c| c.window == window || c.frame == window)
+    {
       if idx != 0 {
         let c = self.clients.remove (idx);
         self.clients.insert (0, c);
@@ -106,18 +110,11 @@ impl Workspace {
       match event.type_ {
         KeyPress => {
           if event.key.keycode == 0x17 {
-            XSetWindowBorder (
-              display,
-              self.clients[switch_idx].window,
-              (*config).colors.normal.pixel
-            );
+            // TODO: fix fullscreen windows
+            self.clients[switch_idx].set_border ((*config).colors.normal);
             switch_idx = (switch_idx + 1) % self.clients.len ();
-            XSetWindowBorder (
-              display,
-              self.clients[switch_idx].window,
-              (*config).colors.selected.pixel
-            );
-            XRaiseWindow (display, self.clients[switch_idx].window);
+            self.clients[switch_idx].set_border ((*config).colors.selected);
+            XRaiseWindow (display, self.clients[switch_idx].frame);
           }
         }
         KeyRelease => {
@@ -137,24 +134,20 @@ impl Workspace {
     self.focus (focused_win);
     // Re-grab main input
     super::grab_keys ();
+    XSync (display, X_FALSE);
   }
 
   pub fn has_urgent (&self) -> bool {
-    self.clients.iter ().any (|&c| c.is_urgent)
+    self.clients.iter ().any (|c| c.is_urgent)
+  }
+
+  pub fn contains (&self, window: Window) -> bool {
+    self.clients.iter ().any (|c| c.window == window)
   }
 }
 
-/*impl IntoIterator for Workspace {
-  type Item = Client;
-  type IntoIter = std::vec::IntoIter<Self::Item>;
-
-  fn into_iter (self) -> Self::IntoIter {
-    self.clients.into_iter ()
-  }
-}*/
-
 impl Deref for Workspace {
-  type Target = [Client];
+  type Target = [Box<Client>];
   fn deref (&self) -> &Self::Target {
     &self.clients[..]
   }

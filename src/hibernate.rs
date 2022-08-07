@@ -270,10 +270,10 @@ pub unsafe fn load () -> Result<(), std::io::Error> {
     c.prev_geometry = pg;
     c.workspace = ws_idx;
     // Add client to workspace
-    workspaces[ws_idx].push (c);
     if ws_idx == active_workspace {
-      XMapWindow (display, c.window);
+      c.map ();
     }
+    workspaces[ws_idx].push (c);
   }
   // Set input focus
   if let Some (focused) = focused_client! () {

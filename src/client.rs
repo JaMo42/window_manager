@@ -4,39 +4,85 @@ use super::geometry::*;
 use super::*;
 use super::property::WM;
 
+unsafe fn create_frame (base_geometry: &Geometry) -> Window {
+  let g = *base_geometry.clone ().expand ((*config).border_width);
+  let mut attributes: XSetWindowAttributes = uninitialized! ();
+  attributes.background_pixmap = X_NONE;
+  attributes.cursor = cursor::normal;
+  attributes.override_redirect = X_TRUE;
+  attributes.event_mask = SubstructureRedirectMask;
+  attributes.save_under = X_FALSE;
+  let screen = XDefaultScreen (display);
+  XCreateWindow (
+    display, root,
+    g.x, g.y,
+    g.w, g.h,
+    0,
+    XDefaultDepth (display, screen),
+    InputOutput as u32,
+    XDefaultVisual (display, screen),
+    CWBackPixmap|CWEventMask|CWCursor|CWSaveUnder,
+    &mut attributes
+  )
+}
+
 #[derive(Copy, Clone)]
 pub struct Client {
   pub window: Window,
+  pub frame: Window,
   pub geometry: Geometry,
   pub prev_geometry: Geometry,
   pub workspace: usize,
   pub snap_state: u8,
   pub is_urgent: bool,
   pub is_fullscreen: bool,
-  pub is_dialog: bool
+  pub is_dialog: bool,
+  border_color: c_ulong
 }
 
 impl Client {
-  pub unsafe fn new (window: Window) -> Self {
-    let mut wc: XWindowChanges = uninitialized! ();
-    wc.border_width = (*config).border_width;
-    XConfigureWindow (display, window, CWBorderWidth as u32, &mut wc);
-    XSelectInput (
-      display,
-      window,
-      //EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask
-      PropertyChangeMask
-    );
+  pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
-    Client {
+
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
+    attributes.event_mask = StructureNotifyMask | PropertyChangeMask;
+    attributes.do_not_propagate_mask = ButtonPressMask | ButtonReleaseMask;
+    XChangeWindowAttributes (display, window, CWEventMask|CWDontPropagate, &mut attributes);
+    XSetWindowBorderWidth (display, window, 0);
+
+    let frame = create_frame (&geometry);
+    XReparentWindow (display, window, frame, (*config).border_width, (*config).border_width);
+    XMapSubwindows (display, frame);
+
+    let mut c = Box::new (Client {
       window,
+      frame,
       geometry,
       prev_geometry: geometry,
       workspace: active_workspace,
       snap_state: 0,
       is_urgent: false,
       is_fullscreen: false,
-      is_dialog: false
+      is_dialog: false,
+      border_color: (*config).colors.normal.pixel
+    });
+    XSaveContext (display, window, wm_context, &mut *c as *mut Client as XPointer);
+    XSaveContext (display, frame, wm_context, &mut *c as *mut Client as XPointer);
+    c
+  }
+
+  pub unsafe fn dummy (window: Window) -> Self {
+    Client {
+      window,
+      frame: X_NONE,
+      geometry: uninitialized! (),
+      prev_geometry: uninitialized! (),
+      workspace: 0,
+      snap_state: 0,
+      is_urgent: false,
+      is_fullscreen: false,
+      is_dialog: false,
+      border_color: 0
     }
   }
 
@@ -52,24 +98,61 @@ impl Client {
     !(self.is_fullscreen || self.is_dialog)
   }
 
+  pub unsafe fn map (&mut self) {
+    XMapWindow (display, self.frame);
+    self.set_border ((*config).colors.focused);
+  }
+
+  pub unsafe fn unmap (&self) {
+    XUnmapWindow (display, self.frame);
+  }
+
+  pub unsafe fn draw_border (&self) {
+    (*draw).rect (
+      0,
+      0,
+      self.geometry.w + 2 * (*config).border_width as u32,
+      self.geometry.h + 2 * (*config).border_width as u32,
+      self.border_color,
+      true
+    );
+    (*draw).render (
+      self.frame,
+      0,
+      0,
+      self.geometry.w + 2 * (*config).border_width as u32,
+      self.geometry.h + 2 * (*config).border_width as u32
+    );
+  }
+
+  pub unsafe fn set_border (&mut self, color: color::Color) {
+    self.border_color = color.pixel;
+    self.draw_border ();
+  }
+
   pub unsafe fn move_and_resize (&mut self, target: Geometry) {
-    self.geometry = target;
+    let mut client_geometry = target;
     if self.is_snapped () {
-      XMoveResizeWindow (
-        display, self.window,
-        target.x + (*config).gap as i32,
-        target.y + (*config).gap as i32,
-        target.w - (((*config).gap + (*config).border_width as u32) << 1),
-        target.h - (((*config).gap + (*config).border_width as u32) << 1)
-      );
+      client_geometry.expand (-((*config).gap as i32));
     }
-    else {
-      XMoveResizeWindow (
-        display, self.window,
-        target.x, target.y,
-        target.w, target.h
-      );
-    }
+    client_geometry.expand (-(*config).border_width);
+    self.set_position_and_size (client_geometry);
+  }
+
+  pub unsafe fn set_position_and_size (&mut self, target: Geometry) {
+    self.geometry = target;
+    let fg = *target.clone ().expand((*config).border_width);
+    XMoveResizeWindow (
+      display, self.frame,
+      fg.x,
+      fg.y,
+      fg.w,
+      fg.h
+    );
+    XResizeWindow (display, self.window, target.w, target.h);
+    self.configure ();
+    self.draw_border ();
+    XSync (display, X_FALSE);
   }
 
   pub unsafe fn unsnap (&mut self) {
@@ -81,12 +164,13 @@ impl Client {
     if self.is_urgent {
       self.set_urgency (false);
     }
-    XSetWindowBorder (display, self.window, (*config).colors.focused.pixel);
+    self.set_border ((*config).colors.focused);
     XSetInputFocus (display, self.window, RevertToParent, CurrentTime);
-    XRaiseWindow (display, self.window);
+    XRaiseWindow (display, self.frame);
     property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &self.window, 1);
     self.send_event (property::atom (WM::TakeFocus));
     bar.draw ();
+    XSync (display, X_FALSE);
   }
 
   pub unsafe fn set_urgency (&mut self, urgency: bool) {
@@ -95,7 +179,7 @@ impl Client {
     }
     self.is_urgent = urgency;
     if urgency {
-      XSetWindowBorder (display, self.window, (*config).colors.urgent.pixel);
+      self.set_border ((*config).colors.urgent);
     }
     let hints = XGetWMHints (display, self.window);
     if !hints.is_null () {
@@ -164,18 +248,40 @@ impl Client {
       property::set (self.window, Net::WMState, XA_ATOM, 32,
         &property::atom (Net::WMStateFullscreen), 1);
       self.snap_state = SNAP_NONE;
-      let border = (*config).border_width;
-      self.move_and_resize (Geometry::from_parts (
-        -border, -border,
-        screen_size.w, screen_size.h
-      ));
+      XReparentWindow (display, self.window, root, 0, 0);
+      XResizeWindow (display, self.window, screen_size.w, screen_size.h);
       XRaiseWindow (display, self.window);
+      XSetInputFocus (display, self.window, RevertToNone, CurrentTime);
     }
     else {
       property::set (self.window, Net::WMState, XA_ATOM, 32,
         std::ptr::null::<c_uchar> (), 0);
+      XReparentWindow (display, self.window, self.frame, (*config).border_width, (*config).border_width);
       self.move_and_resize (self.prev_geometry);
+      self.focus ();
     }
+  }
+
+  pub unsafe fn configure (&self) {
+    let mut ev: XConfigureEvent = uninitialized! ();
+    ev.type_ = ConfigureNotify;
+    ev.display = display;
+    ev.event = self.window;
+    ev.window = self.window;
+    ev.x = self.geometry.x;
+    ev.x = self.geometry.x;
+    ev.width = self.geometry.w as i32;
+    ev.height = self.geometry.h as i32;
+    ev.border_width = 0;
+    ev.above = X_NONE;
+    ev.override_redirect = X_FALSE;
+    XSendEvent (
+      display,
+      self.window,
+      X_FALSE,
+      StructureNotifyMask,
+      &mut ev as *mut XConfigureEvent as *mut XEvent
+    );
   }
 }
 
@@ -187,6 +293,7 @@ impl PartialEq for Client {
 
 impl std::fmt::Display for Client {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-    write! (f, "'{}' ({})", unsafe { window_title (self.window) }, self.window)
+    let title = unsafe { window_title (self.window) };
+    write! (f, "'{}' ({})", title, self.window)
   }
 }

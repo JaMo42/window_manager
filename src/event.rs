@@ -1,4 +1,3 @@
-use std::cmp::max;
 use x11::xlib::*;
 use super::core::*;
 use super::config::*;
@@ -9,18 +8,18 @@ use super::*;
 pub const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
 
 
-unsafe fn win2client<'a> (window: Window) -> Option<&'a mut Client> {
-  if window == X_NONE {
-    return None;
+unsafe fn win2client (window: Window) -> Option<&'static mut Client> {
+  let mut data: XPointer = std::ptr::null_mut ();
+  if window == X_NONE || window == root
+    || XFindContext (display, window, wm_context, &mut data) != 0 {
+    None
   }
-  for ws in workspaces.iter_mut () {
-    for c in ws.iter_mut () {
-      if c.window == window {
-        return Some (c);
-      }
-    }
+  else if !data.is_null () {
+    Some (&mut *(data as *mut Client))
   }
-  None
+  else {
+    None
+  }
 }
 
 
@@ -46,6 +45,11 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   }
   mouse_held = event.button;
   workspaces[active_workspace].focus (event.subwindow);
+}
+
+
+pub unsafe fn button_relase () {
+  mouse_held = 0;
 }
 
 
@@ -121,11 +125,12 @@ unsafe fn mouse_move (window: Window) {
   }
   let mut event: XEvent = uninitialized! ();
   let mut last_time: Time = 0;
-  let client_x = client.geometry.x;
-  let client_y = client.geometry.y;
-  let mut mouse_x = 0;
-  let mut mouse_y = 0;
+  let mut mouse_x = start_x;
+  let mut mouse_y = start_y;
   let mut state = 0;
+  let mut preview = geometry::Preview::create (
+    if client.is_snapped () { client.prev_geometry } else { client.geometry }
+  );
   loop {
     XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
     match event.type_ {
@@ -134,19 +139,14 @@ unsafe fn mouse_move (window: Window) {
       MotionNotify => {
         let motion = event.motion;
         // Only handle at 60 FPS
-        if (motion.time - last_time) <= (1000 / 60) {
+        if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
           continue;
         }
         last_time = motion.time;
-        let new_x = client_x + (motion.x - start_x);
-        let new_y = client_y + (motion.y - start_y);
-        XMoveResizeWindow (
-          display, window,
-          new_x, new_y,
-          client.prev_geometry.w, client.prev_geometry.h
-        );
-        mouse_x = motion.x_root;
-        mouse_y = motion.y_root;
+        preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
+        preview.update ();
+        mouse_x = motion.x;
+        mouse_y = motion.y;
         state = motion.state;
       }
       ButtonRelease => break,
@@ -159,15 +159,13 @@ unsafe fn mouse_move (window: Window) {
     action::move_snap (client, mouse_x as u32, mouse_y as u32);
   }
   else {
-    client.geometry = get_window_geometry (window);
-    client.prev_geometry = client.geometry;
-    client.snap_state = SNAP_NONE;
+    preview.finish (client);
   }
 }
 
 
 unsafe fn mouse_resize (window: Window) {
-  let client: &mut Client = if let Some (c) = win2client (window) {
+  let client = if let Some (c) = win2client (window) {
     c
   }
   else {
@@ -197,8 +195,11 @@ unsafe fn mouse_resize (window: Window) {
   }
   let mut event: XEvent = uninitialized! ();
   let mut last_time: Time = 0;
-  let client_w = client.geometry.w as i32;
-  let client_h = client.geometry.h as i32;
+  let mut prev_x = start_x;
+  let mut prev_y = start_y;
+  let mut preview = geometry::Preview::create (
+    if client.is_snapped () { client.prev_geometry } else { client.geometry }
+  );
   loop {
     XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
     match event.type_ {
@@ -207,26 +208,21 @@ unsafe fn mouse_resize (window: Window) {
       MotionNotify => {
         let motion = event.motion;
         // Only handle at 60 FPS
-        if (motion.time - last_time) <= (1000 / 60) {
+        if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
           continue;
         }
         last_time = motion.time;
-        let new_w = max (10, client_w + (motion.x - start_x)) as u32;
-        let new_h = max (10, client_h + (motion.y - start_y)) as u32;
-        XMoveResizeWindow (
-          display, window,
-          client.geometry.x, client.geometry.y,
-          new_w, new_h
-        );
+        preview.resize_by (motion.x - prev_x, motion.y - prev_y);
+        preview.update ();
+        prev_x = motion.x;
+        prev_y = motion.y;
       }
       ButtonRelease => break,
       _ => {}
     }
   }
   XUngrabPointer (display, CurrentTime);
-  client.geometry = get_window_geometry (window);
-  client.prev_geometry = client.geometry;
-  client.snap_state = SNAP_NONE;
+  preview.finish (client);
 }
 
 
@@ -276,6 +272,12 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     log::info! ("New meta window: {} ({})", name, window);
   }
   else {
+    let mut wa: XWindowAttributes = uninitialized !();
+    if XGetWindowAttributes (display, window, &mut wa) == 0
+      || wa.override_redirect != X_FALSE {
+      log::info! ("ignoring window with override_redirect: {}", window);
+      return;
+    }
     let mut c = Client::new (window);
     let mut g = c.geometry;
     // Window type
@@ -290,19 +292,20 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       if let Some (trans) = win2client (trans_win) {
         has_trans_client = true;
         target_workspace = trans.workspace;
-        g.center (&trans.geometry);
-        g.clamp (&window_area);
+        g.center (&trans.geometry)
+          .clamp (&window_area);
       }
     }
     if !has_trans_client {
       let mut rng = rand::thread_rng ();
       g.random_inside (&window_area, &mut rng);
     }
-    c.move_and_resize (g);
     c.prev_geometry = c.geometry;
+    c.move_and_resize (g);
+    c.configure ();
     // Add client
     if target_workspace == active_workspace {
-      XMapWindow (display, window);
+      c.map ();
     }
     workspaces[target_workspace].push (c);
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
@@ -319,19 +322,46 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
 
 
 pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
-  log::trace! ("configure_request: '{}' ({})", window_title (event.window), event.window);
-  XConfigureWindow (
-    display, event.window, event.value_mask as u32,
-    &mut XWindowChanges {
-      x: event.x,
-      y: event.y,
-      width: event.width,
-      height: event.height,
-      border_width: event.border_width,
-      sibling: event.above,
-      stack_mode: event.detail
+  if let Some (client) = win2client (event.window) {
+    if event.value_mask & CWBorderWidth as u64 != 0 {
+      return;
     }
-  );
+    if event.value_mask & CWX as u64 != 0 {
+      client.geometry.x = event.x;
+    }
+    if event.value_mask & CWY as u64 != 0 {
+      client.geometry.y = event.y;
+    }
+    if event.value_mask & CWWidth as u64 != 0 {
+      client.geometry.w = event.width as u32;
+    }
+    if event.value_mask & CWHeight as u64 != 0 {
+      client.geometry.h = event.height as u32;
+    }
+    if (event.value_mask & (CWX|CWY) as u64 != 0)
+      && (event.value_mask & (CWWidth|CWHeight) as u64 == 0) {
+      client.configure ();
+    }
+    if !client.is_snapped() {
+      client.prev_geometry = *client.geometry.clone ().expand ((*config).border_width);
+    }
+    client.set_position_and_size (client.geometry);
+  }
+  else {
+    XConfigureWindow (
+      display, event.window, event.value_mask as u32,
+      &mut XWindowChanges {
+        x: event.x,
+        y: event.y,
+        width: event.width,
+        height: event.height,
+        border_width: 0,
+        sibling: event.above,
+        stack_mode: event.detail
+      }
+    );
+  }
+  XSync (display, X_FALSE);
 }
 
 pub unsafe fn property_notify (event: &XPropertyEvent) {
@@ -407,16 +437,17 @@ pub unsafe fn mapping_notify (event: &XMappingEvent) {
 
 pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
   let window = event.window;
-  #[allow(clippy::needless_range_loop)]
-  for ws_idx in 0..workspaces.len () {
-    for client in workspaces[ws_idx].iter () {
-      if client.window == window {
-        workspaces[ws_idx].remove (client);
-        update_client_list ();
-        return;
-      }
+  XGrabServer (display);
+  for workspace in &mut workspaces {
+    if workspace.contains (window) {
+      let c = workspace.remove (&Client::dummy (window));
+      XSelectInput (display, c.frame, X_NONE as i64);
+      XDestroyWindow (display, c.frame);
+      update_client_list ();
+      break;
     }
   }
+  XUngrabServer (display);
 }
 
 pub unsafe fn expose (event: &XExposeEvent) {

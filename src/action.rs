@@ -13,11 +13,8 @@ pub unsafe fn quit () {
 
 pub unsafe fn close_client (client: &mut Client) {
   if !client.send_event (property::atom (WM::DeleteWindow)) {
-    XGrabServer (display);
-    XSetCloseDownMode (display, DestroyAll);
     XKillClient (display, client.window);
     XSync (display, X_FALSE);
-    XUngrabServer (display);
   }
 }
 
@@ -63,7 +60,7 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
     target.x = window_area.x + (window_area.w / 2) as c_int;
     target.w = window_area.w / 2;
   }
-  // Fullscreen
+  // Maximized
   if (flags & SNAP_MAXIMIZED) != 0 {
     target = window_area;
     // We don't care about the gap for maximized windows so we add it here
@@ -114,10 +111,10 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
     return;
   }
   for c in workspaces[active_workspace].iter () {
-    XUnmapWindow (display, c.window);
+    c.unmap ();
   }
-  for c in workspaces[idx].iter () {
-    XMapWindow (display, c.window);
+  for c in workspaces[idx].iter_mut () {
+    c.map ();
   }
   active_workspace = idx;
   if let Some (focused) = focused_client! () {
@@ -136,9 +133,9 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
 pub unsafe fn move_to_workspace (idx: usize, client_: Option<&mut Client>) {
   let client = client_.unwrap ();
   client.workspace = idx;
-  workspaces[idx].push (*client);
-  workspaces[active_workspace].remove (client);
-  XUnmapWindow (display, client.window);
+  let boxed = workspaces[active_workspace].remove (client);
+  boxed.unmap ();
+  workspaces[idx].push (boxed);
 }
 
 

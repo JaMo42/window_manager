@@ -41,6 +41,8 @@ pub const SNAP_TOP: u8 = 0x4;
 pub const SNAP_BOTTOM: u8 = 0x8;
 pub const SNAP_MAXIMIZED: u8 = 0x10;
 
+pub const MOUSE_MOVE_RESIZE_RATE: u64 = 1000 / 30;
+
 pub static mut display: *mut Display = std::ptr::null_mut ();
 pub static mut root: Window = X_NONE;
 pub static mut workspaces: Vec<Workspace> = Vec::new ();
@@ -55,3 +57,4 @@ pub static mut mouse_held: c_uint = 0;
 pub static mut meta_windows: Vec<Window> = Vec::new ();
 pub static mut draw: *mut Drawing_Context = std::ptr::null_mut ();
 pub static mut bar: Bar = Bar::new ();
+pub static mut wm_context: XContext = X_NONE as i32;

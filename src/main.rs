@@ -176,6 +176,8 @@ unsafe fn select_input (mut mask: c_long) {
 
 
 unsafe fn init () {
+  // Create context type
+  wm_context = XUniqueContext ();
   // Create workspaces
   workspaces.reserve ((*config).workspace_count);
   for _ in 0..(*config).workspace_count {
@@ -224,11 +226,13 @@ unsafe fn init () {
   // Bar
   if cfg! (feature = "bar") {
     bar = Bar::create ();
+    log::info! ("Bar window: {}", bar.window);
   }
 }
 
-unsafe fn run () {
-  const EVENT_NAME: [&str; 36] = [
+
+const fn event_name (type_: c_int) -> &'static str {
+  const EVENT_NAMES: [&str; 36] = [
     "",
     "",
     "KeyPress",
@@ -266,21 +270,28 @@ unsafe fn run () {
     "MappingNotify",
     "GenericEvent"
   ];
+  EVENT_NAMES[type_ as usize]
+}
+
+
+unsafe fn run () {
   let mut event: XEvent = uninitialized! ();
   running = true;
   XSync (display, X_FALSE);
   while running {
     XNextEvent (display, &mut event);
-    if cfg! (debug_assertions) {
+    if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
       if event.type_ as usize > 35 {
-        log::trace! ("Event: {:>2} ???", event.type_);
+        log::warn! ("\x1b[2mEvent: \x1b[33m{:>2} Greater than LastEvent: {}\x1b[0m", event.type_, LASTEvent);
       }
       else {
-        log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{}\x1b[0m", event.type_, EVENT_NAME[event.type_ as usize]);
+        log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{} \x1b[39mby \x1b[36m{}\x1b[0m",
+          event.type_, event_name (event.type_), event.any.window);
       }
     }
     match event.type_ {
       ButtonPress => event::button_press (&event.button),
+      ButtonRelease => event::button_relase (),
       ClientMessage => event::client_message (&event.client_message),
       ConfigureRequest => event::configure_request (&event.configure_request),
       DestroyNotify => event::destroy_notify (&event.destroy_window),
@@ -291,7 +302,7 @@ unsafe fn run () {
       PropertyNotify => event::property_notify (&event.property),
       Expose => event::expose (&event.expose),
       _ => {
-        if cfg!(debug_assertions) {
+        if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
           log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
         }
       }
@@ -466,6 +477,19 @@ fn main () {
     config = &config_instance;
     let mut drawing_context_instance = Drawing_Context::new ();
     draw = &mut drawing_context_instance;
+    // May become useful again in the near future
+    //XMapWindow (display, XCreateSimpleWindow (
+    //  display,
+    //  root,
+    //  window_area.x,
+    //  window_area.y,
+    //  window_area.w,
+    //  window_area.h,
+    //  0,
+    //  0,
+    //  config_instance.colors.urgent.pixel
+    //));
+    //log::info! ("\x1b[1;32mwindow area: {:?}\x1b[0m", window_area);
     log::trace! ("Initializing");
     init ();
     log::trace! ("Running");

@@ -28,10 +28,11 @@ impl Bar {
 
   pub unsafe fn create () -> Self {
     let screen = XDefaultScreen (display);
-    let mut wa: XSetWindowAttributes = uninitialized! ();
-    wa.override_redirect = X_TRUE;
-    wa.background_pixmap = ParentRelative as u64;
-    wa.event_mask = ButtonPressMask|ExposureMask;
+    let mut atributes: XSetWindowAttributes = uninitialized! ();
+    atributes.override_redirect = X_TRUE;
+    atributes.background_pixmap = X_NONE;
+    atributes.event_mask = ButtonPressMask|ExposureMask;
+    atributes.cursor = cursor::normal;
     let mut class_hint = XClassHint {
       res_name: c_str! ("window_manager_bar") as *mut c_char,
       res_class: c_str! ("window_manager_bar") as *mut c_char
@@ -50,9 +51,9 @@ impl Bar {
       XDefaultDepth (display, screen),
       CopyFromParent as u32,
       XDefaultVisual(display, screen),
-      CWOverrideRedirect|CWBackPixmap|CWEventMask, &mut wa
+      CWOverrideRedirect|CWBackPixmap|CWEventMask|CWCursor,
+      &mut atributes
     );
-    XDefineCursor (display, window, cursor::normal);
     XSetClassHint (display, window, &mut class_hint);
     let window_type_dock = property::atom (property::Net::WMWindowTypeDock);
     property::set (
@@ -62,7 +63,7 @@ impl Bar {
       32,
       &window_type_dock,
       1
-      );
+    );
     if (*config).bar_opacity != 100 {
       let atom = XInternAtom (display, c_str! ("_NET_WM_WINDOW_OPACITY"), X_FALSE);
       let value = 42949672u32 * (*config).bar_opacity as u32;

@@ -1,4 +1,5 @@
 xrdb -merge $HOME/.Xresources
+export RUST_BACKTRACE=1
 case $VALGRIND in
   1)
     exec valgrind ./target/debug/window_manager 2>err
