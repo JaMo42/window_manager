@@ -164,8 +164,8 @@ unsafe fn grab_buttons () {
 
 unsafe fn select_input (mut mask: c_long) {
   if mask == 0 {
-    mask = SubstructureRedirectMask | SubstructureNotifyMask
-      | ButtonPressMask | PointerMotionMask | EnterWindowMask
+    mask = SubstructureRedirectMask | SubstructureNotifyMask | ButtonPressMask
+      | ButtonReleaseMask | PointerMotionMask | EnterWindowMask
       | LeaveWindowMask | StructureNotifyMask | PropertyChangeMask;
   }
   let mut wa: XSetWindowAttributes = uninitialized! ();

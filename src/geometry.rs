@@ -117,6 +117,8 @@ pub struct Preview {
 }
 
 impl Preview {
+  const border_width: c_int = 5;
+
   pub unsafe fn create (initial_geometry: Geometry) -> Self {
     let mut vi: XVisualInfo = uninitialized! ();
     XMatchVisualInfo(display, XDefaultScreen(display), 32, TrueColor, &mut vi);
@@ -129,13 +131,13 @@ impl Preview {
     let window = XCreateWindow(
       display,
       root,
-      initial_geometry.x,
-      initial_geometry.y,
+      initial_geometry.x - Preview::border_width,
+      initial_geometry.y - Preview::border_width,
       initial_geometry.w,
       initial_geometry.h,
-      5,
+      Preview::border_width as c_uint,
       vi.depth,
-      InputOutput as u32,
+      InputOutput as c_uint,
       vi.visual,
       CWEventMask|CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap,
       &mut attributes
@@ -193,7 +195,10 @@ impl Preview {
       gg.h -= 2 * (*config).gap;
       gg
     } else {
-      self.geometry
+      let mut gg = self.geometry;
+      gg.x -= Preview::border_width;
+      gg.y -= Preview::border_width;
+      gg
     };
     XMoveResizeWindow (
       display,
