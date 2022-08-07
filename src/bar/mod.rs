@@ -5,7 +5,6 @@ use crate::core::*;
 use crate::cursor;
 use crate::property;
 use crate::action::select_workspace;
-use crate::window_title;
 use crate::draw::Alignment;
 
 
@@ -114,14 +113,6 @@ impl Bar {
         .draw ();
     }
     (*draw).text_color((*config).colors.bar_text);
-    // Active window title
-    if let Some (f) = focused_client! () {
-      let title = window_title (f.window);
-      (*draw).text (title.as_str ())
-        .at ((self.height * workspaces.len () as u32 + 20) as i32, 0)
-        .align_vertically (Alignment::Centered, self.height as i32)
-        .draw ();
-    }
     // ==== RIGHT ====
     // Time
     let now= chrono::Local::now ();
