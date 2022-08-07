@@ -8,7 +8,10 @@ gaps 5
 pad 46 10 10 10
 
 # Width of border around windows
-border 10
+# Border on the left, right, and bottom; title_bar_height set the top height
+border 5
+window_title_font sans 16
+window_title_height +1
 
 
 # Define a window to be a meta-window by its class
@@ -50,7 +53,7 @@ color Background #111111
 #hibernate
 
 # Bar
-bar_font SF Pro Text 18
+bar_font sans 18
 bar_opacity 80
 # Use the font height:
 #   bar_height 0
