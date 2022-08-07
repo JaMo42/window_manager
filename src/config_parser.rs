@@ -15,7 +15,8 @@ pub enum Definition_Type {
   Hibernate,
   Bar_Font (String),
   Bar_Opacity (u8),
-  Bar_Time_Format (String)
+  Bar_Time_Format (String),
+  Bar_Height (crate::bar::Height)
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -103,6 +104,35 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
     }
   }
 
+  fn parse_bar_height (&mut self) -> crate::bar::Height {
+    type H = crate::bar::Height;
+    let thing = self.next_thing ();
+    let is_plus = thing.starts_with ("+");
+    let num_str = if is_plus {
+      let mut it = thing.chars ();
+      it.next ();
+      it.as_str ()
+    }
+    else {
+      thing.as_str ()
+    };
+    if let Ok (n) = num_str.parse::<u32> () {
+      if n == 0 {
+        H::Font
+      }
+      else if is_plus {
+        H::FontPlus (n)
+      }
+      else {
+        H::Absolute (n)
+      }
+    }
+    else {
+      self.fail ("Expected a number");
+      unreachable! ();
+    }
+  }
+
   fn parse_line (&mut self) -> Definition_Type {
     use Definition_Type::*;
 
@@ -151,6 +181,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
         Bar_Opacity (percent)
       }
       "bar_time_format" => Bar_Time_Format (self.rest_of_line ()),
+      "bar_height" => Bar_Height (self.parse_bar_height ()),
       _ => {
         self.fail ("Unknown keyword");
         unreachable! ();

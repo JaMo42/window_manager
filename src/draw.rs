@@ -58,6 +58,14 @@ impl Drawing_Context {
     self.pango_layout.set_font_description (Some (&pango::FontDescription::from_string (description)));
   }
 
+  pub unsafe fn font_height (&mut self, description: Option<&str>) -> u32 {
+    if let Some (d) = description {
+      self.select_font (d);
+    }
+    self.pango_layout.set_text ("Mgj가");
+    (self.pango_layout.size ().1 / pango::SCALE) as u32
+  }
+
   pub fn text_color (&mut self, color: Color) {
     self.cairo_context.set_source_rgb (
       color.color.red as f64 / 65535.0,

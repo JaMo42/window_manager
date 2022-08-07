@@ -116,7 +116,6 @@ impl Workspace {
       match event.type_ {
         KeyPress => {
           if event.key.keycode == 0x17 {
-            // TODO: fix fullscreen windows
             self.clients[switch_idx].set_border ((*config).colors.normal);
             switch_idx = (switch_idx + 1) % self.clients.len ();
             self.clients[switch_idx].set_border ((*config).colors.selected);

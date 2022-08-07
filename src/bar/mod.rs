@@ -9,6 +9,13 @@ use crate::window_title;
 use crate::draw::Alignment;
 
 
+pub enum Height {
+  Font,
+  FontPlus (u32),
+  Absolute (u32)
+}
+
+
 pub struct Bar {
   pub width: u32,
   pub height: u32,
@@ -38,8 +45,11 @@ impl Bar {
       res_class: c_str! ("window_manager_bar") as *mut c_char
     };
     let width = screen_size.w as u32;
-    // TODO: based on config; font_size + something
-    let height = 36;
+    let height = match (*config).bar_height {
+      Height::Font => (*draw).font_height (Some (&(*config).bar_font)),
+      Height::FontPlus (n) => n + (*draw).font_height (Some (&(*config).bar_font)),
+      Height::Absolute (n) => n
+    };
     let window = XCreateWindow (
       display,
       root,

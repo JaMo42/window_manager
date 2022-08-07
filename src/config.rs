@@ -99,7 +99,8 @@ pub struct Config {
   pub hibernate: bool,
   pub bar_font: String,
   pub bar_opacity: u8,
-  pub bar_time_format: String
+  pub bar_time_format: String,
+  pub bar_height: bar::Height
 }
 
 impl Config {
@@ -116,7 +117,8 @@ impl Config {
       hibernate: false,
       bar_font: "sans".to_string (),
       bar_opacity: 100,
-      bar_time_format: "%a %b %e %T %Y".to_string ()
+      bar_time_format: "%a %b %e %T %Y".to_string (),
+      bar_height: bar::Height::FontPlus (5)
     }
   }
 
@@ -204,6 +206,14 @@ impl Config {
         Bar_Time_Format (format) => {
           log::info! ("config: bar time format: '{}'", format);
           self.bar_time_format = format;
+        }
+        Bar_Height (height) => {
+          match height {
+            bar::Height::Font => log::info! ("config: bar height: same as font height"),
+            bar::Height::FontPlus(n) => log::info! ("config: bar height: font height + {}", n),
+            bar::Height::Absolute(n) => log::info! ("config: bar height: {}", n)
+          };
+          self.bar_height = height;
         }
       }
     }
