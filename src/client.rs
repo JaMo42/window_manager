@@ -68,7 +68,7 @@ impl Client {
       is_fullscreen: false,
       is_dialog: false,
       border_color: (*config).colors.normal.pixel,
-      title: "".to_string ()
+      title: window_title (window)
     });
     XSaveContext (display, window, wm_context, &mut *c as *mut Client as XPointer);
     XSaveContext (display, frame, wm_context, &mut *c as *mut Client as XPointer);
