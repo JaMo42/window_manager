@@ -53,24 +53,30 @@ impl Workspace {
     panic! ("tried to remove client not on workspace");
   }
 
-  pub unsafe fn focus (&mut self, window: Window) {
+  unsafe fn focus_client (&mut self, idx: usize) {
+    let window = self.clients[idx].window;
     if let Some (prev) = self.clients.first_mut () {
-      if window == prev.window {
+      if prev.window == window {
+        prev.focus ();
         return;
       }
       prev.set_border ((*config).colors.normal);
     }
-    if window == X_NONE {
-      log::warn! ("Tried to focus None");
+    if idx != 0 {
+      let c = self.clients.remove (idx);
+      self.clients.insert (0, c);
+    }
+    self.clients[0].focus ();
+  }
+
+  pub unsafe fn focus (&mut self, window: Window) {
+    if window == X_NONE || window == root {
+      log::warn! ("Tried to focus {}", if window == X_NONE { "None" } else { "Root" });
     }
     else if let Some (idx) = self.clients.iter ().position (
       |c| c.window == window || c.frame == window)
     {
-      if idx != 0 {
-        let c = self.clients.remove (idx);
-        self.clients.insert (0, c);
-      }
-      self.clients[0].focus ();
+      self.focus_client (idx);
     }
     else {
       panic! ("Trying to focus window on a different workspace");
@@ -130,8 +136,7 @@ impl Workspace {
     XSetInputFocus (display, X_NONE, RevertToParent, CurrentTime);
     XDestroyWindow (display, w);
     // Focus the resulting window
-    let focused_win = self.clients[switch_idx].window;
-    self.focus (focused_win);
+    self.focus_client (switch_idx);
     // Re-grab main input
     super::grab_keys ();
     XSync (display, X_FALSE);
