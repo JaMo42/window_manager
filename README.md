@@ -113,6 +113,16 @@ This is simply a bash script that is run on startup (so don't forget to add `&` 
 
 - `Alt + Tab` Windows-style window switching
 
+## Status bar
+
+The window manager has a builtin status bar which is enabled by default.
+It can be disabled by calling `cargo build` with `--no-default-features`.
+See the [configuration file format](./doc/CONFIG.md) for customization options,
+currently only the font and colors can be changed.
+
+The bar contains a workspace switcher on the left and the current battery charge and time on the right.
+
+
 ## Hibernation
 
 (This was mostly implemented for fun and is likely not something you want).
@@ -124,7 +134,6 @@ On startup it then runs all these processes and moves their window to the correc
 This does not restore the state of the program in any way beyond running it with the same command line (hence the *fake*).
 
 This also does not work if one process owns multiple windows.
-
 ## ws_tool
 
 A basic python script that lets you interact with workspaces.
@@ -145,19 +154,6 @@ $ ./ws_tool format inactive active join
 See the [Polybar](#polybar) section for an example usage of the `format` command.
 
 Rquires the XLib package: `pip install python3-xlib`.
-
-## Status bar
-
-The window manager has a builtin status bar which is enabled by default.
-It can be disabled by calling `cargo build` with `--no-default-features`.
-See the [configuration file format](./doc/CONFIG.md) for customization options,
-currently only the font and colors can be changed.
-
-The bar contains a workspace switcher and active window title on the left and the current battery charge and time on the right.
-
-Preview:
-
-![window_manager](./doc/bar.png "Builtin status bar")
 
 ## Polybar
 
