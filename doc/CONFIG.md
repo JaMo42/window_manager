@@ -24,7 +24,7 @@ Sets the padding from the respective side of the desktop for snapped windows (us
 ```
 border <N>
 ```
-Sets the width of window borders.
+Sets the width of window borders. This value sets the width on the left, right, and bottom.
 
 ```
 meta <Class>
@@ -86,6 +86,21 @@ bar_time_format <format>
 ```
 Set the format string for the time widget (man strftime).
 
+```
+bar_height <height>
+```
+Set the height of the status bar; see [Height values](#height-values).
+
+```
+window_title_font <font>
+```
+Set the font used for window titles.
+
+```
+window_title_height <height>
+```
+Set the height for the title bar of each window (top border); see [Height values](#height-values).
+
 ## Modifiers
 
 - `Win` Windows key
@@ -143,3 +158,8 @@ Set the format string for the time widget (man strftime).
   - `Bar::UrgentWorkspace` background color for indicators of workspaces which contain windows demanding attention
 
   - `Bar::UrgentWorkspaceText` respective text color
+
+## Height values
+
+A height value can be either `<number>` or `+<number>`, the former specifying a abosulte value and the letter a value that's added on the font-size of the element.
+If the number for the absolute value is 0, the height of the font is used.
