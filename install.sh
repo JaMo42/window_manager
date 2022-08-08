@@ -5,9 +5,11 @@
 : "${CONFIG_PREFIX:=$HOME/.config}"
 
 CONFIG_DIR=$CONFIG_PREFIX/window_manager
+RESOURCE_DIR=$CONFIG_DIR/res
 
 echo Installing program to: $INSTALL_PREFIX
 echo Installing configuration to: $CONFIG_DIR
+echo Installing resources to: $RESOURCE_DIR
 
 test -f "target/release/window_manager" || cargo build --release
 
@@ -34,3 +36,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
   sudo cp -v window_manager.desktop /usr/share/xsessions/window_manager.desktop
 fi
 
+read -p "Install resources? [y/N]" -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  test -f $RESOURCE_DIR || mkdir -p $RESOURCE_DIR
+  cp -v res/* $RESOURCE_DIR/
+fi

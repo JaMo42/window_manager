@@ -18,6 +18,7 @@ cairo-rs = { version = "0.15.12", features = ["xlib"] }
 pango = "0.15.10"
 pangocairo = "0.15.1"
 chrono = "0.4.19"
+librsvg = { git="https://gitlab.gnome.org/GNOME/librsvg" }
 
 [features]
 default = ["bar"]

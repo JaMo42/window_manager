@@ -16,10 +16,19 @@ pub type Color = XftColor;
 
 pub struct Color_Scheme {
   pub focused: Color,
+  pub focused_text: Color,
   pub normal: Color,
-  pub background: Color,
+  pub normal_text: Color,
   pub selected: Color,
+  pub selected_text: Color,
   pub urgent: Color,
+  pub urgent_text: Color,
+
+  pub close_button: Color,
+  pub close_button_hovered: Color,
+
+  pub background: Color,
+
   pub bar_background: Color,
   pub bar_text: Color,
   pub bar_workspace: Color,
@@ -34,10 +43,16 @@ impl Color_Scheme {
   pub fn new () -> Color_Scheme {
     Color_Scheme {
       focused: xft_color_new! (),
+      focused_text: xft_color_new! (),
       normal: xft_color_new! (),
-      background: xft_color_new! (),
+      normal_text: xft_color_new! (),
       selected: xft_color_new! (),
+      selected_text: xft_color_new! (),
       urgent: xft_color_new! (),
+      urgent_text: xft_color_new! (),
+      close_button: xft_color_new! (),
+      close_button_hovered: xft_color_new! (),
+      background: xft_color_new! (),
       bar_background: xft_color_new! (),
       bar_text: xft_color_new! (),
       bar_workspace: xft_color_new! (),
@@ -62,11 +77,20 @@ impl Color_Scheme {
         );
       }
     }
+
     set_color! (self.focused, "#005577");
+    set_color! (self.focused_text, "#000000");
     set_color! (self.normal, "#444444");
-    set_color! (self.background, "#000000");
+    set_color! (self.normal_text, "#eeeeee");
     set_color! (self.selected, "#007755");
+    set_color! (self.selected_text, "#000000");
     set_color! (self.urgent, "#770000");
+    set_color! (self.urgent_text, "#000000");
+
+    set_color! (self.close_button, "#000000");
+    set_color! (self.close_button_hovered, "#ff1111");
+
+    set_color! (self.background, "#000000");
 
     set_color! (self.bar_background, "#000000");
     set_color! (self.bar_text, "#eeeeee");
@@ -81,10 +105,16 @@ impl Color_Scheme {
   fn _get_elem (&self, element: &str) -> XftColor {
     match element {
       "Focused" => self.focused,
+      "FocusedText" => self.focused_text,
       "Normal" => self.normal,
-      "Background" => self.background,
+      "NormalText" => self.normal_text,
       "Selected" => self.selected,
+      "SelectedText" => self.selected_text,
       "Urgent" => self.urgent,
+      "UrgentText" => self.urgent_text,
+      "CloseButton" => self.close_button,
+      "CloseButtonHovered" => self.close_button_hovered,
+      "Background" => self.background,
       "Bar::Background" => self.bar_background,
       "Bar::Text" => self.bar_text,
       "Bar::Workspace" => self.bar_workspace,
@@ -100,10 +130,16 @@ impl Color_Scheme {
   fn _get_elem_mut (&mut self, element: &str) -> &mut XftColor {
     match element {
       "Focused" => &mut self.focused,
+      "FocusedText" => &mut self.focused_text,
       "Normal" => &mut self.normal,
-      "Background" => &mut self.background,
+      "NormalText" => &mut self.normal_text,
       "Selected" => &mut self.selected,
+      "SelectedText" => &mut self.selected_text,
       "Urgent" => &mut self.urgent,
+      "UrgentText" => &mut self.urgent_text,
+      "CloseButton" => &mut self.close_button,
+      "CloseButtonHovered" => &mut self.close_button_hovered,
+      "Background" => &mut self.background,
       "Bar::Background" => &mut self.bar_background,
       "Bar::Text" => &mut self.bar_text,
       "Bar::Workspace" => &mut self.bar_workspace,

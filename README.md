@@ -178,7 +178,7 @@ Example for a polybar module that displays the active workspace and lets you swi
   click-right = ws_tool set prev
 ```
 
-### Acknowledgments
+## Acknowledgments
 
 Some projects I used to learn how windows managers work.
 
@@ -186,3 +186,11 @@ Some projects I used to learn how windows managers work.
 - [dwm](https://dwm.suckless.org/)
 - [tinywm](https://github.com/mackstann/tinywm)
 - [How X Window Managers Work, And How To Write One](https://jichu4n.com/posts/how-x-window-managers-work-and-how-to-write-one-part-i/)
+
+### Icons
+
+The repository contains icons from [icons8](https://icons8.com).
+
+Sources:
+
+- Close button: https://icons8.com/icon/83149/close

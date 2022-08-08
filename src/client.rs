@@ -29,9 +29,53 @@ unsafe fn create_frame (base_geometry: &Geometry) -> Window {
   )
 }
 
+
+unsafe fn create_auxilarry_windows (frame: Window, frame_size: &Geometry) -> Window {
+  let button_size = frame_offset.y as u32;
+  let button_pos = frame_size.w - button_size;
+  let mut vi: XVisualInfo = uninitialized! ();
+  XMatchVisualInfo(display, XDefaultScreen(display), 32, TrueColor, &mut vi);
+  let mut attributes: XSetWindowAttributes = uninitialized! ();
+  attributes.override_redirect = X_TRUE;
+  attributes.event_mask = ButtonPressMask|ButtonReleaseMask|EnterWindowMask|LeaveWindowMask;
+  //attributes.background_pixmap = X_NONE;
+  //attributes.colormap = XCreateColormap (display, root, vi.visual, AllocNone);
+
+  let screen = XDefaultScreen (display);
+  let close_button_window = XCreateWindow (
+    display,
+    frame,
+    button_pos as i32,
+    0,
+    button_size,
+    button_size,
+    0,
+    XDefaultDepth (display, screen),//vi.depth,
+    InputOutput as c_uint,
+    XDefaultVisual (display, screen),//vi.visual,
+    CWEventMask|CWOverrideRedirect/*|CWBackPixmap*//*|CWColormap*/,
+    &mut attributes
+  );
+  //XSelectInput (display, close_button_window, ButtonPressMask|ButtonReleaseMask|EnterWindowMask|LeaveWindowMask);
+  let window_type_desktop = property::atom (property::Net::WMWindowTypeDesktop);
+  property::set (
+    close_button_window,
+    property::Net::WMWindowType,
+    XA_ATOM,
+    32,
+    &window_type_desktop,
+    1
+  );
+  XClearWindow (display, close_button_window);
+
+  close_button_window
+}
+
+
 pub struct Client {
   pub window: Window,
   pub frame: Window,
+  pub close_button: Window,
   pub geometry: Geometry,
   pub prev_geometry: Geometry,
   pub workspace: usize,
@@ -40,7 +84,8 @@ pub struct Client {
   pub is_fullscreen: bool,
   pub is_dialog: bool,
   border_color: c_ulong,
-  title: String
+  title: String,
+  close_button_state: bool
 }
 
 impl Client {
@@ -55,11 +100,17 @@ impl Client {
 
     let frame = create_frame (&geometry);
     XReparentWindow (display, window, frame, frame_offset.x, frame_offset.y);
-    XMapSubwindows (display, frame);
 
+    let close_button= create_auxilarry_windows(
+      frame, &geometry.get_frame (&frame_offset)
+    );
+    log::debug! ("Client::new: close_button: {}", close_button);
+
+    XMapSubwindows (display, frame);
     let mut c = Box::new (Client {
       window,
       frame,
+      close_button,
       geometry,
       prev_geometry: geometry,
       workspace: active_workspace,
@@ -68,10 +119,13 @@ impl Client {
       is_fullscreen: false,
       is_dialog: false,
       border_color: (*config).colors.normal.pixel,
-      title: window_title (window)
+      title: window_title (window),
+      close_button_state: false
     });
-    XSaveContext (display, window, wm_context, &mut *c as *mut Client as XPointer);
-    XSaveContext (display, frame, wm_context, &mut *c as *mut Client as XPointer);
+    let this = &mut *c as *mut Client as XPointer;
+    XSaveContext (display, window, wm_context, this);
+    XSaveContext (display, frame, wm_context, this);
+    XSaveContext (display, close_button, wm_context, this);
     c
   }
 
@@ -79,6 +133,7 @@ impl Client {
     Client {
       window,
       frame: X_NONE,
+      close_button: X_NONE,
       geometry: uninitialized! (),
       prev_geometry: uninitialized! (),
       workspace: 0,
@@ -87,7 +142,8 @@ impl Client {
       is_fullscreen: false,
       is_dialog: false,
       border_color: 0,
-      title: String::new ()
+      title: String::new (),
+      close_button_state: false
     }
   }
 
@@ -105,6 +161,7 @@ impl Client {
 
   pub unsafe fn map (&mut self) {
     XMapWindow (display, self.frame);
+    XMapWindow (display, self.close_button);
     self.set_border ((*config).colors.focused);
   }
 
@@ -112,7 +169,7 @@ impl Client {
     XUnmapWindow (display, self.frame);
   }
 
-  pub unsafe fn draw_border (&self) {
+  pub unsafe fn draw_border (&mut self) {
     (*draw).rect (
       0,
       0,
@@ -134,11 +191,45 @@ impl Client {
       self.geometry.w + frame_offset.w,
       self.geometry.h + frame_offset.h
     );
+    self.draw_close_button (self.close_button_state);
   }
 
   pub unsafe fn set_border (&mut self, color: color::Color) {
     self.border_color = color.pixel;
     self.draw_border ();
+    self.draw_close_button (self.close_button_state);
+  }
+
+  pub unsafe fn draw_close_button (&mut self, hovered: bool) {
+    const ICON_SIZE_PERCENT: u32 = 75;
+    let size = frame_offset.y as u32;
+    let icon_size = size * ICON_SIZE_PERCENT / 100;
+    let icon_position = (size - icon_size) as i32 / 2;
+    let color = if hovered {
+      (*config).colors.close_button_hovered
+    } else {
+      (*config).colors.close_button
+    };
+    (*draw).rect (0, 0, size, size, self.border_color, true);
+
+    if let Some (icon) = &(*draw).resources.close_button {
+      (*draw).draw_colored_svg (
+        icon,
+        color,
+        icon_position, icon_position,
+        icon_size, icon_size
+      );
+    }
+    else {
+      (*draw).rect (
+        icon_position, icon_position,
+        icon_size, icon_size,
+        color.pixel, true
+      );
+    }
+
+    (*draw).render (self.close_button, 0, 0, size, size);
+    self.close_button_state = hovered;
   }
 
   pub unsafe fn set_title (&mut self, title: &str) {
@@ -165,6 +256,7 @@ impl Client {
       fg.w,
       fg.h
     );
+    XMoveWindow (display, self.close_button, fg.w as i32 - frame_offset.y, 0);
     XResizeWindow (display, self.window, target.w, target.h);
     self.configure ();
     self.draw_border ();

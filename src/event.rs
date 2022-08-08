@@ -32,6 +32,15 @@ pub unsafe fn button_press (event: &XButtonEvent) {
     }
   }
   if event.subwindow == X_NONE {
+    if let Some (client) = win2client (event.window) {
+      // This is probably always true as long as we only have the close button
+      if event.window == client.close_button {
+        action::close_client (client);
+      }
+      else {
+        log::warn! ("non-meta click on {}", event.window);
+      }
+    }
     return;
   }
   if meta_windows.contains (&event.subwindow) {
@@ -310,10 +319,11 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     }
     c.prev_geometry = c.geometry;
     c.move_and_resize (g);
-    c.configure ();
     // Add client
     if target_workspace == active_workspace {
       c.map ();
+      c.draw_close_button (false);
+      c.draw_border ();
     }
     workspaces[target_workspace].push (c);
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
@@ -402,7 +412,7 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
     log::debug! ("Client message: {}", event.message_type);
     // Something about just printing 'client' here sometimes just freezes the
     // entire program (TODO)
-    log::debug! ("  Recipient: {}", client);
+    log::debug! ("  Recipient: {}", client.window);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
     if event.message_type == atom (Net::WMState) {
       // _NET_WM_STATE
@@ -469,6 +479,7 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
     if workspace.contains (window) {
       let c = workspace.remove (&Client::dummy (window));
       XDeleteContext (display, c.window, wm_context);
+      XDeleteContext (display, c.close_button, wm_context);
       XDeleteContext (display, c.frame, wm_context);
       XSelectInput (display, c.frame, X_NONE as i64);
       XDestroyWindow (display, c.frame);
@@ -482,5 +493,12 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
 pub unsafe fn expose (event: &XExposeEvent) {
   if event.count == 0 {
     bar.draw ();
+  }
+}
+
+pub unsafe fn crossing (event: &XCrossingEvent) {
+  if let Some (client) = win2client (event.window) {
+    client.draw_close_button (event.type_ == EnterNotify);
+    client.draw_border ();
   }
 }

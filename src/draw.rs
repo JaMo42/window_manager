@@ -1,8 +1,14 @@
 use super::core::*;
 use cairo::ffi::*;
+use librsvg::{SvgHandle, CairoRenderer};
 use x11::xlib::*;
 use super::color::Color;
 use super::geometry::Geometry;
+use super::paths;
+
+pub struct Resources {
+  pub close_button: Option<SvgHandle>
+}
 
 pub struct Drawing_Context {
   drawable: Drawable,
@@ -10,6 +16,7 @@ pub struct Drawing_Context {
   cairo_surface: cairo::Surface,
   cairo_context: cairo::Context,
   pango_layout: pango::Layout,
+  pub resources: Resources
 }
 
 impl Drawing_Context {
@@ -42,7 +49,18 @@ impl Drawing_Context {
       cairo_surface,
       cairo_context,
       pango_layout,
+      resources: Resources {
+        close_button: None
+      }
     }
+  }
+
+  pub unsafe fn load_resources (&mut self) {
+    log::info! ("Loading resources");
+    let loader = librsvg::Loader::new ();
+    self.resources.close_button = loader.read_path (
+      format! ("{}/close_button.svg", paths::resource_dir)
+    ).ok ();
   }
 
   pub unsafe fn rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: u64, fill: bool) {
@@ -54,6 +72,29 @@ impl Drawing_Context {
     }
   }
 
+  pub unsafe fn draw_svg (&mut self, svg: &SvgHandle, x: i32, y: i32, w: u32, h: u32) {
+    CairoRenderer::new (svg).render_document (
+      &self.cairo_context,
+      &cairo::Rectangle {
+        x: x as f64,
+        y: y as f64,
+        width: w as f64,
+        height: h as f64
+      }
+    ).unwrap ();
+  }
+
+  pub unsafe fn draw_colored_svg (&mut self, svg: &SvgHandle, color: Color, x: i32, y: i32, w: u32, h: u32) {
+    // Create a mask from the alpha of the SVG and use that to fill the given color
+    self.cairo_context.save ().unwrap ();
+    self.cairo_context.push_group ();
+    self.draw_svg (svg, x, y, w, h);
+    let pattern = self.cairo_context.pop_group ().unwrap ();
+    self.text_color (color);
+    self.cairo_context.mask (&pattern).unwrap ();
+    self.cairo_context.restore ().unwrap ();
+  }
+
   pub unsafe fn select_font (&mut self, description: &str) {
     self.pango_layout.set_font_description (Some (&pango::FontDescription::from_string (description)));
   }
@@ -62,7 +103,7 @@ impl Drawing_Context {
     if let Some (d) = description {
       self.select_font (d);
     }
-    self.pango_layout.set_text ("Mgj가");
+    self.pango_layout.set_text ("Mgj가|");
     (self.pango_layout.size ().1 / pango::SCALE) as u32
   }
 

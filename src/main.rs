@@ -39,6 +39,7 @@ mod paths {
   pub static mut autostartrc: String = String::new ();
   pub static mut hiberfile: String = String::new ();
   pub static mut logfile: String = String::new ();
+  pub static mut resource_dir: String = String::new ();
 
   pub unsafe fn load () {
     let config_dir = if let Ok (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME") {
@@ -54,6 +55,7 @@ mod paths {
     autostartrc = format! ("{}/autostartrc", config_dir);
     hiberfile = format! ("{}/.hiberfile", config_dir);
     logfile = format! ("{}/log.txt", config_dir);
+    resource_dir = format! ("{}/res", config_dir);
   }
 }
 
@@ -297,7 +299,9 @@ unsafe fn run () {
       ClientMessage => event::client_message (&event.client_message),
       ConfigureRequest => event::configure_request (&event.configure_request),
       DestroyNotify => event::destroy_notify (&event.destroy_window),
+      EnterNotify => event::crossing (&event.crossing),
       KeyPress => event::key_press (&event.key),
+      LeaveNotify => event::crossing (&event.crossing),
       MappingNotify => event::mapping_notify (&event.mapping),
       MapRequest => event::map_request (&event.map_request),
       MotionNotify => event::motion (&event.button),
@@ -478,6 +482,7 @@ fn main () {
     config_instance.load ();
     config = &config_instance;
     let mut drawing_context_instance = Drawing_Context::new ();
+    drawing_context_instance.load_resources ();
     draw = &mut drawing_context_instance;
     log::trace! ("Initializing");
     init ();
