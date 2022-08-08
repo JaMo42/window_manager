@@ -189,7 +189,7 @@ Some projects I used to learn how windows managers work.
 
 ### Icons
 
-The repository contains icons from [icons8](https://icons8.com).
+This repository contains icons from [icons8](https://icons8.com).
 
 Sources:
 
