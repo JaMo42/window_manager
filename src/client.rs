@@ -16,6 +16,7 @@ unsafe fn create_frame (base_geometry: &Geometry) -> Window {
   attributes.event_mask = SubstructureRedirectMask;
   attributes.save_under = X_FALSE;
   let screen = XDefaultScreen (display);
+
   XCreateWindow (
     display, root,
     g.x, g.y,
@@ -38,11 +39,11 @@ unsafe fn create_auxilarry_windows (frame: Window, frame_size: &Geometry) -> Win
   let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.override_redirect = X_TRUE;
   attributes.event_mask = ButtonPressMask|ButtonReleaseMask|EnterWindowMask|LeaveWindowMask;
-  //attributes.background_pixmap = X_NONE;
-  //attributes.colormap = XCreateColormap (display, root, vi.visual, AllocNone);
+  attributes.background_pixmap = X_NONE;
+  attributes.save_under = X_FALSE;
+  attributes.backing_store = NotUseful;
 
-  let screen = XDefaultScreen (display);
-  let close_button_window = XCreateWindow (
+  XCreateWindow (
     display,
     frame,
     button_pos as i32,
@@ -50,25 +51,12 @@ unsafe fn create_auxilarry_windows (frame: Window, frame_size: &Geometry) -> Win
     button_size,
     button_size,
     0,
-    XDefaultDepth (display, screen),//vi.depth,
+    CopyFromParent,
     InputOutput as c_uint,
-    XDefaultVisual (display, screen),//vi.visual,
-    CWEventMask|CWOverrideRedirect/*|CWBackPixmap*//*|CWColormap*/,
+    CopyFromParent as *mut Visual,
+    CWEventMask|CWOverrideRedirect|CWBackPixmap|CWSaveUnder|CWBackingStore,
     &mut attributes
-  );
-  //XSelectInput (display, close_button_window, ButtonPressMask|ButtonReleaseMask|EnterWindowMask|LeaveWindowMask);
-  let window_type_desktop = property::atom (property::Net::WMWindowTypeDesktop);
-  property::set (
-    close_button_window,
-    property::Net::WMWindowType,
-    XA_ATOM,
-    32,
-    &window_type_desktop,
-    1
-  );
-  XClearWindow (display, close_button_window);
-
-  close_button_window
+  )
 }
 
 
@@ -101,10 +89,9 @@ impl Client {
     let frame = create_frame (&geometry);
     XReparentWindow (display, window, frame, frame_offset.x, frame_offset.y);
 
-    let close_button= create_auxilarry_windows(
+    let close_button= create_auxilarry_windows (
       frame, &geometry.get_frame (&frame_offset)
     );
-    log::debug! ("Client::new: close_button: {}", close_button);
 
     XMapSubwindows (display, frame);
     let mut c = Box::new (Client {
