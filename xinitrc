@@ -7,6 +7,9 @@ case $VALGRIND in
   2)
     exec valgrind --track-origins=yes --leak-check=full ./target/debug/window_manager 2>err
     ;;
+  CALLGRIND)
+    exec valgrind --tool=callgrind -v ./target/debug/window_manager 2>err
+    ;;
   *)
     exec ./target/debug/window_manager 2>err
     ;;

@@ -7,3 +7,4 @@ log.txt
 # Created by `./run.sh`
 err
 
+callgrind.out.*
