@@ -3,6 +3,7 @@ use super::core::*;
 use super::geometry::*;
 use super::*;
 use super::property::WM;
+use super::draw::resources;
 
 pub static mut frame_offset: Geometry = Geometry::new ();
 
@@ -199,9 +200,9 @@ impl Client {
     };
     (*draw).rect (0, 0, size, size, self.border_color, true);
 
-    if let Some (icon) = &(*draw).resources.close_button {
+    if resources::close_button.is_some () {
       (*draw).draw_colored_svg (
-        icon,
+        &mut resources::close_button,
         color,
         icon_position, icon_position,
         icon_size, icon_size

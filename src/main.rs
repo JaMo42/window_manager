@@ -482,8 +482,8 @@ fn main () {
     config_instance.load ();
     config = &config_instance;
     let mut drawing_context_instance = Drawing_Context::new ();
-    drawing_context_instance.load_resources ();
     draw = &mut drawing_context_instance;
+    draw::load_resources ();
     log::trace! ("Initializing");
     init ();
     log::trace! ("Running");

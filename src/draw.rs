@@ -6,17 +6,38 @@ use super::color::Color;
 use super::geometry::Geometry;
 use super::paths;
 
-pub struct Resources {
-  pub close_button: Option<SvgHandle>
+pub mod resources {
+  pub static mut close_button: super::Svg_Resource = super::Svg_Resource {
+    file: "close_button.svg",
+    handle: None,
+    renderer: None,
+    pattern: None
+  };
 }
+
+
+pub struct Svg_Resource {
+  file: &'static str,
+  handle: Option<SvgHandle>,
+  renderer: Option<CairoRenderer<'static>>,
+  // The pattern used to draw a colored SVG, it is assumed that the size the
+  // SVG is drawn in is always the same and it's always drawn to (0, 0).
+  pattern: Option<cairo::Pattern>
+}
+
+impl Svg_Resource {
+  pub fn is_some (&self) -> bool {
+    self.handle.is_some ()
+  }
+}
+
 
 pub struct Drawing_Context {
   drawable: Drawable,
   gc: GC,
   cairo_surface: cairo::Surface,
   cairo_context: cairo::Context,
-  pango_layout: pango::Layout,
-  pub resources: Resources
+  pango_layout: pango::Layout
 }
 
 impl Drawing_Context {
@@ -40,27 +61,17 @@ impl Drawing_Context {
     cairo_xlib_surface_set_size (cairo_surface_raw, width as i32, height as i32);
     let cairo_surface = cairo::Surface::from_raw_full (cairo_surface_raw)
       .expect ("Failed to create cairo surface");
-    let cairo_context =
-      cairo::Context::new (&cairo_surface).expect ("Failed to create cairo context");
-    let pango_layout = pangocairo::create_layout (&cairo_context).unwrap ();
+    let cairo_context = cairo::Context::new (&cairo_surface)
+      .expect ("Failed to create cairo context");
+    let pango_layout = pangocairo::create_layout (&cairo_context)
+      .expect ("Failed to create pango layout");
     Self {
       drawable,
       gc: XCreateGC (display, root, 0, std::ptr::null_mut ()),
       cairo_surface,
       cairo_context,
       pango_layout,
-      resources: Resources {
-        close_button: None
-      }
     }
-  }
-
-  pub unsafe fn load_resources (&mut self) {
-    log::info! ("Loading resources");
-    let loader = librsvg::Loader::new ();
-    self.resources.close_button = loader.read_path (
-      format! ("{}/close_button.svg", paths::resource_dir)
-    ).ok ();
   }
 
   pub unsafe fn rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: u64, fill: bool) {
@@ -72,8 +83,8 @@ impl Drawing_Context {
     }
   }
 
-  pub unsafe fn draw_svg (&mut self, svg: &SvgHandle, x: i32, y: i32, w: u32, h: u32) {
-    CairoRenderer::new (svg).render_document (
+  pub unsafe fn draw_svg (&mut self, svg: &Svg_Resource, x: i32, y: i32, w: u32, h: u32) {
+    svg.renderer.as_ref ().unwrap ().render_document (
       &self.cairo_context,
       &cairo::Rectangle {
         x: x as f64,
@@ -84,15 +95,17 @@ impl Drawing_Context {
     ).unwrap ();
   }
 
-  pub unsafe fn draw_colored_svg (&mut self, svg: &SvgHandle, color: Color, x: i32, y: i32, w: u32, h: u32) {
+  pub unsafe fn draw_colored_svg (&mut self, svg: &mut Svg_Resource, color: Color, x: i32, y: i32, w: u32, h: u32) {
     // Create a mask from the alpha of the SVG and use that to fill the given color
-    self.cairo_context.save ().unwrap ();
-    self.cairo_context.push_group ();
-    self.draw_svg (svg, x, y, w, h);
-    let pattern = self.cairo_context.pop_group ().unwrap ();
+    if svg.pattern.is_none () {
+      self.cairo_context.save ().unwrap ();
+      self.cairo_context.push_group ();
+      self.draw_svg (svg, x, y, w, h);
+      svg.pattern = Some (self.cairo_context.pop_group ().unwrap ());
+      self.cairo_context.restore ().unwrap ();
+    }
     self.text_color (color);
-    self.cairo_context.mask (&pattern).unwrap ();
-    self.cairo_context.restore ().unwrap ();
+    self.cairo_context.mask (svg.pattern.as_ref ().unwrap ()).unwrap ();
   }
 
   pub unsafe fn select_font (&mut self, description: &str) {
@@ -140,8 +153,9 @@ impl Drawing_Context {
 
 
 pub enum Alignment {
-  // Left is excluded as it is the default
+  // Left/Top is excluded as it is the default
   Centered,
+  // These are currently not used
   //Right,
   //Bottom
 }
@@ -219,4 +233,25 @@ impl<'a> Rendered_Text<'a> {
     pangocairo::show_layout (self.context, self.layout);
     Geometry::from_parts (self.x, self.y, self.width as u32, self.height as u32)
   }
+}
+
+pub unsafe fn load_resources () {
+  log::info! ("Loading resources");
+  let loader = librsvg::Loader::new ();
+
+  let load_svg = |res: &'static mut Svg_Resource| {
+    match loader.read_path (format! ("{}/{}", paths::resource_dir, res.file)) {
+      Ok (handle) => {
+        res.handle = Some (handle);
+        res.renderer = Some (CairoRenderer::new (
+          res.handle.as_ref ().unwrap ()
+        ));
+      }
+      Err (error) => {
+        log::error! ("Failed to load {}: {}", res.file, error);
+      }
+    }
+  };
+
+  load_svg (&mut resources::close_button);
 }
