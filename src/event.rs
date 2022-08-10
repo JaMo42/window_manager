@@ -310,15 +310,15 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
         has_trans_client = true;
         target_workspace = trans.workspace;
         g.center (&trans.geometry)
-          .clamp (&window_area);
+          .clamp (&window_area.get_client (&frame_offset));
       }
     }
     if !has_trans_client {
       let mut rng = rand::thread_rng ();
-      g.random_inside (&window_area, &mut rng);
+      g.random_inside (&window_area.get_client (&frame_offset), &mut rng);
     }
     c.prev_geometry = c.geometry;
-    c.move_and_resize (g);
+    c.set_position_and_size (g);
     // Add client
     if target_workspace == active_workspace {
       c.map ();
