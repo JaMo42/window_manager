@@ -125,7 +125,6 @@ pub struct Config {
   pub workspace_count: usize,
   pub meta_window_classes: Vec<String>,
   pub colors: Color_Scheme,
-  pub hibernate: bool,
   pub bar_font: String,
   pub bar_opacity: u8,
   pub bar_time_format: String,
@@ -145,7 +144,6 @@ impl Config {
       workspace_count: 1,
       meta_window_classes: Vec::new (),
       colors: Color_Scheme::new (),
-      hibernate: false,
       bar_font: "sans".to_string (),
       bar_opacity: 100,
       bar_time_format: "%a %b %e %T %Y".to_string (),
@@ -222,10 +220,6 @@ impl Config {
           else {
             color_links.push ((element, color_hex));
           }
-        }
-        Hibernate => {
-          log::info! ("config: enable hibernation");
-          self.hibernate = true;
         }
         Bar_Font (description) => {
           log::info! ("config: bar font: {}", description);

@@ -18,7 +18,6 @@ mod config_parser;
 mod color;
 #[macro_use]
 mod workspace;
-mod hibernate;
 #[macro_use]
 mod property;
 mod cursor;
@@ -37,7 +36,6 @@ use bar::Bar;
 mod paths {
   pub static mut config: String = String::new ();
   pub static mut autostartrc: String = String::new ();
-  pub static mut hiberfile: String = String::new ();
   pub static mut logfile: String = String::new ();
   pub static mut resource_dir: String = String::new ();
 
@@ -53,7 +51,6 @@ mod paths {
     }
     config = format! ("{}/config", config_dir);
     autostartrc = format! ("{}/autostartrc", config_dir);
-    hiberfile = format! ("{}/.hiberfile", config_dir);
     logfile = format! ("{}/log.txt", config_dir);
     resource_dir = format! ("{}/res", config_dir);
   }
@@ -193,13 +190,6 @@ unsafe fn init () {
   // Properties
   property::load_atoms ();
   property::init_set_root_properties ();
-  // Hibernation
-  if (*config).hibernate {
-    select_input (SubstructureRedirectMask);
-    if hibernate::load ().is_err () {
-      log::error! ("Could not read hiberfile");
-    }
-  }
   // Cursors
   cursor::load_cursors ();
   // Grab input
@@ -318,14 +308,6 @@ unsafe fn run () {
 
 
 unsafe fn cleanup () {
-  // Hibernation
-  #[allow(clippy::collapsible_if)]
-  if (*config).hibernate {
-    if hibernate::store ().is_err () {
-      log::error! ("Could not write hiberfile");
-      std::fs::remove_file (&paths::hiberfile).ok ();
-    }
-  }
   // Close all open clients
   for ws in workspaces.iter () {
     for c in ws.iter () {

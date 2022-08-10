@@ -49,9 +49,6 @@ color Urgent #d9534f
 # Solid background color
 color Background #111111
 
-# Enable hibernation
-#hibernate
-
 # Bar
 bar_font sans 18
 bar_opacity 80

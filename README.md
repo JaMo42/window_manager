@@ -22,8 +22,6 @@
 
 - Builtin status bar
 
-- Fake [Hibernation](#hibernation)
-
 ## Dependencies
 
 Written in rust, `cargo` required.
@@ -122,18 +120,6 @@ currently only the font and colors can be changed.
 
 The bar contains a workspace switcher on the left and the current battery charge and time on the right.
 
-
-## Hibernation
-
-(This was mostly implemented for fun and is likely not something you want).
-
-This stores the position and workspace of each window as well as the command used to launch the program that owns the window (by PID).
-
-On startup it then runs all these processes and moves their window to the correct workspace and position, preserving the stacking order.
-
-This does not restore the state of the program in any way beyond running it with the same command line (hence the *fake*).
-
-This also does not work if one process owns multiple windows.
 ## ws_tool
 
 A basic python script that lets you interact with workspaces.

@@ -66,11 +66,6 @@ Set the [`<Element1>`](#color-elements) to the same color as `<Element2>`.
 Can be used before `Element2` is defined.
 
 ```
-hibernate
-```
-Enable the fake-hibernation.
-
-```
 bar_font <font>
 ```
 Set the font of the status bar.
