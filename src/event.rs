@@ -64,10 +64,19 @@ pub unsafe fn button_relase () {
 
 pub unsafe fn motion (event: &XButtonEvent) {
   if mouse_held != 0 {
-    match mouse_held {
-      1 => mouse_move (event.subwindow),
-      3 => mouse_resize (event.subwindow),
-      _ => {}
+    if let Some (c) = win2client (event.subwindow) {
+      if (event.state & (*config).modifier) == 0 {
+        if event.x - c.geometry.x > 0 && event.y - c.geometry.y > 0 {
+          mouse_held = Button3;
+        } else {
+          mouse_held = Button1;
+        }
+      }
+      match mouse_held {
+        Button1 => mouse_move (c),
+        Button3 => mouse_resize (c),
+        _ => {}
+      }
     }
     mouse_held = 0;
   }
@@ -103,13 +112,7 @@ unsafe fn pointer_position () -> Option<(c_int, c_int)> {
 }
 
 
-unsafe fn mouse_move (window: Window) {
-  let client: &mut Client = if let Some (c) = win2client (window) {
-    c
-  }
-  else {
-    return;
-  };
+unsafe fn mouse_move (client: &mut Client) {
   if XGrabPointer (
     display,
     root,
@@ -176,13 +179,7 @@ unsafe fn mouse_move (window: Window) {
 }
 
 
-unsafe fn mouse_resize (window: Window) {
-  let client = if let Some (c) = win2client (window) {
-    c
-  }
-  else {
-    return;
-  };
+unsafe fn mouse_resize (client: &mut Client) {
   if XGrabPointer (
     display,
     root,
