@@ -4,15 +4,13 @@ workspaces 4
 # Inner gap for snapped clients
 gaps 5
 # Top, Bottom, Left, Right padding for snapped clients
-# (Bar height is 36)
 pad 46 10 10 10
 
 # Width of border around windows
 # Border on the left, right, and bottom; title_bar_height set the top height
 border 5
 window_title_font sans 16
-window_title_height +1
-
+window_title_height +2
 
 # Define a window to be a meta-window by its class
 #meta XClock
@@ -38,32 +36,37 @@ bind Mod+Print $ scrot ~/Pictures/Screenshots/%Y-%m-%d-%H%M%S-screenshot.jpg
 
 # Define colors
 
+def_color DarkText #030405
+def_color LightText #e7e8e9
+def_color Accent #428bca
+
 # Border of focused window
-color Focused #428bca
+color Focused Accent
+color FocusedText DarkText
 # Border of other windows
 color Normal #777777
+color NormalText DarkText
 # Color or pending window druing window switching
 color Selected #5cb85c
+color SelectedText DarkText
 # Color of a window that demands attention
 color Urgent #d9534f
+color UrgentText FocusedText
 # Solid background color
 color Background #111111
+# Close button
+color CloseButton DarkText
+color CloseButtonHovered Urgent
 
 # Bar
 bar_font sans 18
 bar_opacity 80
 # Use the font height:
 #   bar_height 0
-# Use the font height plus given pixels
+# Use the font height plus given pixels:
 #   bar_height +5
-# Absolute height
+# Absolute height:
 bar_height 36
 color Bar::Background #161514
-color Bar::Text #e9e9e9
-color Bar::Workspace Bar::Background
-color Bar::WorkspaceText Bar::Text
-color Bar::ActiveWorkspace Focused
-color Bar::ActiveWorkspaceText #030405
-color Bar::UrgentWorkspace Urgent
-color Bar::UrgentWorkspaceText #030405
+color Bar::Text LightText
 

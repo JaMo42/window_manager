@@ -56,6 +56,7 @@ The set of KeySyms that are available in this manner and the mechanisms by which
 
 ```
 color <Element> #RRGGBB
+color <Element> #RRRRGGGGBBBB
 ```
 Set the [`<Element>`](#color-elements) to the hex-color.
 
@@ -64,6 +65,12 @@ color <Element1> <Element2>
 ```
 Set the [`<Element1>`](#color-elements) to the same color as `<Element2>`.
 Can be used before `Element2` is defined.
+
+```
+def_color <Name> #RRGGBB
+def_color <Name> #RRRRGGGGBBBB
+```
+Define a named color that can be used to set other colors.
 
 ```
 bar_font <font>
@@ -124,15 +131,34 @@ Set the height for the title bar of each window (top border); see [Height values
 
 - `unsnap_or_center` If the focused window is snapped, un-snap it, restoring it to it's position before it was last snapped. If it is not snapped, center it.
 
+## Height values
+
+A height value can be either `<number>` or `+<number>`, the former specifying a abosulte value and the letter a value that's added on the font-size of the element.
+If the number for the absolute value is 0, the height of the font is used.
+
 ## Color elements
 
-- `Focused` the focused window
+- Window border colors
 
-- `Normal` un-focused windows
+  - `Focused` the focused window
 
-- `Urgent` windows that demand attention
+  - `FocusedText` respective text color
 
-- `Select` the pending windows during window switching
+  - `Normal` un-focused windows
+
+  - `NormalText` respective text color
+
+  - `Urgent` windows that demand attention
+
+  - `UrgentText` respective text color
+
+  - `Selected` the pending windows during window switching
+
+  - `SelectedText` respective text color
+
+- `CloseButton` default color of the close button
+
+- `CloseButtonHovered` color of the close button when the mouse is above it
 
 - `Background` the desktop background (use an external program like `feh` to set a background image)
 
@@ -153,8 +179,3 @@ Set the height for the title bar of each window (top border); see [Height values
   - `Bar::UrgentWorkspace` background color for indicators of workspaces which contain windows demanding attention
 
   - `Bar::UrgentWorkspaceText` respective text color
-
-## Height values
-
-A height value can be either `<number>` or `+<number>`, the former specifying a abosulte value and the letter a value that's added on the font-size of the element.
-If the number for the absolute value is 0, the height of the font is used.

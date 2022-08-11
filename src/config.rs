@@ -1,5 +1,5 @@
 use std::os::raw::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::ffi::CString;
 use x11::xlib::*;
 use x11::keysym::*;
@@ -166,6 +166,7 @@ impl Config {
     let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
     let parser = config_parser::Parser::new (source.chars ());
     let mut color_scheme_config = Color_Scheme_Config::new ();
+    let mut color_defs: BTreeMap<String, String> = BTreeMap::new ();
     for def in parser {
       use config_parser::Definition_Type::*;
       match def {
@@ -210,7 +211,7 @@ impl Config {
           );
         }
         Color (element, color_hex) => {
-          log::info! ("config: color: {} {}", element, color_hex);
+          log::info! ("config: color: {} -> {}", element, color_hex);
           color_scheme_config.set (
             &element,
             if color_hex.starts_with ('#') {
@@ -219,6 +220,10 @@ impl Config {
               Color_Config::Link (color_hex)
             }
           );
+        }
+        Def_Color (name, color_hex) => {
+          log::info! ("config: color definition: {} -> {}", name, color_hex);
+          color_defs.insert (name, color_hex);
         }
         Bar_Font (description) => {
           log::info! ("config: bar font: {}", description);
@@ -248,7 +253,7 @@ impl Config {
       }
     }
     // Set color scheme
-    self.colors = unsafe { Color_Scheme::new (&color_scheme_config) };
+    self.colors = unsafe { Color_Scheme::new (&color_scheme_config, &color_defs) };
     // Pre-defined key bindings
     for ws_idx in 0..self.workspace_count {
       let sym = XK_1 + ws_idx as u32;

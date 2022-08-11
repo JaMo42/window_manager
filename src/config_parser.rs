@@ -13,6 +13,7 @@ pub enum Definition_Type {
   Bind_Key (c_uint, String, String),
   Bind_Command (c_uint, String, String),
   Color (String, String),
+  Def_Color (String, String),
   Bar_Font (String),
   Bar_Opacity (u8),
   Bar_Time_Format (String),
@@ -168,6 +169,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
         }
       }
       "color" => Color (self.next_thing (), self.next_thing ()),
+      "def_color" => Def_Color (self.next_thing (), self.next_thing ()),
       "bar_font" => Bar_Font (self.rest_of_line ().trim ().to_string ()),
       "bar_opacity" => {
         let percent: u8 = self.parse_number ();

@@ -1,5 +1,6 @@
 use std::ffi::CString;
 use std::mem::size_of;
+use std::collections::BTreeMap;
 use x11::xlib::*;
 use x11::xft::{XftColor, XftColorAllocName};
 use super::core::display;
@@ -122,9 +123,9 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   // Window borders
     // Focused
     "#005577",
-    "000000",
+    "#000000",
     // Normal
-    "444444",
+    "#444444",
     "#eeeeee",
     // Selected
     "#007755",
@@ -142,18 +143,18 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
 
   // Bar
     // Background
-    "111111",
+    "#111111",
     // Text
-    "eeeeee",
+    "#eeeeee",
     // Workspaces
-    "Normal",
-    "NormalText",
+    "Bar::Background",
+    "Bar::Text",
     // Active workspace
     "Focused",
     "FocusedText",
-    // Urgent workspaceA
+    // Workspace with urgent client
     "Urgent",
-    "UrgetnText",
+    "UrgentText",
 ];
 
 impl std::ops::Index<usize> for Color_Scheme {
@@ -177,10 +178,13 @@ impl std::ops::IndexMut<usize> for Color_Scheme {
 }
 
 impl Color_Scheme {
-  pub unsafe fn new (cfg: &Color_Scheme_Config) -> Self {
+  pub unsafe fn new (cfg: &Color_Scheme_Config, defs_in: &BTreeMap<String, String>) -> Self {
     let mut result: Color_Scheme = uninitialized! ();
     let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
     let mut links = Vec::<(usize, usize)>::new ();
+    let defs: BTreeMap<String, Color> = defs_in.iter ().map (|(name, hex)| {
+      (name.clone (), Color::alloc_from_hex (hex))
+    }).collect ();
     for i in 0..COLOR_COUNT {
       match &cfg.cfg[i] {
         Color_Config::Default => {
@@ -196,7 +200,12 @@ impl Color_Scheme {
           set[i] = true;
         },
         Color_Config::Link (target) => {
-          links.push ((i, color_index (target.as_str ())));
+          if let Some (def) = defs.get (target) {
+            result[i] = *def;
+            set[i] = true;
+          }else {
+            links.push ((i, color_index (target.as_str ())));
+          }
         }
       }
     }
