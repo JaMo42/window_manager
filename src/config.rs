@@ -7,6 +7,7 @@ use super::*;
 use super::config_parser;
 use super::color::*;
 use super::paths;
+use super::color;
 
 #[macro_export]
 macro_rules! clean_mods {
@@ -166,7 +167,7 @@ impl Config {
     let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
     let parser = config_parser::Parser::new (source.chars ());
     let mut color_scheme_config = Color_Scheme_Config::new ();
-    let mut color_defs: BTreeMap<String, String> = BTreeMap::new ();
+    let mut color_defs: BTreeMap<String, Color> = BTreeMap::new ();
     for def in parser {
       use config_parser::Definition_Type::*;
       match def {
@@ -223,7 +224,10 @@ impl Config {
         }
         Def_Color (name, color_hex) => {
           log::info! ("config: color definition: {} -> {}", name, color_hex);
-          color_defs.insert (name, color_hex);
+          color_defs.insert (
+            name,
+            unsafe { color::Color::alloc_from_hex (&color_hex) }
+          );
         }
         Bar_Font (description) => {
           log::info! ("config: bar font: {}", description);
