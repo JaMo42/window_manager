@@ -121,14 +121,14 @@ impl Preview {
 
   pub unsafe fn create (initial_geometry: Geometry) -> Self {
     let mut vi: XVisualInfo = uninitialized! ();
-    XMatchVisualInfo(display, XDefaultScreen(display), 32, TrueColor, &mut vi);
+    XMatchVisualInfo(display, XDefaultScreen (display), 32, TrueColor, &mut vi);
     let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.override_redirect = X_TRUE;
     attributes.event_mask = 0;
     attributes.border_pixel = (*config).colors.selected.pixel;
     attributes.background_pixel = 0;
     attributes.colormap = XCreateColormap (display, root, vi.visual, AllocNone);
-    let window = XCreateWindow(
+    let window = XCreateWindow (
       display,
       root,
       initial_geometry.x - Preview::border_width,

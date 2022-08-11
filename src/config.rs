@@ -5,7 +5,7 @@ use x11::xlib::*;
 use x11::keysym::*;
 use super::*;
 use super::config_parser;
-use super::color::Color_Scheme;
+use super::color::*;
 use super::paths;
 
 #[macro_export]
@@ -143,7 +143,7 @@ impl Config {
       border_width: 0,
       workspace_count: 1,
       meta_window_classes: Vec::new (),
-      colors: Color_Scheme::new (),
+      colors: Color_Scheme::new_uninit (),
       bar_font: "sans".to_string (),
       bar_opacity: 100,
       bar_time_format: "%a %b %e %T %Y".to_string (),
@@ -162,13 +162,10 @@ impl Config {
   }
 
   pub fn load (&mut self) {
-    unsafe {
-      self.colors.load_defaults ()
-    };
     // Parse file
     let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
     let parser = config_parser::Parser::new (source.chars ());
-    let mut color_links = Vec::<(String, String)>::new ();
+    let mut color_scheme_config = Color_Scheme_Config::new ();
     for def in parser {
       use config_parser::Definition_Type::*;
       match def {
@@ -214,12 +211,14 @@ impl Config {
         }
         Color (element, color_hex) => {
           log::info! ("config: color: {} {}", element, color_hex);
-          if color_hex.starts_with ('#') {
-            self.colors.set (&element, &color_hex);
-          }
-          else {
-            color_links.push ((element, color_hex));
-          }
+          color_scheme_config.set (
+            &element,
+            if color_hex.starts_with ('#') {
+              Color_Config::Hex (color_hex)
+            } else {
+              Color_Config::Link (color_hex)
+            }
+          );
         }
         Bar_Font (description) => {
           log::info! ("config: bar font: {}", description);
@@ -248,9 +247,8 @@ impl Config {
         }
       }
     }
-    for (dest, source) in color_links {
-      self.colors.link (dest.as_str (), source.as_str ());
-    }
+    // Set color scheme
+    self.colors = unsafe { Color_Scheme::new (&color_scheme_config) };
     // Pre-defined key bindings
     for ws_idx in 0..self.workspace_count {
       let sym = XK_1 + ws_idx as u32;

@@ -121,11 +121,7 @@ impl Drawing_Context {
   }
 
   pub fn text_color (&mut self, color: Color) {
-    self.cairo_context.set_source_rgb (
-      color.color.red as f64 / 65535.0,
-      color.color.green as f64 / 65535.0,
-      color.color.blue as f64 / 65535.0
-    );
+    self.cairo_context.set_source_rgb (color.red, color.green, color.blue);
   }
 
   pub unsafe fn text (&mut self, text: &str) -> Rendered_Text {
@@ -220,11 +216,7 @@ impl<'a> Rendered_Text<'a> {
   }
 
   pub fn color (&mut self, color: Color) -> &mut Self {
-    self.context.set_source_rgb (
-      color.color.red as f64 / 65535.0,
-      color.color.green as f64 / 65535.0,
-      color.color.blue as f64 / 65535.0
-    );
+    self.context.set_source_rgb (color.red, color.green, color.blue);
     self
   }
 

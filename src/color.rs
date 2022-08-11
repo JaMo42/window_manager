@@ -1,19 +1,80 @@
 use std::ffi::CString;
+use std::mem::size_of;
 use x11::xlib::*;
 use x11::xft::{XftColor, XftColorAllocName};
 use super::core::display;
 
-macro_rules! xft_color_new {
-  () => {
-    XftColor {
+#[derive(Copy, Clone)]
+pub struct Color {
+  pub pixel: u64,
+  pub red: f64,
+  pub green: f64,
+  pub blue: f64
+}
+
+impl Color {
+  pub const fn from_rgb (red: f64, green: f64, blue: f64) -> Self {
+    Color {
       pixel: 0,
-      color: x11::xrender::XRenderColor {red: 0, green: 0, blue: 0, alpha: 0}
+      red,
+      green,
+      blue
     }
+  }
+
+  pub unsafe fn alloc_from_hex (hex: &str) -> Self {
+    let screen = XDefaultScreen (display);
+    let visual = XDefaultVisual (display, screen);
+    let color_map = XDefaultColormap (display, screen);
+    let mut xcolor: XftColor = uninitialized! ();
+    XftColorAllocName (display, visual, color_map, c_str! (hex), &mut xcolor);
+    Color {
+      pixel: xcolor.pixel,
+      red: xcolor.color.red as f64 / 0xffff as f64,
+      green: xcolor.color.green as f64 / 0xffff as f64,
+      blue: xcolor.color.blue as f64 / 0xffff as f64
+    }
+  }
+
+  pub fn scale (&self, factor: f64) -> Self {
+    Self::from_rgb (
+      self.red * factor,
+      self.green * factor,
+      self.blue * factor
+    )
   }
 }
 
-pub type Color = XftColor;
 
+pub enum Color_Config {
+  Default,
+  Hex (String),
+  Link (String)
+}
+
+impl std::default::Default for Color_Config {
+  fn default() -> Self {
+    Color_Config::Default
+  }
+}
+
+
+pub struct Color_Scheme_Config {
+  pub cfg: [Color_Config; COLOR_COUNT]
+}
+
+impl Color_Scheme_Config {
+  pub fn new () -> Self {
+    Color_Scheme_Config { cfg: Default::default () }
+  }
+
+  pub fn set (&mut self, elem: &str, cfg: Color_Config) {
+    self.cfg[unsafe { color_index (elem) }] = cfg;
+  }
+}
+
+
+#[repr(C)]
 pub struct Color_Scheme {
   pub focused: Color,
   pub focused_text: Color,
@@ -23,12 +84,9 @@ pub struct Color_Scheme {
   pub selected_text: Color,
   pub urgent: Color,
   pub urgent_text: Color,
-
   pub close_button: Color,
   pub close_button_hovered: Color,
-
   pub background: Color,
-
   pub bar_background: Color,
   pub bar_text: Color,
   pub bar_workspace: Color,
@@ -36,137 +94,146 @@ pub struct Color_Scheme {
   pub bar_active_workspace: Color,
   pub bar_active_workspace_text: Color,
   pub bar_urgent_workspace: Color,
-  pub bar_urgent_workspace_text: Color
+  pub bar_urgent_workspace_text: Color,
+}
+const COLOR_COUNT: usize = size_of::<Color_Scheme> () / size_of::<Color> ();
+const COLOR_NAMES: [&str; COLOR_COUNT] = [
+  "Focused",
+  "FocusedText",
+  "Normal",
+  "NormalText",
+  "Selected",
+  "SelectedText",
+  "Urgent",
+  "UrgentText",
+  "CloseButton",
+  "CloseButtonHovered",
+  "Background",
+  "Bar::Background",
+  "Bar::Text",
+  "Bar::Workspace",
+  "Bar::WorkspaceText",
+  "Bar::ActiveWorkspace",
+  "Bar::ActiveWorkspaceText",
+  "Bar::UrgentWorkspace",
+  "Bar::UrgentWorkspaceText"
+];
+const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
+  // Window borders
+    // Focused
+    "#005577",
+    "000000",
+    // Normal
+    "444444",
+    "#eeeeee",
+    // Selected
+    "#007755",
+    "#000000",
+    // Urgent
+    "#770000",
+    "#000000",
+
+  // Close button
+  "#000000",
+  "#ff1111",
+
+  // Background
+  "#000000",
+
+  // Bar
+    // Background
+    "111111",
+    // Text
+    "eeeeee",
+    // Workspaces
+    "Normal",
+    "NormalText",
+    // Active workspace
+    "Focused",
+    "FocusedText",
+    // Urgent workspaceA
+    "Urgent",
+    "UrgetnText",
+];
+
+impl std::ops::Index<usize> for Color_Scheme {
+  type Output = Color;
+
+  fn index (&self, index: usize) -> &Color {
+    let p = self as *const Color_Scheme as *const Color;
+    unsafe {
+      &*p.add (index)
+    }
+  }
+}
+
+impl std::ops::IndexMut<usize> for Color_Scheme {
+  fn index_mut (&mut self, index: usize) -> &mut Color {
+    let p = self as *mut Color_Scheme as *mut Color;
+    unsafe {
+      &mut *p.add (index)
+    }
+  }
 }
 
 impl Color_Scheme {
-  pub fn new () -> Color_Scheme {
-    Color_Scheme {
-      focused: xft_color_new! (),
-      focused_text: xft_color_new! (),
-      normal: xft_color_new! (),
-      normal_text: xft_color_new! (),
-      selected: xft_color_new! (),
-      selected_text: xft_color_new! (),
-      urgent: xft_color_new! (),
-      urgent_text: xft_color_new! (),
-      close_button: xft_color_new! (),
-      close_button_hovered: xft_color_new! (),
-      background: xft_color_new! (),
-      bar_background: xft_color_new! (),
-      bar_text: xft_color_new! (),
-      bar_workspace: xft_color_new! (),
-      bar_workspace_text: xft_color_new! (),
-      bar_active_workspace: xft_color_new! (),
-      bar_active_workspace_text: xft_color_new! (),
-      bar_urgent_workspace: xft_color_new! (),
-      bar_urgent_workspace_text: xft_color_new! ()
-    }
-  }
-
-  pub unsafe fn load_defaults (&mut self) {
-    let scn = XDefaultScreen (display);
-    let vis = XDefaultVisual (display, scn);
-    let cm = XDefaultColormap (display, scn);
-    macro_rules! set_color {
-      ($elem:expr, $hex:expr) => {
-        XftColorAllocName (
-          display, vis, cm,
-          c_str! ($hex),
-          &mut $elem
-        );
+  pub unsafe fn new (cfg: &Color_Scheme_Config) -> Self {
+    let mut result: Color_Scheme = uninitialized! ();
+    let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
+    let mut links = Vec::<(usize, usize)>::new ();
+    for i in 0..COLOR_COUNT {
+      match &cfg.cfg[i] {
+        Color_Config::Default => {
+          if DEFAULT_CONFIG[i].starts_with ('#') {
+            result[i] = Color::alloc_from_hex (DEFAULT_CONFIG[i]);
+            set[i] = true;
+          } else {
+            links.push ((i, color_index (DEFAULT_CONFIG[i])));
+          }
+        },
+        Color_Config::Hex (string) => {
+          result[i] = Color::alloc_from_hex (string.as_str ());
+          set[i] = true;
+        },
+        Color_Config::Link (target) => {
+          links.push ((i, color_index (target.as_str ())));
+        }
       }
     }
 
-    set_color! (self.focused, "#005577");
-    set_color! (self.focused_text, "#000000");
-    set_color! (self.normal, "#444444");
-    set_color! (self.normal_text, "#eeeeee");
-    set_color! (self.selected, "#007755");
-    set_color! (self.selected_text, "#000000");
-    set_color! (self.urgent, "#770000");
-    set_color! (self.urgent_text, "#000000");
-
-    set_color! (self.close_button, "#000000");
-    set_color! (self.close_button_hovered, "#ff1111");
-
-    set_color! (self.background, "#000000");
-
-    set_color! (self.bar_background, "#000000");
-    set_color! (self.bar_text, "#eeeeee");
-    set_color! (self.bar_workspace, "#000000");
-    set_color! (self.bar_workspace_text, "#eeeeee");
-    set_color! (self.bar_active_workspace, "#005577");
-    set_color! (self.bar_active_workspace_text, "#000000");
-    set_color! (self.bar_urgent_workspace, "#770000");
-    set_color! (self.bar_urgent_workspace_text, "#000000");
-  }
-
-  fn _get_elem (&self, element: &str) -> XftColor {
-    match element {
-      "Focused" => self.focused,
-      "FocusedText" => self.focused_text,
-      "Normal" => self.normal,
-      "NormalText" => self.normal_text,
-      "Selected" => self.selected,
-      "SelectedText" => self.selected_text,
-      "Urgent" => self.urgent,
-      "UrgentText" => self.urgent_text,
-      "CloseButton" => self.close_button,
-      "CloseButtonHovered" => self.close_button_hovered,
-      "Background" => self.background,
-      "Bar::Background" => self.bar_background,
-      "Bar::Text" => self.bar_text,
-      "Bar::Workspace" => self.bar_workspace,
-      "Bar::WorkspaceText" => self.bar_workspace_text,
-      "Bar::ActiveWorkspace" => self.bar_active_workspace,
-      "Bar::ActiveWorkspaceText" => self.bar_active_workspace_text,
-      "Bar::UrgentWorkspace" => self.bar_urgent_workspace,
-      "Bar::UrgentWorkspaceText" => self.bar_urgent_workspace_text,
-      _ => panic! ("Color_Scheme::set: unknown element: {}", element)
+    let mut did_change = true;
+    while did_change && !links.is_empty() {
+      did_change = false;
+      for i in (0..links.len ()).rev () {
+        if set[links[i].1] {
+          result[links[i].0] = result[links[i].1];
+          set[links[i].0] = true;
+          links.remove (i);
+          did_change = true;
+        }
+      }
     }
-  }
-
-  fn _get_elem_mut (&mut self, element: &str) -> &mut XftColor {
-    match element {
-      "Focused" => &mut self.focused,
-      "FocusedText" => &mut self.focused_text,
-      "Normal" => &mut self.normal,
-      "NormalText" => &mut self.normal_text,
-      "Selected" => &mut self.selected,
-      "SelectedText" => &mut self.selected_text,
-      "Urgent" => &mut self.urgent,
-      "UrgentText" => &mut self.urgent_text,
-      "CloseButton" => &mut self.close_button,
-      "CloseButtonHovered" => &mut self.close_button_hovered,
-      "Background" => &mut self.background,
-      "Bar::Background" => &mut self.bar_background,
-      "Bar::Text" => &mut self.bar_text,
-      "Bar::Workspace" => &mut self.bar_workspace,
-      "Bar::WorkspaceText" => &mut self.bar_workspace_text,
-      "Bar::ActiveWorkspace" => &mut self.bar_active_workspace,
-      "Bar::ActiveWorkspaceText" => &mut self.bar_active_workspace_text,
-      "Bar::UrgentWorkspace" => &mut self.bar_urgent_workspace,
-      "Bar::UrgentWorkspaceText" => &mut self.bar_urgent_workspace_text,
-      _ => panic! ("Color_Scheme::set: unknown element: {}", element)
+    if !links.is_empty () {
+      log::error! ("Unresolved links: {:?}", links);
+      panic! ("unresolved links");
     }
+
+    result
   }
 
-  pub fn set (&mut self, element: &str, color_hex: &str) {
-    let dest: *mut XftColor = self._get_elem_mut (element);
+  pub fn new_uninit () -> Self {
     unsafe {
-      let scn = XDefaultScreen (display);
-      XftColorAllocName (
-        display,
-        XDefaultVisual (display, scn),
-        XDefaultColormap (display, scn),
-        c_str! (color_hex),
-        dest
-      );
+      uninitialized! ()
     }
   }
+}
 
-  pub fn link (&mut self, dest: &str, source: &str) {
-    *self._get_elem_mut (dest) = self._get_elem (source);
+unsafe fn color_index (name: &str) -> usize {
+  for (i, color) in COLOR_NAMES.iter ().enumerate () {
+    if *color == name {
+      return i;
+    }
   }
+  log::error! ("Invalid color name: {}", name);
+  panic! ("invalid color name");
 }

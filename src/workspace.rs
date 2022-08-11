@@ -28,7 +28,7 @@ impl Workspace {
 
   pub unsafe fn push (&mut self, client: Box<Client>) {
     if let Some (prev) = self.clients.first_mut () {
-      prev.set_border ((*config).colors.normal);
+      prev.set_border (&(*config).colors.normal);
     }
     self.clients.insert (0, client);
     self.clients[0].focus ();
@@ -60,7 +60,7 @@ impl Workspace {
         prev.focus ();
         return;
       }
-      prev.set_border ((*config).colors.normal);
+      prev.set_border (&(*config).colors.normal);
     }
     if idx != 0 {
       let c = self.clients.remove (idx);
@@ -116,9 +116,9 @@ impl Workspace {
       match event.type_ {
         KeyPress => {
           if event.key.keycode == 0x17 {
-            self.clients[switch_idx].set_border ((*config).colors.normal);
+            self.clients[switch_idx].set_border (&(*config).colors.normal);
             switch_idx = (switch_idx + 1) % self.clients.len ();
-            self.clients[switch_idx].set_border ((*config).colors.selected);
+            self.clients[switch_idx].set_border (&(*config).colors.selected);
             self.clients[switch_idx].raise ();
           }
         }

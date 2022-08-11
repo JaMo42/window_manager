@@ -35,8 +35,6 @@ unsafe fn create_frame (base_geometry: &Geometry) -> Window {
 unsafe fn create_auxilarry_windows (frame: Window, frame_size: &Geometry) -> Window {
   let button_size = frame_offset.y as u32;
   let button_pos = frame_size.w - button_size;
-  let mut vi: XVisualInfo = uninitialized! ();
-  XMatchVisualInfo(display, XDefaultScreen(display), 32, TrueColor, &mut vi);
   let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.override_redirect = X_TRUE;
   attributes.event_mask = ButtonPressMask|ButtonReleaseMask|EnterWindowMask|LeaveWindowMask;
@@ -72,7 +70,7 @@ pub struct Client {
   pub is_urgent: bool,
   pub is_fullscreen: bool,
   pub is_dialog: bool,
-  border_color: c_ulong,
+  border_color: &'static color::Color,
   title: String,
   close_button_state: bool
 }
@@ -106,7 +104,7 @@ impl Client {
       is_urgent: false,
       is_fullscreen: false,
       is_dialog: false,
-      border_color: (*config).colors.normal.pixel,
+      border_color: &(*config).colors.normal,
       title: window_title (window),
       close_button_state: false
     });
@@ -129,7 +127,7 @@ impl Client {
       is_urgent: false,
       is_fullscreen: false,
       is_dialog: false,
-      border_color: 0,
+      border_color: &*(1 as *const color::Color),
       title: String::new (),
       close_button_state: false
     }
@@ -150,7 +148,7 @@ impl Client {
   pub unsafe fn map (&mut self) {
     XMapWindow (display, self.frame);
     XMapWindow (display, self.close_button);
-    self.set_border ((*config).colors.focused);
+    self.set_border (&(*config).colors.focused);
   }
 
   pub unsafe fn unmap (&self) {
@@ -163,7 +161,7 @@ impl Client {
       0,
       self.geometry.w + frame_offset.w,
       self.geometry.h + frame_offset.h,
-      self.border_color,
+      self.border_color.pixel,
       true
     );
     (*draw).select_font (&(*config).title_font);
@@ -182,8 +180,8 @@ impl Client {
     self.draw_close_button (self.close_button_state);
   }
 
-  pub unsafe fn set_border (&mut self, color: color::Color) {
-    self.border_color = color.pixel;
+  pub unsafe fn set_border (&mut self, color: &'static color::Color) {
+    self.border_color = color;
     self.draw_border ();
     self.draw_close_button (self.close_button_state);
   }
@@ -198,7 +196,7 @@ impl Client {
     } else {
       (*config).colors.close_button
     };
-    (*draw).rect (0, 0, size, size, self.border_color, true);
+    (*draw).rect (0, 0, size, size, self.border_color.pixel, true);
 
     if resources::close_button.is_some () {
       (*draw).draw_colored_svg (
@@ -264,7 +262,7 @@ impl Client {
       XRaiseWindow (display, self.window);
     }
     else {
-      self.set_border ((*config).colors.focused);
+      self.set_border (&(*config).colors.focused);
       XRaiseWindow (display, self.frame);
       bar.draw ();
     }
@@ -289,7 +287,7 @@ impl Client {
     }
     self.is_urgent = urgency;
     if urgency {
-      self.set_border ((*config).colors.urgent);
+      self.set_border (&(*config).colors.urgent);
     }
     let hints = XGetWMHints (display, self.window);
     if !hints.is_null () {
