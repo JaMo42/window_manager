@@ -172,6 +172,7 @@ Some projects I used to learn how windows managers work.
 - [dwm](https://dwm.suckless.org/)
 - [tinywm](https://github.com/mackstann/tinywm)
 - [How X Window Managers Work, And How To Write One](https://jichu4n.com/posts/how-x-window-managers-work-and-how-to-write-one-part-i/)
+- [Fvwm](https://www.fvwm.org/)
 
 ### Icons
 
