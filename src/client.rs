@@ -76,6 +76,8 @@ pub struct Client {
 }
 
 impl Client {
+  const TITLE_BAR_GRADIENT_FACTOR: f64 = 1.185;
+
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
 
@@ -164,6 +166,15 @@ impl Client {
       self.border_color.pixel,
       true
     );
+    (*draw).gradient (
+      0,
+      0,
+      self.geometry.w + frame_offset.w,
+      frame_offset.y as u32,
+      self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
+      *self.border_color
+    );
+
     (*draw).select_font (&(*config).title_font);
     (*draw).text (&self.title)
       .at (frame_offset.x, 0)
@@ -197,6 +208,14 @@ impl Client {
       (*config).colors.close_button
     };
     (*draw).rect (0, 0, size, size, self.border_color.pixel, true);
+    (*draw).gradient (
+      0,
+      0,
+      size,
+      size,
+      self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
+      *self.border_color
+    );
 
     if resources::close_button.is_some () {
       (*draw).draw_colored_svg (

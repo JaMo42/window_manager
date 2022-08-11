@@ -83,6 +83,19 @@ impl Drawing_Context {
     }
   }
 
+  pub unsafe fn gradient (&mut self, x_: i32, y_: i32, w_: u32, h_: u32, color_1: Color, color_2: Color) {
+    let x = x_ as f64;
+    let y = y_ as f64;
+    let w = w_ as f64;
+    let h = h_ as f64;
+    let gradient = cairo::LinearGradient::new (x, y, x, y+h);
+    gradient.add_color_stop_rgb (0.0, color_1.red, color_1.green, color_1.blue);
+    gradient.add_color_stop_rgb (1.0, color_2.red, color_2.green, color_2.blue);
+    self.cairo_context.rectangle (x, y, w, h);
+    self.cairo_context.set_source (&gradient).unwrap ();
+    self.cairo_context.fill ().unwrap ();
+  }
+
   pub unsafe fn draw_svg (&mut self, svg: &Svg_Resource, x: i32, y: i32, w: u32, h: u32) {
     svg.renderer.as_ref ().unwrap ().render_document (
       &self.cairo_context,
