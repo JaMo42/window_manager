@@ -65,8 +65,16 @@ pub unsafe fn button_relase () {
 pub unsafe fn motion (event: &XButtonEvent) {
   if mouse_held != 0 {
     if let Some (c) = win2client (event.subwindow) {
+      let mut lock_width = false;
+      let mut lock_height = false;
       if (event.state & (*config).modifier) == 0 {
         if event.x - c.geometry.x > 0 && event.y - c.geometry.y > 0 {
+          let extra = i32::max (10 - frame_offset.x, 0);
+          if event.x - c.geometry.x + extra < c.geometry.w as i32 {
+            lock_width = true;
+          } else if event.y - c.geometry.y + extra < c.geometry.h as i32 {
+            lock_height = true;
+          }
           mouse_held = Button3;
         } else {
           mouse_held = Button1;
@@ -74,7 +82,7 @@ pub unsafe fn motion (event: &XButtonEvent) {
       }
       match mouse_held {
         Button1 => mouse_move (c),
-        Button3 => mouse_resize (c),
+        Button3 => mouse_resize (c, lock_width, lock_height),
         _ => {}
       }
     }
@@ -179,7 +187,7 @@ unsafe fn mouse_move (client: &mut Client) {
 }
 
 
-unsafe fn mouse_resize (client: &mut Client) {
+unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool) {
   if XGrabPointer (
     display,
     root,
@@ -206,6 +214,8 @@ unsafe fn mouse_resize (client: &mut Client) {
   let mut last_time: Time = 0;
   let mut prev_x = start_x;
   let mut prev_y = start_y;
+  let width_mul = !lock_width as i32;
+  let height_mul = !lock_height as i32;
   let mut preview = geometry::Preview::create (
     if client.is_snapped () {
       client.prev_geometry
@@ -225,7 +235,10 @@ unsafe fn mouse_resize (client: &mut Client) {
           continue;
         }
         last_time = motion.time;
-        preview.resize_by (motion.x - prev_x, motion.y - prev_y);
+        preview.resize_by (
+          (motion.x - prev_x) * width_mul,
+          (motion.y - prev_y) * height_mul
+        );
         preview.update ();
         prev_x = motion.x;
         prev_y = motion.y;
