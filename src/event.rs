@@ -188,6 +188,13 @@ unsafe fn mouse_move (client: &mut Client) {
 
 
 unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool) {
+  let cursor = if lock_height {
+    cursor::resizing_horizontal
+  } else if lock_width {
+    cursor::resizing_vertical
+  } else {
+    cursor::resizing
+  };
   if XGrabPointer (
     display,
     root,
@@ -196,7 +203,7 @@ unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool
     GrabModeAsync,
     GrabModeAsync,
     X_NONE,
-    cursor::resizing,
+    cursor,
     CurrentTime
   ) != GrabSuccess {
     return;
