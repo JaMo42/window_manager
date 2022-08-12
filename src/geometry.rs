@@ -171,16 +171,18 @@ impl Preview {
     const MIN_WIDTH: u32 = 3 * 160;
     const MIN_HEIGHT: u32 = 3 * 90;
     if w < 0 {
-      if self.geometry.w - -w as u32 >= MIN_WIDTH {
-        self.geometry.w -= (-w) as u32;
+      let ww = -w as u32;
+      if self.geometry.w > ww && self.geometry.w - ww >= MIN_WIDTH {
+        self.geometry.w -= ww as u32;
       }
     }
     else {
       self.geometry.w += w as u32;
     }
     if h < 0 {
-      if self.geometry.h - -h as u32 >= MIN_HEIGHT {
-        self.geometry.h -= (-h) as u32;
+      let hh = -h as u32;
+      if self.geometry.h > hh && self.geometry.h - hh >= MIN_HEIGHT {
+        self.geometry.h -= hh;
       }
     }
     else {

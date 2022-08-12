@@ -180,6 +180,7 @@ impl Client {
       .at (frame_offset.x, 0)
       .align_vertically (draw::Alignment::Centered, frame_offset.y)
       .color ((*config).colors.bar_active_workspace_text)
+      .width (self.geometry.w as i32 + frame_offset.x - frame_offset.y)
       .draw ();
     (*draw).render (
       self.frame,

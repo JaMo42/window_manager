@@ -233,12 +233,19 @@ impl<'a> Rendered_Text<'a> {
     self
   }
 
+  pub fn width (&mut self, width: i32) -> &mut Self {
+    self.layout.set_width (width * pango::SCALE);
+    self.layout.set_ellipsize (pango::EllipsizeMode::Middle);
+    self
+  }
+
   pub fn draw (&mut self) -> Geometry {
     self.context.move_to (self.x as f64, self.y as f64);
     pangocairo::show_layout (self.context, self.layout);
     Geometry::from_parts (self.x, self.y, self.width as u32, self.height as u32)
   }
 }
+
 
 pub unsafe fn load_resources () {
   log::info! ("Loading resources");
