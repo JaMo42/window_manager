@@ -79,7 +79,7 @@ impl Bar {
   pub unsafe fn draw (&self) {
     if !cfg! (feature="bar") { return; }
     (*draw).select_font((*config).bar_font.as_str ());
-    (*draw).rect (0, 0, bar.width, bar.height, (*config).colors.bar_background.pixel, true);
+    (*draw).rect (0, 0, bar.width, bar.height, (*config).colors.bar_background, true);
     // ==== LEFT ====
     // Workspaces
     for (idx, workspace) in workspaces.iter ().enumerate () {
@@ -87,12 +87,12 @@ impl Bar {
         (idx as u32 * self.height) as i32, 0,
         self.height, self.height,
         if workspace.has_urgent () {
-          (*config).colors.bar_urgent_workspace.pixel
+          (*config).colors.bar_urgent_workspace
         }
         else if idx == active_workspace {
-          (*config).colors.bar_active_workspace.pixel
+          (*config).colors.bar_active_workspace
         } else {
-          (*config).colors.bar_workspace.pixel
+          (*config).colors.bar_workspace
         },
         true
       );

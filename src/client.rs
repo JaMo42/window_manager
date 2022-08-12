@@ -163,7 +163,7 @@ impl Client {
       0,
       self.geometry.w + frame_offset.w,
       self.geometry.h + frame_offset.h,
-      self.border_color.pixel,
+      *self.border_color,
       true
     );
     (*draw).gradient (
@@ -207,7 +207,7 @@ impl Client {
     } else {
       (*config).colors.close_button
     };
-    (*draw).rect (0, 0, size, size, self.border_color.pixel, true);
+    (*draw).rect (0, 0, size, size, *self.border_color, true);
     (*draw).gradient (
       0,
       0,
@@ -229,7 +229,7 @@ impl Client {
       (*draw).rect (
         icon_position, icon_position,
         icon_size, icon_size,
-        color.pixel, true
+        color, true
       );
     }
 

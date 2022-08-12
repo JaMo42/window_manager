@@ -74,8 +74,8 @@ impl Drawing_Context {
     }
   }
 
-  pub unsafe fn rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: u64, fill: bool) {
-    XSetForeground (display, self.gc, color);
+  pub unsafe fn rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: Color, fill: bool) {
+    XSetForeground (display, self.gc, color.pixel);
     if fill {
       XFillRectangle (display, self.drawable, self.gc, x, y, w, h);
     } else {
