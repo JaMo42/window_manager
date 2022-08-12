@@ -168,14 +168,20 @@ impl Preview {
   }
 
   pub unsafe fn resize_by (&mut self, w: i32, h: i32) {
-    if w < 0 && (self.geometry.w - -w as u32) >= 160 {
-      self.geometry.w -= (-w) as u32;
+    const MIN_WIDTH: u32 = 3 * 160;
+    const MIN_HEIGHT: u32 = 3 * 90;
+    if w < 0 {
+      if self.geometry.w - -w as u32 >= MIN_WIDTH {
+        self.geometry.w -= (-w) as u32;
+      }
     }
     else {
       self.geometry.w += w as u32;
     }
-    if h < 0 && (self.geometry.h - -h as u32) >= 90 {
-      self.geometry.h -= (-h) as u32;
+    if h < 0 {
+      if self.geometry.h - -h as u32 >= MIN_HEIGHT {
+        self.geometry.h -= (-h) as u32;
+      }
     }
     else {
       self.geometry.h += h as u32;
