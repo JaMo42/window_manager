@@ -1,6 +1,6 @@
 # window_manager
 
-![window_manager](./doc/screenshot.png "Screenshot running 2 xfce4-terminals, polybar, and the picom compositor")
+![window_manager](./doc/screenshot.png)
 
 ### floating window manager for X
 
@@ -139,7 +139,7 @@ $ ./ws_tool format inactive active join
 
 See the [Polybar](#polybar) section for an example usage of the `format` command.
 
-Rquires the XLib package: `pip install python3-xlib`.
+Requires the XLib package: `pip install python3-xlib`.
 
 ## Polybar
 
@@ -176,8 +176,4 @@ Some projects I used to learn how windows managers work.
 
 ### Icons
 
-This repository contains icons from [icons8](https://icons8.com).
-
-Sources:
-
-- Close button: https://icons8.com/icon/83149/close
+See [res/README.md](./res/README.md)

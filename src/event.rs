@@ -34,10 +34,7 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   if event.subwindow == X_NONE {
     if let Some (client) = win2client (event.window) {
       // This is probably always true as long as we only have the close button
-      if event.window == client.close_button {
-        action::close_client (client);
-      }
-      else {
+      if !client.click (event.window) {
         log::warn! ("non-meta click on {}", event.window);
       }
     }
@@ -339,7 +336,8 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     // Add client
     if target_workspace == active_workspace {
       c.map ();
-      c.draw_close_button (false);
+      //c.draw_close_button (false);
+      //c.close_button.draw (false);
       c.draw_border ();
     }
     workspaces[target_workspace].push (c);
@@ -495,7 +493,10 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
     if workspace.contains (window) {
       let c = workspace.remove (&Client::dummy (window));
       XDeleteContext (display, c.window, wm_context);
-      XDeleteContext (display, c.close_button, wm_context);
+      //XDeleteContext (display, c.close_button.window, wm_context);
+      for b in c.buttons () {
+        XDeleteContext (display, b.window, wm_context);
+      }
       XDeleteContext (display, c.frame, wm_context);
       XSelectInput (display, c.frame, X_NONE as i64);
       XDestroyWindow (display, c.frame);
@@ -514,7 +515,10 @@ pub unsafe fn expose (event: &XExposeEvent) {
 
 pub unsafe fn crossing (event: &XCrossingEvent) {
   if let Some (client) = win2client (event.window) {
-    client.draw_close_button (event.type_ == EnterNotify);
-    client.draw_border ();
+    for b in client.buttons_mut () {
+      if b.window == event.window {
+        b.draw (event.type_ == EnterNotify);
+      }
+    }
   }
 }

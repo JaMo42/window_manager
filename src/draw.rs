@@ -7,12 +7,10 @@ use super::geometry::Geometry;
 use super::paths;
 
 pub mod resources {
-  pub static mut close_button: super::Svg_Resource = super::Svg_Resource {
-    file: "close_button.svg",
-    handle: None,
-    renderer: None,
-    pattern: None
-  };
+  use super::Svg_Resource;
+  pub static mut close_button: Svg_Resource = Svg_Resource::new ("close_button.svg");
+  pub static mut maximize_button: Svg_Resource = Svg_Resource::new ("maximize_button.svg");
+  pub static mut minimize_button: Svg_Resource = Svg_Resource::new ("minimize_button.svg");
 }
 
 
@@ -26,6 +24,15 @@ pub struct Svg_Resource {
 }
 
 impl Svg_Resource {
+  pub const fn new (file: &'static str) -> Self {
+    Self {
+      file,
+      handle: None,
+      renderer: None,
+      pattern: None
+    }
+  }
+
   pub fn is_some (&self) -> bool {
     self.handle.is_some ()
   }
@@ -161,12 +168,12 @@ impl Drawing_Context {
 }
 
 
+#[allow(dead_code)]
+#[derive(Copy, Clone)]
 pub enum Alignment {
-  // Left/Top is excluded as it is the default
+  Left, Top,
   Centered,
-  // These are currently not used
-  //Right,
-  //Bottom
+  Right, Bottom
 }
 
 
@@ -206,11 +213,11 @@ impl<'a> Rendered_Text<'a> {
 
   pub fn align_horizontally (&mut self, alignment: Alignment, width: i32) -> &mut Self {
     if self.width < width {
-      if matches! (alignment, Alignment::Centered) {
-        self.x += (width - self.width) / 2;
-      }
-      else {
-        self.x += width - self.width;
+      match alignment {
+        Alignment::Left => {},
+        Alignment::Centered => self.x += (width - self.width) / 2,
+        Alignment::Right => self.x += width - self.width,
+        _ => panic! ("Invalid value for horizontal alignment")
       }
     }
     self
@@ -218,11 +225,11 @@ impl<'a> Rendered_Text<'a> {
 
   pub fn align_vertically (&mut self, alignment: Alignment, height: i32) -> &mut Self {
     if self.height < height {
-      if matches! (alignment, Alignment::Centered) {
-        self.y += (height - self.height) / 2;
-      }
-      else {
-        self.y += height - self.height;
+      match alignment {
+        Alignment::Top => {},
+        Alignment::Centered => self.y += (height - self.height) / 2,
+        Alignment::Bottom => self.y += height - self.height,
+        _ => panic! ("Invalid value for horizontal alignment")
       }
     }
     self
@@ -265,4 +272,6 @@ pub unsafe fn load_resources () {
 
   log::info! ("Loading resources");
   load_svg (&mut resources::close_button);
+  load_svg (&mut resources::maximize_button);
+  load_svg (&mut resources::minimize_button);
 }

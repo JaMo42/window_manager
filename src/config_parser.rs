@@ -19,7 +19,11 @@ pub enum Definition_Type {
   Bar_Time_Format (String),
   Bar_Height (Height),
   Title_Font (String),
-  Title_Height (Height)
+  Title_Height (Height),
+  Title_Position (String),
+  Left_Buttons (Vec<String>),
+  Right_Buttons (Vec<String>),
+  Button_Icon_Size (u8)
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -92,7 +96,6 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
     }
     else {
       self.fail ("Expected a number");
-      unreachable! ();
     }
   }
 
@@ -128,7 +131,31 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
     }
     else {
       self.fail ("Expected a number");
-      unreachable! ();
+    }
+  }
+
+  fn parse_choice (&mut self, choices: &[&str]) -> String {
+    let thing = self.next_thing ();
+    if choices.contains (&thing.as_str ()) {
+      thing
+    } else {
+      self.fail (&format! ("Expected one of: {}", choices.join (", ")));
+    }
+  }
+
+  fn parse_percentage (&mut self) -> u8 {
+    let mut thing = self.next_thing ();
+    if !thing.ends_with ('%') {
+      self.fail ("Expected percentage");
+    }
+    thing.pop ();
+    if let Ok (n) = thing.parse::<u8> () {
+      if n > 100 {
+        self.fail ("Percentage should be in range 0~100")
+      }
+      n
+    } else {
+      self.fail ("Expected percentage");
     }
   }
 
@@ -171,26 +198,32 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       "color" => Color (self.next_thing (), self.next_thing ()),
       "def_color" => Def_Color (self.next_thing (), self.next_thing ()),
       "bar_font" => Bar_Font (self.rest_of_line ().trim ().to_string ()),
-      "bar_opacity" => {
-        let percent: u8 = self.parse_number ();
-        if percent > 100 {
-          self.fail ("Bar opacity must be in range 0~100");
-          unreachable! ();
-        }
-        Bar_Opacity (percent)
-      }
+      "bar_opacity" => Bar_Opacity (self.parse_percentage ()),
       "bar_time_format" => Bar_Time_Format (self.rest_of_line ()),
       "bar_height" => Bar_Height (self.parse_height ()),
       "window_title_font" => Title_Font (self.rest_of_line ().trim ().to_string ()),
       "window_title_height" => Title_Height (self.parse_height ()),
+      "window_title_position" => Title_Position (self.parse_choice (&["left", "center", "right"])),
+      "left_buttons" => Left_Buttons (
+        self.rest_of_line ()
+          .split (' ')
+          .map (|s| s.to_string ())
+          .collect ()
+      ),
+      "right_buttons" => Right_Buttons (
+        self.rest_of_line ()
+          .split (' ')
+          .map (|s| s.to_string ())
+          .collect ()
+      ),
+      "button_icon_size" => Button_Icon_Size (self.parse_percentage ()),
       _ => {
         self.fail ("Unknown keyword");
-        unreachable! ();
       }
     }
   }
 
-  fn fail (&mut self, description: &str) {
+  fn fail (&mut self, description: &str) -> ! {
     eprintln! ("config:{}:{} at {}: {}", self.line, self.thing_col, self.thing, description);
     log::error! ("config:{}:{} at {}: {}", self.line, self.thing_col, self.thing, description);
     std::process::exit (1);

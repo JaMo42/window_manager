@@ -9,8 +9,13 @@ pad 46 10 10 10
 # Width of border around windows
 # Border on the left, right, and bottom; title_bar_height set the top height
 border 5
+
+# Window title
 window_title_font sans 16
-window_title_height +2
+window_title_height +4
+
+# Window buttons
+right_buttons minimize maximize close
 
 # Define a window to be a meta-window by its class
 #meta XClock
@@ -32,6 +37,8 @@ bind Mod+Left snap_left
 bind Mod+Right snap_right
 bind Mod+Alt+Up snap_up
 bind Mod+Alt+Down snap_down
+bind Mod+M minimize
+bind Mod+R raise_all
 bind Mod+Print $ scrot ~/Pictures/Screenshots/%Y-%m-%d-%H%M%S-screenshot.jpg
 
 # Define colors
@@ -56,11 +63,15 @@ color UrgentText FocusedText
 color Background #111111
 # Close button
 color CloseButton DarkText
-color CloseButtonHovered Urgent
+color CloseButtonHovered #ff3b30
+color MaximizeButton DarkText
+color MaximizeButtonHovered #28cd41
+color MinimizeButton DarkText
+color MinimizeButtonHovered #ffcc00
 
 # Bar
 bar_font sans 18
-bar_opacity 80
+bar_opacity 80%
 # Use the font height:
 #   bar_height 0
 # Use the font height plus given pixels:

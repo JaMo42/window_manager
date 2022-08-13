@@ -55,6 +55,7 @@ The set of KeySyms that are available in this manner and the mechanisms by which
 ```
 
 ```
+color <Element> #RGB
 color <Element> #RRGGBB
 color <Element> #RRRRGGGGBBBB
 ```
@@ -67,10 +68,11 @@ Set the [`<Element1>`](#color-elements) to the same color as `<Element2>`.
 Can be used before `Element2` is defined.
 
 ```
+def_color <Name> #RGB
 def_color <Name> #RRGGBB
 def_color <Name> #RRRRGGGGBBBB
 ```
-Define a named color that can be used to set other colors.
+Define a named color that can be used to set other colors. These cannot contain links.
 
 ```
 bar_font <font>
@@ -103,6 +105,26 @@ window_title_height <height>
 ```
 Set the height for the title bar of each window (top border); see [Height values](#height-values).
 
+```
+window_title_position left|center|right
+```
+Set the window title alignment.
+
+```
+left_buttons [buttons...]
+```
+Set the left [window buttons](#window-buttons) (not that by default the window title is on the left).
+
+```
+right_buttons [buttons...]
+```
+Set the right [window buttons](#window-buttons).
+
+```
+button_icon_size <percentage>
+```
+Set the relative size of window button icons; the buttons themselves are always the same height as the title bar.
+
 ## Modifiers
 
 - `Win` Windows key
@@ -133,49 +155,42 @@ Set the height for the title bar of each window (top border); see [Height values
 
 ## Height values
 
-A height value can be either `<number>` or `+<number>`, the former specifying a abosulte value and the letter a value that's added on the font-size of the element.
+A height value can be either `<number>` or `+<number>`, the former specifying a absolute value and the letter a value that's added on the font-size of the element.
 If the number for the absolute value is 0, the height of the font is used.
+
+## Window buttons
+
+- `close` Closes the window
+
+- `maximize` Toggles between maximized and un-snapped
+
+- `minimize` Minimizes the window
 
 ## Color elements
 
-- Window border colors
-
-  - `Focused` the focused window
-
-  - `FocusedText` respective text color
-
-  - `Normal` un-focused windows
-
-  - `NormalText` respective text color
-
-  - `Urgent` windows that demand attention
-
-  - `UrgentText` respective text color
-
-  - `Selected` the pending windows during window switching
-
-  - `SelectedText` respective text color
-
-- `CloseButton` default color of the close button
-
-- `CloseButtonHovered` color of the close button when the mouse is above it
-
-- `Background` the desktop background (use an external program like `feh` to set a background image)
-
-- Bar colors
-
-  - `Bar::Background` background color of the bar
-
-  - `Bar::Text` default text color
-
-  - `Bar::Workspace` background color for non-active workspace indicators
-
-  - `Bar::WorkspaceText` respective text color
-
-  - `Bar::ActiveWorkspace` background color for non-active workspace indicators
-
-  - `Bar::ActiveWorkspaceText` respective text color
-
-  - `Bar::UrgentWorkspace` background color for indicators of workspaces which contain windows demanding attention
-
-  - `Bar::UrgentWorkspaceText` respective text color
+| **Element** | **Description**
+| --- | ---
+| Focused | Border of the focused window
+| FocusedText | Text on the border of the focused window
+| Normal | As `Focused` but for normal windows
+| NormalText |
+| Selected | As `Focused` but for the selected window during window switching
+| SelectedText |
+| Urgent | As `Focused` but for windows that demand attention
+| UrgentText |
+| CloseButton | Default color of the close button
+| CloseButtonHovered | Color of the close button when the mouse is above it
+| MaximizeButton | As `CloseButton` but for the maximize button
+| MaximizeButtonHovered |
+| MinimizeButton | As `CloseButton` but for the minimize button
+| MinimizeButtonHovered |
+| Background | Color of the root window
+| **Colors for the builtin bar** |
+| Bar::Background | Background color
+| Bar::Text | Color of battery and clock widget
+| Bar::Workspace | Color for normal workspace indicators
+| Bar::WorkspaceText | Text color for normal workspace indicators
+| Bar::ActiveWorkspace | As `Bar::Workspace` but for the active workspace
+| Bar::ActiveWorkspaceText |
+| Bar::UrgentWorkspace | as `Bar::Workspace` but for workspaces that contain windows  that demand attention
+| Bar::UrgentWorkspaceText |

@@ -3,7 +3,7 @@ use super::core::*;
 use super::geometry::*;
 use super::*;
 use super::property::WM;
-use super::draw::resources;
+use super::buttons::Button;
 
 pub static mut frame_offset: Geometry = Geometry::new ();
 
@@ -32,37 +32,9 @@ unsafe fn create_frame (base_geometry: &Geometry) -> Window {
 }
 
 
-unsafe fn create_auxilarry_windows (frame: Window, frame_size: &Geometry) -> Window {
-  let button_size = frame_offset.y as u32;
-  let button_pos = frame_size.w - button_size;
-  let mut attributes: XSetWindowAttributes = uninitialized! ();
-  attributes.override_redirect = X_TRUE;
-  attributes.event_mask = ButtonPressMask|ButtonReleaseMask|EnterWindowMask|LeaveWindowMask;
-  attributes.background_pixmap = X_NONE;
-  attributes.save_under = X_FALSE;
-  attributes.backing_store = NotUseful;
-
-  XCreateWindow (
-    display,
-    frame,
-    button_pos as i32,
-    0,
-    button_size,
-    button_size,
-    0,
-    CopyFromParent,
-    InputOutput as c_uint,
-    CopyFromParent as *mut Visual,
-    CWEventMask|CWOverrideRedirect|CWBackPixmap|CWSaveUnder|CWBackingStore,
-    &mut attributes
-  )
-}
-
-
 pub struct Client {
   pub window: Window,
   pub frame: Window,
-  pub close_button: Window,
   pub geometry: Geometry,
   pub prev_geometry: Geometry,
   pub workspace: usize,
@@ -71,13 +43,14 @@ pub struct Client {
   pub is_fullscreen: bool,
   pub is_dialog: bool,
   pub is_minimized: bool,
-  border_color: &'static color::Color,
+  pub border_color: &'static color::Color,
   title: String,
-  close_button_state: bool
+  left_buttons: Vec<Button>,
+  right_buttons: Vec<Button>
 }
 
 impl Client {
-  const TITLE_BAR_GRADIENT_FACTOR: f64 = 1.185;
+  pub const TITLE_BAR_GRADIENT_FACTOR: f64 = 1.185;
 
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
@@ -91,15 +64,9 @@ impl Client {
     let frame = create_frame (&geometry);
     XReparentWindow (display, window, frame, frame_offset.x, frame_offset.y);
 
-    let close_button= create_auxilarry_windows (
-      frame, &geometry.get_frame (&frame_offset)
-    );
-
-    XMapSubwindows (display, frame);
     let mut c = Box::new (Client {
       window,
       frame,
-      close_button,
       geometry,
       prev_geometry: geometry,
       workspace: active_workspace,
@@ -110,12 +77,32 @@ impl Client {
       is_minimized: false,
       border_color: &(*config).colors.normal,
       title: window_title (window),
-      close_button_state: false
+      left_buttons: Vec::new (),
+      right_buttons: Vec::new ()
     });
     let this = &mut *c as *mut Client as XPointer;
     XSaveContext (display, window, wm_context, this);
     XSaveContext (display, frame, wm_context, this);
-    XSaveContext (display, close_button, wm_context, this);
+
+    let mut i = 0;
+    for name in (*config).left_buttons.iter () {
+      let b = buttons::from_string (&mut c, name);
+      b.move_ (i, true);
+      c.left_buttons.push (b);
+      i += 1;
+    }
+    i = 0;
+    // Reverse the iterator so the leftmost button in the config is the
+    // leftmost button on the window
+    for name in (*config).right_buttons.iter ().rev () {
+      let b = buttons::from_string (&mut c, name);
+      b.move_ (i, false);
+      c.right_buttons.push (b);
+      i += 1;
+    }
+
+    XMapSubwindows (display, frame);
+
     c
   }
 
@@ -123,7 +110,6 @@ impl Client {
     Client {
       window,
       frame: X_NONE,
-      close_button: X_NONE,
       geometry: uninitialized! (),
       prev_geometry: uninitialized! (),
       workspace: 0,
@@ -134,7 +120,8 @@ impl Client {
       is_minimized: false,
       border_color: &*(1 as *const color::Color),
       title: String::new (),
-      close_button_state: false
+      left_buttons: Vec::new (),
+      right_buttons: Vec::new ()
     }
   }
 
@@ -152,7 +139,6 @@ impl Client {
 
   pub unsafe fn map (&mut self) {
     XMapWindow (display, self.frame);
-    XMapWindow (display, self.close_button);
   }
 
   pub unsafe fn unmap (&self) {
@@ -160,18 +146,19 @@ impl Client {
   }
 
   pub unsafe fn draw_border (&mut self) {
+    let frame_size = self.geometry.get_frame (&frame_offset);
     (*draw).rect (
       0,
-      0,
-      self.geometry.w + frame_offset.w,
-      self.geometry.h + frame_offset.h,
+      frame_offset.y,
+      frame_size.w,
+      frame_size.h - frame_offset.y as u32,
       *self.border_color,
       true
     );
     (*draw).gradient (
       0,
       0,
-      self.geometry.w + frame_offset.w,
+      frame_size.w,
       frame_offset.y as u32,
       self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
       *self.border_color
@@ -181,6 +168,7 @@ impl Client {
     (*draw).text (&self.title)
       .at (frame_offset.x, 0)
       .align_vertically (draw::Alignment::Centered, frame_offset.y)
+      .align_horizontally((*config).title_alignment, frame_size.w as i32)
       .color ((*config).colors.bar_active_workspace_text)
       .width (self.geometry.w as i32 + frame_offset.x - frame_offset.y)
       .draw ();
@@ -191,53 +179,14 @@ impl Client {
       self.geometry.w + frame_offset.w,
       self.geometry.h + frame_offset.h
     );
-    self.draw_close_button (self.close_button_state);
+    for b in self.buttons_mut () {
+      b.draw (false);
+    }
   }
 
   pub unsafe fn set_border (&mut self, color: &'static color::Color) {
     self.border_color = color;
     self.draw_border ();
-    self.draw_close_button (self.close_button_state);
-  }
-
-  pub unsafe fn draw_close_button (&mut self, hovered: bool) {
-    const ICON_SIZE_PERCENT: u32 = 75;
-    let size = frame_offset.y as u32;
-    let icon_size = size * ICON_SIZE_PERCENT / 100;
-    let icon_position = (size - icon_size) as i32 / 2;
-    let color = if hovered {
-      (*config).colors.close_button_hovered
-    } else {
-      (*config).colors.close_button
-    };
-    (*draw).rect (0, 0, size, size, *self.border_color, true);
-    (*draw).gradient (
-      0,
-      0,
-      size,
-      size,
-      self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
-      *self.border_color
-    );
-
-    if resources::close_button.is_some () {
-      (*draw).draw_colored_svg (
-        &mut resources::close_button,
-        color,
-        icon_position, icon_position,
-        icon_size, icon_size
-      );
-    }
-    else {
-      (*draw).rect (
-        icon_position, icon_position,
-        icon_size, icon_size,
-        color, true
-      );
-    }
-
-    (*draw).render (self.close_button, 0, 0, size, size);
-    self.close_button_state = hovered;
   }
 
   pub unsafe fn set_title (&mut self, title: &str) {
@@ -264,7 +213,12 @@ impl Client {
       fg.w,
       fg.h
     );
-    XMoveWindow (display, self.close_button, fg.w as i32 - frame_offset.y, 0);
+    for i in 0..self.left_buttons.len (){
+      self.left_buttons[i].move_ (i as i32, true);
+    }
+    for i in 0..self.right_buttons.len (){
+      self.right_buttons[i].move_ (i as i32, false);
+    }
     XResizeWindow (display, self.window, target.w, target.h);
     self.configure ();
     self.draw_border ();
@@ -412,6 +366,24 @@ impl Client {
       &mut ev as *mut XConfigureEvent as *mut XEvent
     );
   }
+
+  pub unsafe fn click (&mut self, window: Window) -> bool {
+    for b in self.buttons_mut () {
+      if b.window == window {
+        b.click ();
+        return true;
+      }
+    }
+    false
+  }
+
+  pub fn buttons (&self) -> std::iter::Chain<std::slice::Iter<'_, Button>, std::slice::Iter<'_, Button>> {
+    self.left_buttons.iter ().chain (self.right_buttons.iter ())
+  }
+
+  pub fn buttons_mut (&mut self) -> std::iter::Chain<std::slice::IterMut<'_, Button>, std::slice::IterMut<'_, Button>> {
+    self.left_buttons.iter_mut ().chain (self.right_buttons.iter_mut ())
+  }
 }
 
 impl PartialEq for Client {
@@ -436,4 +408,7 @@ pub unsafe fn set_border_info () {
     2 * b as u32,
     title_height + b as u32
   );
+  buttons::size = title_height;
+  buttons::icon_size = buttons::size * (*config).button_icon_size as u32 / 100;
+  buttons::icon_position = (buttons::size - buttons::icon_size) as i32 / 2;
 }

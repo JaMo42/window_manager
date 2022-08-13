@@ -8,6 +8,7 @@ use super::config_parser;
 use super::color::*;
 use super::paths;
 use super::color;
+use super::draw::Alignment;
 
 #[macro_export]
 macro_rules! clean_mods {
@@ -133,7 +134,11 @@ pub struct Config {
   pub bar_time_format: String,
   pub bar_height: Height,
   pub title_font: String,
-  pub title_height: Height
+  pub title_height: Height,
+  pub title_alignment: Alignment,
+  pub left_buttons: Vec<String>,
+  pub right_buttons: Vec<String>,
+  pub button_icon_size: u8
 }
 
 impl Config {
@@ -152,7 +157,11 @@ impl Config {
       bar_time_format: "%a %b %e %T %Y".to_string (),
       bar_height: Height::FontPlus (5),
       title_font: "sans".to_string (),
-      title_height: Height::FontPlus (1)
+      title_height: Height::FontPlus (1),
+      title_alignment: Alignment::Left,
+      left_buttons: Vec::new (),
+      right_buttons: vec!["close".to_string ()],
+      button_icon_size: 75
     }
   }
 
@@ -236,7 +245,6 @@ impl Config {
           self.bar_font = description
         }
         Bar_Opacity (percent) => {
-          assert! (percent <= 100);
           log::info! ("config: bar opacity: {}%", percent);
           self.bar_opacity = percent;
         }
@@ -255,6 +263,27 @@ impl Config {
         Title_Height (height) => {
           log::info! ("config: title bar height: {}", height);
           self.title_height = height;
+        }
+        Title_Position (position) => {
+          log::info! ("config: title position: {}", position);
+          self.title_alignment = match position.as_str () {
+            "left" => Alignment::Left,
+            "center" => Alignment::Centered,
+            "right" => Alignment::Right,
+            _ => unreachable! ()
+          }
+        }
+        Left_Buttons (buttons) => {
+          log::info! ("config: left buttons: {}", buttons.join (", "));
+          self.left_buttons = buttons;
+        }
+        Right_Buttons (buttons) => {
+          log::info! ("config: right buttons: {}", buttons.join (", "));
+          self.right_buttons = buttons;
+        }
+        Button_Icon_Size (percent) => {
+          log::info! ("config: button icon size: {}%", percent);
+          self.button_icon_size = percent;
         }
       }
     }

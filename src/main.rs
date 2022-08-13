@@ -23,6 +23,7 @@ mod property;
 mod cursor;
 mod draw;
 mod bar;
+mod buttons;
 
 use crate::core::*;
 use client::*;

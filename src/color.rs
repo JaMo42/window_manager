@@ -87,6 +87,10 @@ pub struct Color_Scheme {
   pub urgent_text: Color,
   pub close_button: Color,
   pub close_button_hovered: Color,
+  pub maximize_button: Color,
+  pub maximize_button_hovered: Color,
+  pub minimize_button: Color,
+  pub minimize_button_hovered: Color,
   pub background: Color,
   pub bar_background: Color,
   pub bar_text: Color,
@@ -109,6 +113,10 @@ const COLOR_NAMES: [&str; COLOR_COUNT] = [
   "UrgentText",
   "CloseButton",
   "CloseButtonHovered",
+  "MaximizeButton",
+  "MaximizeButtonHovered",
+  "MinimizeButton",
+  "MinimizeButtonHovered",
   "Background",
   "Bar::Background",
   "Bar::Text",
@@ -133,9 +141,16 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
     // Urgent
     "#770000",
     "#000000",
-    // Close button
-    "#000000",
-    "#ff1111",
+    // Buttons
+      // Close
+      "#000000",
+      "#cc0000",
+      // Maximize
+      "CloseButton",
+      "#00cc00",
+      // Minimize
+      "CloseButton",
+      "#cccc00",
 
   // Background
   "#000000",
