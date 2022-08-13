@@ -44,7 +44,6 @@ impl Workspace {
       else {
         property::delete (root, property::Net::ActiveWindow);
         XSetInputFocus (display, PointerRoot as u64, RevertToPointerRoot, CurrentTime);
-        bar.draw ();
       }
       return c;
     }

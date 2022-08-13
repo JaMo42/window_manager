@@ -286,7 +286,6 @@ impl Client {
     else {
       self.set_border (&(*config).colors.focused);
       XRaiseWindow (display, self.frame);
-      bar.draw ();
     }
     XSetInputFocus (display, self.window, RevertToParent, CurrentTime);
     self.send_event (property::atom (WM::TakeFocus));

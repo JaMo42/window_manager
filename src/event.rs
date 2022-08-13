@@ -409,7 +409,6 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
     }
     else if event.atom == XA_WM_NAME || event.atom == atom (Net::WMName) {
       client.set_title (&window_title (client.window));
-      bar.draw ();
     }
     else if event.atom == atom (Net::WMUserTime)
       && focused_client! ().map_or (true, |f| f.window != event.window)
