@@ -7,7 +7,7 @@ use super::property;
 #[macro_export]
 macro_rules! focused_client {
   () => {
-    workspaces[active_workspace].clients.first_mut ().map (|box_| &mut **box_)
+    workspaces[active_workspace].clients.iter_mut ().find (|c| !c.is_minimized).map (|c| &mut **c)
   }
 }
 
@@ -37,8 +37,7 @@ impl Workspace {
   pub unsafe fn remove (&mut self, client: &Client) -> Box<Client> {
     if let Some (idx) = self.clients.iter ().position (|c| c.window == client.window) {
       let c = self.clients.remove (idx);
-      // Update focused window
-      if let Some (first) = self.clients.first_mut () {
+      if let Some (first) = focused_client! () {
         first.focus ();
       }
       else {

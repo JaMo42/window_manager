@@ -117,9 +117,10 @@ pub unsafe fn minimize (client: &mut Client) {
   }
   client.is_minimized = true;
   client.unmap ();
-  if workspaces[active_workspace].clients.len () > 1 {
-    workspaces[active_workspace].focus_client (1);
+  if let Some (f) = focused_client! () {
+    workspaces[active_workspace].focus (f.window);
   } else {
+    property::delete (root, property::Net::ActiveWindow);
     XSetInputFocus (display, root, RevertToParent, CurrentTime);
   }
 }
