@@ -126,6 +126,18 @@ pub unsafe fn minimize (client: &mut Client) {
 }
 
 
+pub unsafe fn raise_all () {
+  for c in workspaces[active_workspace].iter_mut () {
+    if c.is_minimized {
+      c.is_minimized = false;
+      c.map ();
+      c.draw_border ();
+    }
+  }
+  workspaces[active_workspace].focus_client (0);
+}
+
+
 pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
   if idx == active_workspace {
     return;

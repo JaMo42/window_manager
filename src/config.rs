@@ -78,6 +78,7 @@ impl Action {
       "snap_up" => WM (action::snap_up),
       "snap_down" => WM (action::snap_down),
       "minimize" => WM (action::minimize),
+      "raise_all" => Generic (action::raise_all),
       _ => panic! ("action::from_str: unknown action: {}", s)
     }
   }
