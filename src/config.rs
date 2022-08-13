@@ -77,6 +77,7 @@ impl Action {
       ),
       "snap_up" => WM (action::snap_up),
       "snap_down" => WM (action::snap_down),
+      "minimize" => WM (action::minimize),
       _ => panic! ("action::from_str: unknown action: {}", s)
     }
   }

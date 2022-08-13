@@ -70,6 +70,7 @@ pub struct Client {
   pub is_urgent: bool,
   pub is_fullscreen: bool,
   pub is_dialog: bool,
+  pub is_minimized: bool,
   border_color: &'static color::Color,
   title: String,
   close_button_state: bool
@@ -106,6 +107,7 @@ impl Client {
       is_urgent: false,
       is_fullscreen: false,
       is_dialog: false,
+      is_minimized: false,
       border_color: &(*config).colors.normal,
       title: window_title (window),
       close_button_state: false
@@ -129,6 +131,7 @@ impl Client {
       is_urgent: false,
       is_fullscreen: false,
       is_dialog: false,
+      is_minimized: false,
       border_color: &*(1 as *const color::Color),
       title: String::new (),
       close_button_state: false
@@ -150,7 +153,6 @@ impl Client {
   pub unsafe fn map (&mut self) {
     XMapWindow (display, self.frame);
     XMapWindow (display, self.close_button);
-    self.set_border (&(*config).colors.focused);
   }
 
   pub unsafe fn unmap (&self) {

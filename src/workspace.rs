@@ -34,26 +34,24 @@ impl Workspace {
     self.clients[0].focus ();
   }
 
-  pub fn remove (&mut self, client: &Client) -> Box<Client> {
+  pub unsafe fn remove (&mut self, client: &Client) -> Box<Client> {
     if let Some (idx) = self.clients.iter ().position (|c| c.window == client.window) {
       let c = self.clients.remove (idx);
       // Update focused window
-      unsafe {
-        if let Some (first) = self.clients.first_mut () {
-          first.focus ();
-        }
-        else {
-          property::delete (root, property::Net::ActiveWindow);
-          XSetInputFocus (display, PointerRoot as u64, RevertToPointerRoot, CurrentTime);
-          bar.draw ();
-        }
+      if let Some (first) = self.clients.first_mut () {
+        first.focus ();
+      }
+      else {
+        property::delete (root, property::Net::ActiveWindow);
+        XSetInputFocus (display, PointerRoot as u64, RevertToPointerRoot, CurrentTime);
+        bar.draw ();
       }
       return c;
     }
     panic! ("tried to remove client not on workspace");
   }
 
-  unsafe fn focus_client (&mut self, idx: usize) {
+  pub unsafe fn focus_client (&mut self, idx: usize) {
     let window = self.clients[idx].window;
     if let Some (prev) = self.clients.first_mut () {
       if prev.window == window {
@@ -116,8 +114,15 @@ impl Workspace {
       match event.type_ {
         KeyPress => {
           if event.key.keycode == 0x17 {
-            self.clients[switch_idx].set_border (&(*config).colors.normal);
+            if self.clients[switch_idx].is_minimized {
+              self.clients[switch_idx].unmap ();
+            } else {
+              self.clients[switch_idx].set_border (&(*config).colors.normal);
+            }
             switch_idx = (switch_idx + 1) % self.clients.len ();
+            if self.clients[switch_idx].is_minimized {
+              self.clients[switch_idx].map ();
+            }
             self.clients[switch_idx].set_border (&(*config).colors.selected);
             self.clients[switch_idx].raise ();
           }
@@ -132,9 +137,9 @@ impl Workspace {
     }
     // Clean up
     XUngrabKeyboard (display, CurrentTime);
-    XSetInputFocus (display, X_NONE, RevertToParent, CurrentTime);
     XDestroyWindow (display, w);
     // Focus the resulting window
+    self.clients[switch_idx].is_minimized = false;
     self.focus_client (switch_idx);
     // Re-grab main input
     super::grab_keys ();

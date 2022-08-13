@@ -111,6 +111,20 @@ pub unsafe fn center (client: &mut Client) {
 }
 
 
+pub unsafe fn minimize (client: &mut Client) {
+  if client.is_fullscreen {
+    return;
+  }
+  client.is_minimized = true;
+  client.unmap ();
+  if workspaces[active_workspace].clients.len () > 1 {
+    workspaces[active_workspace].focus_client (1);
+  } else {
+    XSetInputFocus (display, root, RevertToParent, CurrentTime);
+  }
+}
+
+
 pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
   if idx == active_workspace {
     return;
@@ -119,7 +133,10 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
     c.unmap ();
   }
   for c in workspaces[idx].iter_mut () {
-    c.map ();
+    if !c.is_minimized {
+      c.map ();
+      c.draw_border ();
+    }
   }
   active_workspace = idx;
   if let Some (focused) = focused_client! () {

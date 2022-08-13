@@ -248,10 +248,8 @@ impl<'a> Rendered_Text<'a> {
 
 
 pub unsafe fn load_resources () {
-  log::info! ("Loading resources");
-  let loader = librsvg::Loader::new ();
-
-  let load_svg = |res: &'static mut Svg_Resource| {
+  unsafe fn load_svg (res: &'static mut Svg_Resource) {
+    let loader = librsvg::Loader::new ();
     match loader.read_path (format! ("{}/{}", paths::resource_dir, res.file)) {
       Ok (handle) => {
         res.handle = Some (handle);
@@ -263,7 +261,8 @@ pub unsafe fn load_resources () {
         log::error! ("Failed to load {}: {}", res.file, error);
       }
     }
-  };
+  }
 
+  log::info! ("Loading resources");
   load_svg (&mut resources::close_button);
 }
