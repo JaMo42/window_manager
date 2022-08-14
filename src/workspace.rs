@@ -81,6 +81,11 @@ impl Workspace {
 
   pub unsafe fn switch_window (&mut self) {
     if self.clients.len () <= 1 {
+      if self.clients.len () == 1 && self.clients[0].is_minimized {
+        self.clients[0].is_minimized = false;
+        self.clients[0].map ();
+        self.clients[0].set_border (&(*config).colors.focused);
+      }
       return;
     }
     // Create dummy window to handle window switch loop input
