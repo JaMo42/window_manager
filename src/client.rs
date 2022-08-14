@@ -6,6 +6,9 @@ use super::property::WM;
 use super::buttons::Button;
 
 pub static mut frame_offset: Geometry = Geometry::new ();
+static mut left_buttons_width: u32 = 0;
+static mut right_buttons_width: u32 = 0;
+static mut title_x: i32 = 0;
 
 
 unsafe fn create_frame (base_geometry: &Geometry) -> Window {
@@ -46,7 +49,8 @@ pub struct Client {
   pub border_color: &'static color::Color,
   title: String,
   left_buttons: Vec<Button>,
-  right_buttons: Vec<Button>
+  right_buttons: Vec<Button>,
+  title_space: i32
 }
 
 impl Client {
@@ -78,7 +82,8 @@ impl Client {
       border_color: &(*config).colors.normal,
       title: window_title (window),
       left_buttons: Vec::new (),
-      right_buttons: Vec::new ()
+      right_buttons: Vec::new (),
+      title_space: 0
     });
     let this = &mut *c as *mut Client as XPointer;
     XSaveContext (display, window, wm_context, this);
@@ -121,7 +126,8 @@ impl Client {
       border_color: &*(1 as *const color::Color),
       title: String::new (),
       left_buttons: Vec::new (),
-      right_buttons: Vec::new ()
+      right_buttons: Vec::new (),
+      title_space: 0
     }
   }
 
@@ -166,11 +172,11 @@ impl Client {
 
     (*draw).select_font (&(*config).title_font);
     (*draw).text (&self.title)
-      .at (frame_offset.x, 0)
+      .at (title_x, 0)
       .align_vertically (draw::Alignment::Centered, frame_offset.y)
-      .align_horizontally((*config).title_alignment, frame_size.w as i32)
+      .align_horizontally((*config).title_alignment, self.title_space)
       .color ((*config).colors.bar_active_workspace_text)
-      .width (self.geometry.w as i32 + frame_offset.x - frame_offset.y)
+      .width (self.title_space)
       .draw ();
     (*draw).render (
       self.frame,
@@ -205,6 +211,7 @@ impl Client {
 
   pub unsafe fn set_position_and_size (&mut self, target: Geometry) {
     self.geometry = target;
+    self.title_space = (self.geometry.w - left_buttons_width - right_buttons_width) as i32;
     let fg = target.get_frame (&frame_offset);
     XMoveResizeWindow (
       display, self.frame,
@@ -399,6 +406,7 @@ impl std::fmt::Display for Client {
   }
 }
 
+
 pub unsafe fn set_border_info () {
   let title_height = (*config).title_height.get (Some (&(*config).title_font));
   let b = (*config).border_width;
@@ -408,7 +416,8 @@ pub unsafe fn set_border_info () {
     2 * b as u32,
     title_height + b as u32
   );
-  buttons::size = title_height;
-  buttons::icon_size = buttons::size * (*config).button_icon_size as u32 / 100;
-  buttons::icon_position = (buttons::size - buttons::icon_size) as i32 / 2;
+  left_buttons_width = (*config).left_buttons.len () as u32 * title_height;
+  right_buttons_width = (*config).right_buttons.len () as u32 * title_height;
+  title_x = left_buttons_width as i32 + b;
+  buttons::set_size (title_height);
 }

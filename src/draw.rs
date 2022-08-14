@@ -128,6 +128,49 @@ impl Drawing_Context {
     self.cairo_context.mask (svg.pattern.as_ref ().unwrap ()).unwrap ();
   }
 
+  unsafe fn ellipse_impl (&mut self, x: f64, y: f64, w: f64, h: f64, color: Color, drop: bool) {
+    use std::f64::consts::PI;
+    self.cairo_context.save ().unwrap ();
+    self.cairo_context.translate (x, y);
+    self.cairo_context.scale (w / 2.0, h / 2.0);
+    self.cairo_context.arc (1.0, 1.0, 1.0, 0.0, 2.0*PI);
+    self.cairo_context.set_source_rgb (color.red, color.green, color.blue);
+    if drop {
+     self.cairo_context.fill ().unwrap ();
+    } else {
+      self.cairo_context.fill_preserve ().unwrap ();
+    }
+    self.cairo_context.restore ().unwrap ();
+  }
+
+  pub unsafe fn ellipse (&mut self, x: i32, y: i32, w: u32, h: u32, color: Color) {
+    self.ellipse_impl (x as f64, y as f64, w as f64, h as f64, color, true);
+  }
+
+  pub unsafe fn ellipse_outline (
+    &mut self,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+    color: Color,
+    line_width: f64,
+    color_scale: f64
+  ) {
+    self.cairo_context.set_line_width (line_width);
+    let outline_color = color.scale (color_scale);
+    self.cairo_context.set_source_rgb(outline_color.red, outline_color.green, outline_color.blue);
+    self.ellipse_impl(
+      x as f64 + line_width / 2.0,
+      y as f64 + line_width / 2.0,
+      w as f64 - line_width,
+      h as f64 - line_width,
+      color,
+      false
+    );
+    self.cairo_context.stroke ().unwrap();
+  }
+
   pub unsafe fn select_font (&mut self, description: &str) {
     self.pango_layout.set_font_description (Some (&pango::FontDescription::from_string (description)));
   }

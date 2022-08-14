@@ -7,9 +7,12 @@ use super::client::{Client, frame_offset};
 use super::action;
 use super::color::Color;
 
-pub static mut size: u32 = 0;
-pub static mut icon_position: i32 = 0;
-pub static mut icon_size: u32 = 0;
+static mut size: u32 = 0;
+static mut icon_size: u32 = 0;
+static mut icon_position: i32 = 0;
+static mut circle_size: u32 = 0;
+static mut circle_position: i32 = 0;
+
 
 pub struct Button {
   owner: NonNull<Client>,
@@ -61,10 +64,14 @@ impl Button {
   }
 
   pub unsafe fn draw (&mut self, hovered: bool) {
-    let color = if hovered {
-      self.hovered_color
+    let color = if (*config).circle_buttons {
+      self.hovered_color.scale (0.3)
     } else {
-      self.base_color
+      if hovered {
+        self.hovered_color
+      } else {
+        self.base_color
+      }
     };
     let below = *self.owner.as_ref ().border_color;
     (*draw).gradient (
@@ -76,20 +83,39 @@ impl Button {
       below
     );
 
-    if resources::close_button.is_some () {
-      (*draw).draw_colored_svg (
-        self.icon,
-        color,
-        icon_position, icon_position,
-        icon_size, icon_size
+    if (*config).circle_buttons {
+      let border_color = self.owner.as_ref ().border_color.pixel;
+      let is_focused = border_color == (*config).colors.focused.pixel
+        || border_color == (*config).colors.selected.pixel;
+      (*draw).ellipse_outline (
+        circle_position, circle_position,
+        circle_size, circle_size,
+        if hovered || is_focused {
+          self.hovered_color
+        } else {
+          self.base_color
+        },
+        1.0,
+        0.9
       );
     }
-    else {
-      (*draw).rect (
-        icon_position, icon_position,
-        icon_size, icon_size,
-        color, true
-      );
+
+    if !(*config).circle_buttons || hovered {
+      if resources::close_button.is_some () {
+        (*draw).draw_colored_svg (
+          self.icon,
+          color,
+          icon_position, icon_position,
+          icon_size, icon_size
+        );
+      }
+      else {
+        (*draw).ellipse (
+          icon_position, icon_position,
+          icon_size, icon_size,
+          color
+        );
+      }
     }
 
     (*draw).render (self.window, 0, 0, size, size);
@@ -121,6 +147,7 @@ pub unsafe fn close_button (owner: &mut Client) -> Button {
   )
 }
 
+
 pub unsafe fn maximize_button (owner: &mut Client) -> Button {
   Button::new (
     owner,
@@ -130,6 +157,7 @@ pub unsafe fn maximize_button (owner: &mut Client) -> Button {
     action::toggle_maximized
   )
 }
+
 
 pub unsafe fn minimize_button (owner: &mut Client) -> Button {
   Button::new (
@@ -141,6 +169,7 @@ pub unsafe fn minimize_button (owner: &mut Client) -> Button {
   )
 }
 
+
 pub unsafe fn from_string (owner: &mut Client, name: &str) -> Button {
   match name {
     "close" => close_button (owner),
@@ -149,5 +178,23 @@ pub unsafe fn from_string (owner: &mut Client, name: &str) -> Button {
     _ => {
       panic! ("Invalid button name");
     }
+  }
+}
+
+
+pub unsafe fn set_size (title_bar_height: u32) {
+  size = title_bar_height;
+  if (*config).circle_buttons {
+    let s = size as f64;
+    let c =  s * ((*config).button_icon_size as f64 / 100.0);
+    let i = 2.0 * f64::sqrt (f64::powi (c / 2.0, 2) / 2.0);
+    circle_size = c.round () as u32;
+    circle_position = ((s - c) / 2.0).round () as i32;
+    icon_size = i.ceil () as u32;
+    icon_position = ((s - i) / 2.0).round () as i32;
+  }
+  else {
+    icon_size = size * (*config).button_icon_size as u32 / 100;
+    icon_position = (size - icon_size) as i32 / 2;
   }
 }

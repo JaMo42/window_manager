@@ -23,7 +23,8 @@ pub enum Definition_Type {
   Title_Position (String),
   Left_Buttons (Vec<String>),
   Right_Buttons (Vec<String>),
-  Button_Icon_Size (u8)
+  Button_Icon_Size (u8),
+  Circle_Buttons
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -217,6 +218,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
           .collect ()
       ),
       "button_icon_size" => Button_Icon_Size (self.parse_percentage ()),
+      "circle_buttons" => Circle_Buttons,
       _ => {
         self.fail ("Unknown keyword");
       }

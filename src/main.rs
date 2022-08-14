@@ -219,7 +219,6 @@ unsafe fn init () {
   // Bar
   if cfg! (feature = "bar") {
     bar = Bar::create ();
-    log::info! ("Bar window: {}", bar.window);
   }
   // Set window border size info
   client::set_border_info ();

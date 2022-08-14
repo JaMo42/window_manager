@@ -138,7 +138,8 @@ pub struct Config {
   pub title_alignment: Alignment,
   pub left_buttons: Vec<String>,
   pub right_buttons: Vec<String>,
-  pub button_icon_size: u8
+  pub button_icon_size: u8,
+  pub circle_buttons: bool
 }
 
 impl Config {
@@ -160,8 +161,9 @@ impl Config {
       title_height: Height::FontPlus (1),
       title_alignment: Alignment::Left,
       left_buttons: Vec::new (),
-      right_buttons: vec!["close".to_string ()],
-      button_icon_size: 75
+      right_buttons: Vec::new (),
+      button_icon_size: 75,
+      circle_buttons: false
     }
   }
 
@@ -284,6 +286,10 @@ impl Config {
         Button_Icon_Size (percent) => {
           log::info! ("config: button icon size: {}%", percent);
           self.button_icon_size = percent;
+        }
+        Circle_Buttons => {
+          log::info! ("config: circle buttons");
+          self.circle_buttons = true;
         }
       }
     }

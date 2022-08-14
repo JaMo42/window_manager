@@ -125,6 +125,11 @@ button_icon_size <percentage>
 ```
 Set the relative size of window button icons; the buttons themselves are always the same height as the title bar.
 
+```
+circle_buttons
+```
+Enable circle buttons.
+
 ## Modifiers
 
 - `Win` Windows key
@@ -194,3 +199,8 @@ If the number for the absolute value is 0, the height of the font is used.
 | Bar::ActiveWorkspaceText |
 | Bar::UrgentWorkspace | as `Bar::Workspace` but for workspaces that contain windows  that demand attention
 | Bar::UrgentWorkspaceText |
+
+### Circle buttons
+
+If circle buttons are enabled, `<Button>` becomes the circle color for normal windows and `<Button>Hovered` becomes the circle color for focused windows.
+The color of the actual icon gets derived from the `<Button>Hovered` color.
