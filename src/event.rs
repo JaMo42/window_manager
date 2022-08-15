@@ -331,8 +331,8 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       let mut rng = rand::thread_rng ();
       g.random_inside (&window_area.get_client (&frame_offset), &mut rng);
     }
-    c.prev_geometry = c.geometry;
     c.set_position_and_size (g);
+    c.prev_geometry = g;
     // Add client
     if target_workspace == active_workspace {
       c.map ();
