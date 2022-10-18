@@ -46,7 +46,7 @@ impl Workspace {
       }
       return c;
     }
-    panic! ("tried to remove client not on workspace");
+    my_panic! ("tried to remove client not on workspace");
   }
 
   pub unsafe fn focus_client (&mut self, idx: usize) {
@@ -75,7 +75,7 @@ impl Workspace {
       self.focus_client (idx);
     }
     else {
-      panic! ("Trying to focus window on a different workspace");
+      my_panic! ("Trying to focus window on a different workspace");
     }
   }
 

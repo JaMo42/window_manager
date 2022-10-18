@@ -19,7 +19,7 @@ impl Geometry {
     Geometry { x: 0, y: 0, w: 0, h: 0 }
   }
 
-  pub fn from_parts (x: c_int, y: c_int, w: c_uint, h: c_uint) -> Self {
+  pub const fn from_parts (x: c_int, y: c_int, w: c_uint, h: c_uint) -> Self {
     Geometry { x, y, w, h }
   }
 

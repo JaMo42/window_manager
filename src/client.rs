@@ -374,14 +374,13 @@ impl Client {
     );
   }
 
-  pub unsafe fn click (&mut self, window: Window) -> bool {
+  pub unsafe fn click (&mut self, window: Window) {
     for b in self.buttons_mut () {
       if b.window == window {
         b.click ();
-        return true;
+        return;
       }
     }
-    false
   }
 
   pub fn buttons (&self) -> std::iter::Chain<std::slice::Iter<'_, Button>, std::slice::Iter<'_, Button>> {
@@ -391,13 +390,25 @@ impl Client {
   pub fn buttons_mut (&mut self) -> std::iter::Chain<std::slice::IterMut<'_, Button>, std::slice::IterMut<'_, Button>> {
     self.left_buttons.iter_mut ().chain (self.right_buttons.iter_mut ())
   }
+
+  pub unsafe fn destroy (&self) {
+    XDeleteContext (display, self.window, wm_context);
+    for b in self.buttons () {
+      XDeleteContext (display, b.window, wm_context);
+    }
+    XDeleteContext (display, self.frame, wm_context);
+    XSelectInput (display, self.frame, X_NONE as i64);
+    XDestroyWindow (display, self.frame);
+  }
 }
+
 
 impl PartialEq for Client {
   fn eq (&self, other: &Self) -> bool {
     self.window == other.window
   }
 }
+
 
 impl std::fmt::Display for Client {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {

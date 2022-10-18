@@ -39,9 +39,9 @@ impl Color {
 
   pub fn scale (&self, factor: f64) -> Self {
     Self::from_rgb (
-      self.red * factor,
-      self.green * factor,
-      self.blue * factor
+      (self.red * factor).clamp (0.0, 1.0),
+      (self.green * factor).clamp (0.0, 1.0),
+      (self.blue * factor).clamp (0.0, 1.0)
     )
   }
 }
@@ -235,7 +235,7 @@ impl Color_Scheme {
     }
     if !links.is_empty () {
       log::error! ("Unresolved links: {:?}", links);
-      panic! ("unresolved links");
+      my_panic! ("unresolved links");
     }
 
     result
@@ -255,5 +255,5 @@ unsafe fn color_index (name: &str) -> usize {
     }
   }
   log::error! ("Invalid color name: {}", name);
-  panic! ("invalid color name");
+  my_panic! ("invalid color name");
 }

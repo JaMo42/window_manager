@@ -33,10 +33,7 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   }
   if event.subwindow == X_NONE {
     if let Some (client) = win2client (event.window) {
-      // This is probably always true as long as we only have the close button
-      if !client.click (event.window) {
-        log::warn! ("non-meta click on {}", event.window);
-      }
+      client.click (event.window);
     }
     return;
   }
@@ -283,6 +280,7 @@ pub unsafe fn key_press (event: &XKeyEvent) {
 
 
 pub unsafe fn map_request (event: &XMapRequestEvent) {
+  // TODO: should only check active workspace?
   for ws in workspaces.iter () {
     for c in ws.iter () {
       if c.window == event.window {
@@ -336,8 +334,6 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     // Add client
     if target_workspace == active_workspace {
       c.map ();
-      //c.draw_close_button (false);
-      //c.close_button.draw (false);
       c.draw_border ();
     }
     workspaces[target_workspace].push (c);
@@ -476,6 +472,11 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
       action::select_workspace (event.data.get_long (0) as usize, None);
     }
   }
+  else {
+    log::debug! ("Unhandeled client message: {}", event.message_type);
+    log::debug! ("  Recipient: {}", event.window);
+    log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
+  }
 }
 
 pub unsafe fn mapping_notify (event: &XMappingEvent) {
@@ -488,23 +489,14 @@ pub unsafe fn mapping_notify (event: &XMappingEvent) {
 
 pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
   let window = event.window;
-  XGrabServer (display);
   for workspace in &mut workspaces {
     if workspace.contains (window) {
-      let c = workspace.remove (&Client::dummy (window));
-      XDeleteContext (display, c.window, wm_context);
-      //XDeleteContext (display, c.close_button.window, wm_context);
-      for b in c.buttons () {
-        XDeleteContext (display, b.window, wm_context);
-      }
-      XDeleteContext (display, c.frame, wm_context);
-      XSelectInput (display, c.frame, X_NONE as i64);
-      XDestroyWindow (display, c.frame);
+      workspace.remove (&Client::dummy (window))
+        .destroy ();
       update_client_list ();
       break;
     }
   }
-  XUngrabServer (display);
 }
 
 pub unsafe fn expose (event: &XExposeEvent) {

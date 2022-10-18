@@ -24,6 +24,19 @@ macro_rules! uninitialized {
   };
 }
 
+macro_rules! my_panic {
+  ($msg:expr) => {{
+    log::error! ("\x1b[91mPANIC: {}\x1b[0m", $msg);
+    panic! ($msg);
+  }};
+
+  ($($args:tt)*) => {{
+    let msg = format! ($($args)*);
+    log::error! ("\x1b[91mPANIC: {}\x1b[0m", msg);
+    panic! ($($args)*);
+  }};
+}
+
 pub const X_FALSE: c_int = 0;
 pub const X_TRUE: c_int = 1;
 pub const X_NONE: c_ulong = 0;

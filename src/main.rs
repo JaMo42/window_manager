@@ -48,7 +48,7 @@ mod paths {
       format! ("{}/.config/window_manager", std::env::var ("HOME").unwrap ())
     };
     if std::fs::create_dir_all (&config_dir).is_err () {
-      panic! ("Could not create configuration directory: {}", config_dir);
+      my_panic! ("Could not create configuration directory: {}", config_dir);
     }
     config = format! ("{}/config", config_dir);
     autostartrc = format! ("{}/autostartrc", config_dir);
@@ -67,7 +67,7 @@ unsafe extern "C" fn x_error (my_display: *mut Display, event: *mut XErrorEvent)
   );
   let error_msg = std::ffi::CStr::from_ptr (error_text).to_str ().unwrap ().to_string ();
   eprintln! ("window_manager|x-error: {}", error_msg);
-  log::error! ("X Error: {}", error_msg);
+  log::error! ("\x1b[31mX Error: {}\x1b[0m", error_msg);
   0
 }
 
@@ -175,6 +175,24 @@ unsafe fn select_input (mut mask: c_long) {
 }
 
 
+fn run_autostartrc () {
+  use std::process::{Command, Stdio};
+  let path = unsafe { &paths::autostartrc };
+  if std::path::Path::new (path).exists () {
+    Command::new ("bash")
+      .arg (path.as_str ())
+      .stdout (Stdio::null ())
+      .stderr (Stdio::null ())
+      .spawn ()
+      .expect ("failed to run autostartrc");
+  }
+  else {
+    log::info! ("No autostartrc found");
+  }
+  log::info! ("Ran autostartrc");
+}
+
+
 unsafe fn init () {
   // Create context type
   wm_context = XUniqueContext ();
@@ -201,21 +219,7 @@ unsafe fn init () {
   // Ignore SIGCHLD so we don't leave defunct processes behind
   libc::signal (libc::SIGCHLD, libc::SIG_IGN);
   // Run autostart script
-  {
-    use std::process::{Command, Stdio};
-    if std::path::Path::new (&paths::autostartrc).exists () {
-      Command::new ("bash")
-        .arg (paths::autostartrc.as_str ())
-        .stdout (Stdio::null ())
-        .stderr (Stdio::null ())
-        .spawn ()
-        .expect ("failed to run autostartrc");
-    }
-    else {
-      log::info! ("No autostartrc found");
-    }
-  }
-  log::info! ("Ran autostartrc");
+  run_autostartrc ();
   // Bar
   if cfg! (feature = "bar") {
     bar = Bar::create ();

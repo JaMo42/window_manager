@@ -260,7 +260,7 @@ impl<'a> Rendered_Text<'a> {
         Alignment::Left => {},
         Alignment::Centered => self.x += (width - self.width) / 2,
         Alignment::Right => self.x += width - self.width,
-        _ => panic! ("Invalid value for horizontal alignment")
+        _ => my_panic! ("Invalid value for horizontal alignment")
       }
     }
     self
@@ -272,7 +272,7 @@ impl<'a> Rendered_Text<'a> {
         Alignment::Top => {},
         Alignment::Centered => self.y += (height - self.height) / 2,
         Alignment::Bottom => self.y += height - self.height,
-        _ => panic! ("Invalid value for horizontal alignment")
+        _ => my_panic! ("Invalid value for horizontal alignment")
       }
     }
     self

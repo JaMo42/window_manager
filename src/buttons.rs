@@ -176,7 +176,7 @@ pub unsafe fn from_string (owner: &mut Client, name: &str) -> Button {
     "maximize" => maximize_button (owner),
     "minimize" => minimize_button (owner),
     _ => {
-      panic! ("Invalid button name");
+      my_panic! ("Invalid button name");
     }
   }
 }
