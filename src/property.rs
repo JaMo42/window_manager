@@ -186,48 +186,115 @@ pub unsafe fn append<P: Into_Atom, T> (
   );
 }
 
-pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<String> {
-  let mut a: Atom = X_NONE;
-  let mut i: c_int = 0;
-  let mut l: c_ulong = 0;
-  let mut text: *mut c_uchar = std::ptr::null_mut ();
-  if XGetWindowProperty (
-    display, window, property.into_atom (), 0, 1000, X_FALSE, AnyPropertyType as u64,
-    &mut a, &mut i, &mut l, &mut l, &mut text
-  ) == Success as i32 {
-    if a == X_NONE || text.is_null () {
-      None
-    }
-    else {
-      let string = string_from_ptr! (text as *mut c_char);
-      XFree (text as *mut c_void);
-      Some (string)
-    }
+#[allow(dead_code)]
+pub struct Property_Data {
+  actual_type: Atom,
+  format: c_int,
+  nitems: c_ulong,
+  bytes_after: c_ulong,
+  data: *mut c_uchar
+}
+
+#[allow(dead_code)]
+impl Property_Data {
+  pub fn length (&self) -> usize {
+    self.nitems as usize
   }
-  else {
+
+  pub unsafe fn value<T: Copy> (&self) -> T {
+    *(self.data as *mut T)
+  }
+
+  pub unsafe fn value_at<T: Copy> (&self, idx: isize) -> T {
+    *(self.data as *mut T).offset (idx)
+  }
+
+  #[allow(dead_code)]
+  pub unsafe fn as_slice<T> (&self) -> &[T] {
+    std::slice::from_raw_parts (self.data as *const T, self.nitems as usize)
+  }
+
+  pub unsafe fn as_string (&self) -> String {
+    string_from_ptr! (self.data as *mut c_char)
+  }
+}
+
+impl Drop for Property_Data {
+  fn drop (&mut self) {
+    unsafe { XFree (self.data as *mut c_void) };
+  }
+}
+
+pub unsafe fn get<P: Into_Atom> (
+  window: Window, property: P, offset: usize, length: usize, type_: Atom
+) -> Option<Property_Data> {
+  let mut actual_type: Atom = X_NONE;
+  let mut format: c_int = 0;
+  let mut nitems: c_ulong = 0;
+  let mut bytes_after: c_ulong = 0;
+  let mut data: *mut c_uchar = std::ptr::null_mut ();
+  let status = XGetWindowProperty (
+    display,
+    window,
+    property.into_atom (),
+    offset as i64,
+    length as i64,
+    X_FALSE,
+    type_,
+    &mut actual_type,
+    &mut format,
+    &mut nitems,
+    &mut bytes_after,
+    &mut data
+  );
+  if status == Success as i32 && !data.is_null () {
+    Some (Property_Data {
+      actual_type,
+      format,
+      nitems,
+      bytes_after,
+      data
+    })
+  } else {
     None
   }
 }
 
+pub unsafe fn get_data_for_scalar<T, P: Into_Atom> (
+  window: Window, property: P, type_: Atom, offset: usize
+) -> Option<Property_Data> {
+  let long_length = std::mem::size_of::<T> () / 4;
+  let long_offset = (offset * std::mem::size_of::<T> ()) / 4;
+  return get (window, property, long_offset, long_length, type_);
+}
+
+pub unsafe fn get_data_for_array<T, P: Into_Atom> (
+  window: Window, property: P, type_: Atom, length: usize, offset: usize
+) -> Option<Property_Data> {
+  let long_length = (length * std::mem::size_of::<T> ()) / 4;
+  let long_offset = (offset * std::mem::size_of::<T> ()) / 4;
+  return get (window, property, long_offset, long_length, type_);
+}
+
+pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<String> {
+  const MAX_LENGTH: usize = 1024;
+  get_data_for_array::<c_char, _> (
+    window,
+    property,
+    AnyPropertyType as Atom,  // Could be XA_STRING or _XA_UTF8_STRING
+    MAX_LENGTH,
+    0
+  )
+  .map (|d| d.as_string ())
+}
+
 pub unsafe fn get_atom<P: Into_Atom> (window: Window, property: P) -> Atom {
-  let mut a: Atom = X_NONE;
-  let mut i: c_int = 0;
-  let mut l: c_ulong = 0;
-  let mut p: *mut c_uchar = std::ptr::null_mut ();
-  if XGetWindowProperty (
-    display, window, property.into_atom (), 0, std::mem::size_of::<Atom> () as i64,
-    X_FALSE, XA_ATOM, &mut a, &mut i, &mut l, &mut l, &mut p
-  ) == Success as i32 {
-    if a == X_NONE || p.is_null () {
-      X_NONE
-    }
-    else {
-      let atom: Atom = *(p as *mut Atom);
-      XFree (p as *mut c_void);
-      atom
-    }
-  }
-  else {
-    X_NONE
-  }
+  get_data_for_scalar::<Atom, _> (
+    window,
+    property,
+    XA_ATOM,
+    0
+  )
+  .map (|data| data.value ())
+  .unwrap_or (X_NONE)
 }
