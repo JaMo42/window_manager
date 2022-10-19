@@ -176,4 +176,4 @@ Some projects I used to learn how windows managers work.
 
 ### Icons
 
-See [res/README.md](./res/README.md)
+See [config/res/README.md](./config/res/README.md)

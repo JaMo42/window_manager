@@ -20,25 +20,11 @@ read -p "Install config? [Y/n] " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Nn]$ ]]; then
   test -f $CONFIG_DIR || mkdir -p $CONFIG_DIR
-  cp -v config $CONFIG_DIR/config
-fi
-
-read -p "Install autostartrc? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  test -f $CONFIG_DIR || mkdir -p $CONFIG_DIR
-  cp -v autostartrc $CONFIG_DIR/autostartrc
+  cp -rv config/* $CONFIG_DIR
 fi
 
 read -p "Install session manager session? [y/N]" -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   sudo cp -v window_manager.desktop /usr/share/xsessions/window_manager.desktop
-fi
-
-read -p "Install resources? [y/N]" -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  test -f $RESOURCE_DIR || mkdir -p $RESOURCE_DIR
-  cp -v res/* $RESOURCE_DIR/
 fi

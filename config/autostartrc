@@ -2,8 +2,5 @@
 feh --bg-fill ~/.config/wallpaper
 # Run compositor
 picom &
-# Status bar
-$HOME/.config/polybar/launch.sh &
 
 # Startup programs
-

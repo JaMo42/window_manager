@@ -42,32 +42,7 @@ bind Mod+R raise_all
 bind Mod+Print $ scrot ~/Pictures/Screenshots/%Y-%m-%d-%H%M%S-screenshot.jpg
 
 # Define colors
-
-def_color DarkText #030405
-def_color LightText #e7e8e9
-def_color Accent #428bca
-
-# Border of focused window
-color Focused Accent
-color FocusedText DarkText
-# Border of other windows
-color Normal #777777
-color NormalText DarkText
-# Color or pending window druing window switching
-color Selected #5cb85c
-color SelectedText DarkText
-# Color of a window that demands attention
-color Urgent #d9534f
-color UrgentText FocusedText
-# Solid background color
-color Background #111111
-# Close button
-color CloseButton DarkText
-color CloseButtonHovered #ff3b30
-color MaximizeButton DarkText
-color MaximizeButtonHovered #28cd41
-color MinimizeButton DarkText
-color MinimizeButtonHovered #ffcc00
+%include colors/default
 
 # Bar
 bar_font sans 18
@@ -78,6 +53,3 @@ bar_opacity 80%
 #   bar_height +5
 # Absolute height:
 bar_height 36
-color Bar::Background #161514
-color Bar::Text LightText
-
