@@ -16,9 +16,9 @@ test -f "target/release/window_manager" || cargo build --release
 echo Installing program
 sudo cp -v target/release/window_manager $INSTALL_PREFIX/window_manager
 
-read -p "Install config? [Y/n] " -n 1 -r
+read -p "Install config? [y/N] " -n 1 -r
 echo
-if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+if [[ $REPLY =~ ^[Yy]$ ]]; then
   test -f $CONFIG_DIR || mkdir -p $CONFIG_DIR
   cp -rv config/* $CONFIG_DIR
 fi
