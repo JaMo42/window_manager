@@ -153,22 +153,16 @@ impl Client {
 
   pub unsafe fn draw_border (&mut self) {
     let frame_size = self.geometry.get_frame (&frame_offset);
-    (*draw).rect (
-      0,
-      frame_offset.y,
-      frame_size.w,
-      frame_size.h - frame_offset.y as u32,
-      *self.border_color,
-      true
-    );
-    (*draw).gradient (
-      0,
-      0,
-      frame_size.w,
-      frame_offset.y as u32,
-      self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
-      *self.border_color
-    );
+
+    (*draw).rect (0, frame_offset.y, frame_size.w, frame_size.h - frame_offset.y as u32)
+      .color (*self.border_color)
+      .draw ();
+    (*draw).rect (0, 0, frame_size.w, frame_offset.y as u32)
+      .vertical_gradient (
+        self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
+        *self.border_color
+      )
+      .draw ();
 
     (*draw).select_font (&(*config).title_font);
     (*draw).text (&self.title)

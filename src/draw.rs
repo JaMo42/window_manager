@@ -81,26 +81,39 @@ impl Drawing_Context {
     }
   }
 
-  pub unsafe fn rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: Color, fill: bool) {
+  pub unsafe fn fill_rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: Color) {
     XSetForeground (display, self.gc, color.pixel);
-    if fill {
-      XFillRectangle (display, self.drawable, self.gc, x, y, w, h);
-    } else {
-      XDrawRectangle (display, self.drawable, self.gc, x, y, w - 1, h - 1);
-    }
+    XFillRectangle (display, self.drawable, self.gc, x, y, w, h);
   }
 
-  pub unsafe fn gradient (&mut self, x_: i32, y_: i32, w_: u32, h_: u32, color_1: Color, color_2: Color) {
-    let x = x_ as f64;
-    let y = y_ as f64;
-    let w = w_ as f64;
-    let h = h_ as f64;
-    let gradient = cairo::LinearGradient::new (x, y, x, y+h);
-    gradient.add_color_stop_rgb (0.0, color_1.red, color_1.green, color_1.blue);
-    gradient.add_color_stop_rgb (1.0, color_2.red, color_2.green, color_2.blue);
-    self.cairo_context.rectangle (x, y, w, h);
-    self.cairo_context.set_source (&gradient).unwrap ();
-    self.cairo_context.fill ().unwrap ();
+  pub unsafe fn rect (&mut self, x: i32, y: i32, w: u32, h: u32) -> Shape_Builder {
+    Shape_Builder::new (
+      &mut self.cairo_context,
+      Shape::Rectangle,
+      Geometry::from_parts (x, y, w, h)
+    )
+  }
+
+  pub unsafe fn square (&mut self, x: i32, y: i32, side: u32) -> Shape_Builder {
+    self.rect (x, y, side, side)
+  }
+
+  #[allow(dead_code)] // Turns out we only draw circles using their bounding box so far
+  pub unsafe fn circle (&mut self, center_x: i32, center_y: i32, radius: u32) -> Shape_Builder {
+    Shape_Builder::new (
+      &mut self.cairo_context,
+      Shape::Ellipse,
+      Geometry::from_parts (
+        center_x - radius as i32,
+        center_y - radius as i32,
+        2*radius,
+        2*radius
+      )
+    )
+  }
+
+  pub unsafe fn shape (&mut self, kind: Shape, bounding_box: Geometry) -> Shape_Builder {
+    Shape_Builder::new (&mut self.cairo_context, kind, bounding_box)
   }
 
   pub unsafe fn draw_svg (&mut self, svg: &Svg_Resource, x: i32, y: i32, w: u32, h: u32) {
@@ -126,49 +139,6 @@ impl Drawing_Context {
     }
     self.text_color (color);
     self.cairo_context.mask (svg.pattern.as_ref ().unwrap ()).unwrap ();
-  }
-
-  unsafe fn ellipse_impl (&mut self, x: f64, y: f64, w: f64, h: f64, color: Color, drop: bool) {
-    use std::f64::consts::PI;
-    self.cairo_context.save ().unwrap ();
-    self.cairo_context.translate (x, y);
-    self.cairo_context.scale (w / 2.0, h / 2.0);
-    self.cairo_context.arc (1.0, 1.0, 1.0, 0.0, 2.0*PI);
-    self.cairo_context.set_source_rgb (color.red, color.green, color.blue);
-    if drop {
-     self.cairo_context.fill ().unwrap ();
-    } else {
-      self.cairo_context.fill_preserve ().unwrap ();
-    }
-    self.cairo_context.restore ().unwrap ();
-  }
-
-  pub unsafe fn ellipse (&mut self, x: i32, y: i32, w: u32, h: u32, color: Color) {
-    self.ellipse_impl (x as f64, y as f64, w as f64, h as f64, color, true);
-  }
-
-  pub unsafe fn ellipse_outline (
-    &mut self,
-    x: i32,
-    y: i32,
-    w: u32,
-    h: u32,
-    color: Color,
-    line_width: f64,
-    color_scale: f64
-  ) {
-    self.cairo_context.set_line_width (line_width);
-    let outline_color = color.scale (color_scale);
-    self.cairo_context.set_source_rgb(outline_color.red, outline_color.green, outline_color.blue);
-    self.ellipse_impl(
-      x as f64 + line_width / 2.0,
-      y as f64 + line_width / 2.0,
-      w as f64 - line_width,
-      h as f64 - line_width,
-      color,
-      false
-    );
-    self.cairo_context.stroke ().unwrap();
   }
 
   pub unsafe fn select_font (&mut self, description: &str) {
@@ -218,7 +188,6 @@ pub enum Alignment {
   Centered,
   Right, Bottom
 }
-
 
 pub struct Rendered_Text<'a> {
   layout: &'a mut pango::Layout,
@@ -293,6 +262,137 @@ impl<'a> Rendered_Text<'a> {
     self.context.move_to (self.x as f64, self.y as f64);
     pangocairo::show_layout (self.context, self.layout);
     Geometry::from_parts (self.x, self.y, self.width as u32, self.height as u32)
+  }
+}
+
+
+#[derive(Copy, Clone)]
+pub enum Shape {
+  Rectangle,
+  Ellipse,
+}
+
+pub struct Shape_Builder<'a> {
+  context: &'a mut cairo::Context,
+  shape: Shape,
+  bounding_box: Geometry,
+  stroke: Option<(u32, Color)>,
+  gradient: Option<((f64, f64), Color, (f64, f64), Color)>,
+  color: Option<Color>,
+  // percentage of the bounding boxes smaller side to use as corner radius
+  corner_radius_percent: Option<f64>,
+}
+
+#[allow(dead_code)]
+impl<'a> Shape_Builder<'a> {
+  pub fn new (context: &'a mut cairo::Context, shape: Shape, bounding_box: Geometry) -> Self {
+    Self {
+      context,
+      shape,
+      bounding_box,
+      stroke: None,
+      gradient: None,
+      color: None,
+      corner_radius_percent: None,
+    }
+  }
+
+  pub fn color (&mut self, color: Color) -> &mut Self {
+    self.color = Some (color);
+    self
+  }
+
+  pub fn gradient (&mut self, p1: (f64, f64), c1: Color, p2: (f64, f64), c2: Color) -> &mut Self {
+    self.gradient = Some ((p1, c1, p2, c2));
+    self
+  }
+
+  // top -> bottom
+  pub fn vertical_gradient (&mut self, c1: Color, c2: Color) -> &mut Self {
+    self.gradient ((0.0, 0.0), c1, (0.0, 1.0), c2)
+  }
+
+  // left -> right
+  pub fn horizontal_gradient (&mut self, c1: Color, c2: Color) -> &mut Self {
+    self.gradient ((0.0, 0.0), c1, (1.0, 0.0), c2)
+  }
+
+  pub fn stroke (&mut self, width: u32, color: Color) -> &mut Self {
+    self.stroke = Some ((width, color));
+    // Shrink the shape since half of the stoke lies outside the path
+    self.bounding_box.expand (-(width as i32));
+    self
+  }
+
+  pub fn corner_radius (&mut self, percent: f64) -> &mut Self {
+    self.corner_radius_percent = Some (percent);
+    self
+  }
+
+  pub fn draw (&self) {
+    self.set_path ();
+    self.set_color ();
+    self.do_draw ();
+  }
+
+  fn set_path (&self) {
+    let x = self.bounding_box.x as f64;
+    let y = self.bounding_box.y as f64;
+    let w = self.bounding_box.w as f64;
+    let h = self.bounding_box.h as f64;
+    match self.shape {
+      Shape::Rectangle => {
+        if let Some (crp) = self.corner_radius_percent {
+          let r = f64::min (w, h) * crp;
+          self.context.new_sub_path ();
+          self.context.arc (x + w - r, y + r, r, -90.0f64.to_radians (), 0.0f64.to_radians ());
+          self.context.arc (x + w - r, y + h - r, r, 0.0f64.to_radians (), 90.0f64.to_radians ());
+          self.context.arc (x + r, y + h - r, r, 90.0f64.to_radians (), 180.0f64.to_radians ());
+          self.context.arc (x + r, y + r, r, 180.0f64.to_radians (), 270.0f64.to_radians ());
+          self.context.close_path ();
+        } else {
+          self.context.rectangle (x, y, w, h);
+        }
+      }
+      Shape::Ellipse => {
+        if cfg! (debug_assertions) && self.corner_radius_percent.is_some () {
+          log::warn! ("ignoring corner radius for ShapeBuilder of type Circle");
+        }
+        self.context.save ().unwrap ();
+        self.context.translate (x, y);
+        self.context.scale (w / 2.0, h / 2.0);
+        self.context.arc (1.0, 1.0, 1.0, 0.0, 360.0f64.to_radians ());
+        self.context.restore ().unwrap ();
+      }
+    }
+  }
+
+  fn set_color (&self) {
+    if let Some (g) = self.gradient {
+      let (p1, c1, p2, c2) = g;
+      let gradient = cairo::LinearGradient::new (
+        p1.0,
+        p1.1,
+        p2.0 * self.bounding_box.w as f64,
+        p2.1 * self.bounding_box.h as f64
+      );
+      gradient.add_color_stop_rgb (0.0, c1.red, c1.green, c1.blue);
+      gradient.add_color_stop_rgb (1.0, c2.red, c2.green, c2.blue);
+      self.context.set_source (&gradient).unwrap ();
+    } else if let Some (c) = self.color {
+      self.context.set_source_rgb (c.red, c.green, c.blue);
+    }
+  }
+
+  fn do_draw (&self) {
+    if let Some ((w, c)) = self.stroke {
+      self.context.fill_preserve ().unwrap ();
+      self.context.set_source_rgb (c.red, c.green, c.blue);
+      self.context.set_line_width (w as f64);
+      self.context.stroke ().unwrap ();
+    } else {
+      self.context.fill ().unwrap ();
+    }
   }
 }
 

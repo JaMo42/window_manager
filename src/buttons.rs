@@ -73,33 +73,33 @@ impl Button {
         self.base_color
       }
     };
-    let below = *self.owner.as_ref ().border_color;
-    (*draw).gradient (
-      0,
-      0,
-      size,
-      size,
-      below.scale (Client::TITLE_BAR_GRADIENT_FACTOR),
-      below
-    );
 
+    // Redraw window border below button (?)
+    let below = *self.owner.as_ref ().border_color;
+    (*draw).square (0, 0, size)
+      .vertical_gradient (
+        below.scale (Client::TITLE_BAR_GRADIENT_FACTOR),
+        below
+      )
+      .draw ();
+
+    // Draw circle
     if (*config).circle_buttons {
       let border_color = self.owner.as_ref ().border_color.pixel;
       let is_focused = border_color == (*config).colors.focused.pixel
         || border_color == (*config).colors.selected.pixel;
-      (*draw).ellipse_outline (
-        circle_position, circle_position,
-        circle_size, circle_size,
-        if hovered || is_focused {
-          self.hovered_color
-        } else {
-          self.base_color
-        },
-        1.0,
-        0.9
-      );
+      let color = if hovered || is_focused { self.hovered_color } else { self.base_color };
+      let outline_color = color.scale (0.9);
+      (*draw).shape (
+        crate::draw::Shape::Ellipse,
+        crate::Geometry::from_parts (circle_position, circle_position, circle_size, circle_size)
+      )
+        .color (color)
+        .stroke (1, outline_color)
+        .draw ();
     }
 
+    // Draw icon or fallback
     if !(*config).circle_buttons || hovered {
       if resources::close_button.is_some () {
         (*draw).draw_colored_svg (
@@ -110,11 +110,12 @@ impl Button {
         );
       }
       else {
-        (*draw).ellipse (
-          icon_position, icon_position,
-          icon_size, icon_size,
-          color
-        );
+        (*draw).shape (
+        crate::draw::Shape::Ellipse,
+        crate::Geometry::from_parts (icon_position, icon_position, icon_size, icon_size)
+        )
+          .color (color)
+          .draw ();
       }
     }
 
