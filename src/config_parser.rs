@@ -1,7 +1,48 @@
 use std::iter::Peekable;
+use std::path::Path;
+use std::io::{self, BufRead};
+use std::fs::File;
 use std::os::raw::{c_int, c_uint};
 use super::core::*;
 use super::config::Height;
+
+fn read_lines<P: AsRef<Path>> (path: P) -> io::Result<io::Lines<io::BufReader<File>>> {
+  let f = File::open (path)?;
+  Ok (io::BufReader::new (f).lines ())
+}
+
+fn append_lines (
+  str: &mut String, file_content: io::Lines<io::BufReader<File>>, directory: &Path
+) -> io::Result<()> {
+  for maybe_line in file_content {
+    match maybe_line {
+      Ok (line) => {
+        if line.starts_with ("%include ") {
+          let filename: String = line.chars ().skip (9).collect ();
+          let pathname = directory.join (filename);
+          let content = read_lines (pathname)?;
+          append_lines (str, content, directory)?;
+        } else {
+          str.push_str (line.as_str ());
+          str.push ('\n');
+        }
+      }
+      Err (e) => {
+        return Err (e);
+      }
+    }
+  }
+  Ok (())
+}
+
+/// Reads the config file and expands includes
+pub fn read_file (path: &String) -> io::Result<String> {
+  let mut s = String::new ();
+  let directory = Path::new (&path).parent ().unwrap ();
+  let f = read_lines (path)?;
+  append_lines (&mut s, f, directory)?;
+  Ok (s)
+}
 
 pub enum Definition_Type {
   Workspaces (usize),

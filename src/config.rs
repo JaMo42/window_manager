@@ -177,7 +177,8 @@ impl Config {
 
   pub fn load (&mut self) {
     // Parse file
-    let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
+    //let source = std::fs::read_to_string (unsafe { &paths::config }).unwrap ();
+    let source = config_parser::read_file (unsafe { &paths::config }).unwrap ();
     let parser = config_parser::Parser::new (source.chars ());
     let mut color_scheme_config = Color_Scheme_Config::new ();
     let mut color_defs: BTreeMap<String, Color> = BTreeMap::new ();

@@ -4,6 +4,17 @@ The configuration file uses a simple format where each non-blank line contains e
 
 Comment lines start with a `#` and are ignored.
 
+## File inclusion
+
+```
+%include <filename>
+```
+
+Replaces the include line with the content of the file `<filename>`.
+The filename is relative to the main config file.
+
+Note: these are expanded before parsing so line numbers in the error message are invalid, this will be addressed when proper error reporting is added.
+
 ## Definitions
 
 ```
