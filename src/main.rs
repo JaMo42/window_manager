@@ -223,6 +223,7 @@ unsafe fn init () {
   // Bar
   if cfg! (feature = "bar") {
     bar = Bar::create ();
+    bar::tray = bar::tray_manager::Tray_Manager::create (bar.height);
   }
   // Set window border size info
   client::set_border_info ();
@@ -294,13 +295,15 @@ unsafe fn run () {
       ConfigureRequest => event::configure_request (&event.configure_request),
       DestroyNotify => event::destroy_notify (&event.destroy_window),
       EnterNotify => event::crossing (&event.crossing),
+      Expose => event::expose (&event.expose),
       KeyPress => event::key_press (&event.key),
       LeaveNotify => event::crossing (&event.crossing),
+      MapNotify => event::map_notify (&event.map),
       MappingNotify => event::mapping_notify (&event.mapping),
       MapRequest => event::map_request (&event.map_request),
       MotionNotify => event::motion (&event.button),
       PropertyNotify => event::property_notify (&event.property),
-      Expose => event::expose (&event.expose),
+      UnmapNotify => event::unmap_notify (&event.unmap),
       _ => {
         if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
           log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");

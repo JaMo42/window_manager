@@ -414,6 +414,8 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
         client.set_urgency (true);
       }
     }
+  } else if event.atom == property::atom (property::XEmbed::Info) {
+    bar::tray.property_notifty (event);
   }
 }
 
@@ -472,6 +474,11 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
       action::select_workspace (event.data.get_long (0) as usize, None);
     }
   }
+  else if event.message_type == property::atom (Net::SystemTrayOpcode) {
+    log::debug! ("Client message: {}", event.message_type);
+    log::debug! ("  Recipient: Tray ({})", event.window);
+    bar::tray.client_message (event);
+  }
   else {
     log::debug! ("Unhandeled client message: {}", event.message_type);
     log::debug! ("  Recipient: {}", event.window);
@@ -497,11 +504,18 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
       break;
     }
   }
+  if bar::tray.maybe_remove_client (window) {
+    return;
+  }
 }
 
 pub unsafe fn expose (event: &XExposeEvent) {
   if event.count == 0 {
-    bar.draw ();
+    if event.window == bar.window {
+      bar.draw ();
+    } else if event.window == bar::tray.window () {
+      bar::tray.refresh ();
+    }
   }
 }
 
@@ -513,4 +527,12 @@ pub unsafe fn crossing (event: &XCrossingEvent) {
       }
     }
   }
+}
+
+pub unsafe fn map_notify (event: &XMapEvent) {
+  bar::tray.map_notify (event);
+}
+
+pub unsafe fn unmap_notify (event: &XUnmapEvent) {
+  bar::tray.unmap_notify (event);
 }

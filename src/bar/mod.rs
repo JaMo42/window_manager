@@ -1,3 +1,7 @@
+mod xembed;
+mod tray_client;
+pub mod tray_manager;
+
 use x11::xlib::*;
 use std::ffi::CString;
 use libc::{c_char, c_uchar, c_uint};
@@ -6,7 +10,9 @@ use crate::cursor;
 use crate::property;
 use crate::action::select_workspace;
 use crate::draw::Alignment;
+use tray_manager::Tray_Manager;
 
+pub static mut tray: Tray_Manager = Tray_Manager::new ();
 
 pub struct Bar {
   pub width: u32,
@@ -83,18 +89,28 @@ impl Bar {
     // ==== LEFT ====
     // Workspaces
     for (idx, workspace) in workspaces.iter ().enumerate () {
-      (*draw).fill_rect (
+      /*(*draw).fill_rect (
         (idx as u32 * self.height) as i32, 0,
         self.height, self.height,
         if workspace.has_urgent () {
           (*config).colors.bar_urgent_workspace
-        }
-        else if idx == active_workspace {
+        } else if idx == active_workspace {
           (*config).colors.bar_active_workspace
         } else {
           (*config).colors.bar_workspace
         },
-      );
+      );*/
+      let color = if workspace.has_urgent () {
+        (*config).colors.bar_urgent_workspace
+      } else if idx == active_workspace {
+        (*config).colors.bar_active_workspace
+      } else {
+        (*config).colors.bar_workspace
+      };
+      (*draw).square ((idx as u32 * self.height) as i32, 0, self.height)
+        .color (color)
+        .stroke (2, color.scale (0.8))
+        .draw ();
       (*draw).text (format! ("{}", idx+1).as_str ())
         .at ((idx as u32 * self.height) as i32, 0)
         .align_horizontally (Alignment::Centered, self.height as i32)
@@ -168,5 +184,11 @@ impl Bar {
         }
       }
     }
+  }
+
+  pub unsafe fn resize (&mut self, width: u32) {
+    XResizeWindow (display, self.window, width, self.height);
+    self.width = width;
+    self.draw ();
   }
 }

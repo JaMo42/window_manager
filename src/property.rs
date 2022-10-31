@@ -14,30 +14,49 @@ macro_rules! set_cardinal {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub enum Net {
-  Supported,
-  ClientList,
   ActiveWindow,
-  SupportingWMCheck,
-  NumberOfDesktops,
+  ClientList,
   CurrentDesktop,
+  NumberOfDesktops,
+  Supported,
+  SupportingWMCheck,
+  SystemTrayOpcode,
+  SystemTrayOrientation,
+  SystemTrayS0,
   WMName,
   WMState,
-  WMStateFullscreen,
   WMStateDemandsAttention,
+  WMStateFullscreen,
+  WMUserTime,
   WMWindowType,
+  WMWindowTypeDesktop,
   WMWindowTypeDialog,
   WMWindowTypeDock,
-  WMWindowTypeDesktop,
-  WMUserTime,
   Last
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub enum WM {
-  Protocols,
+  Class,
   DeleteWindow,
+  Protocols,
   TakeFocus,
+  Last
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub enum XEmbed {
+  XEmbed,
+  Info,
+  Last
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub enum Other {
+  Manager,
   Last
 }
 
@@ -54,6 +73,18 @@ impl Into_Atom for Net {
 impl Into_Atom for WM {
   unsafe fn into_atom (self) -> Atom {
     wm[self as usize]
+  }
+}
+
+impl Into_Atom for XEmbed {
+  unsafe fn into_atom (self) -> Atom {
+    xembed[self as usize]
+  }
+}
+
+impl Into_Atom for Other {
+  unsafe fn into_atom (self) -> Atom {
+    other[self as usize]
   }
 }
 
@@ -90,6 +121,8 @@ impl Class_Hints {
 
 pub static mut net: [Atom; Net::Last as usize] = [X_NONE; Net::Last as usize];
 pub static mut wm: [Atom; WM::Last as usize] = [X_NONE; WM::Last as usize];
+pub static mut xembed: [Atom; XEmbed::Last as usize] = [X_NONE; XEmbed::Last as usize];
+pub static mut other: [Atom; Other::Last as usize] = [X_NONE; Other::Last as usize];
 
 pub static mut wm_check_window: Window = X_NONE;
 
@@ -106,29 +139,35 @@ pub unsafe fn load_atoms () {
     }
   }
 
+  W! (Class, "WM_CLASS");
+  W! (DeleteWindow, "WM_DELETE_WINDOW");
+  W! (DeleteWindow, "WM_DELETE_WINDOW");
   W! (Protocols, "WM_PROTOCOLS");
-  W! (DeleteWindow, "WM_DELETE_WINDOW");
   W! (TakeFocus, "WM_TAKE_FOCUS");
-  W! (DeleteWindow, "WM_DELETE_WINDOW");
 
-  N! (Supported, "_NET_SUPPORTED");
-  N! (ClientList, "_NET_CLIENT_LIST");
   N! (ActiveWindow, "_NET_ACTIVE_WINDOW");
-  N! (SupportingWMCheck, "_NET_SUPPORTING_WM_CHECK");
-  N! (NumberOfDesktops, "_NET_NUMBER_OF_DESKTOPS");
+  N! (ClientList, "_NET_CLIENT_LIST");
   N! (CurrentDesktop, "_NET_CURRENT_DESKTOP");
+  N! (NumberOfDesktops, "_NET_NUMBER_OF_DESKTOPS");
+  N! (Supported, "_NET_SUPPORTED");
+  N! (SupportingWMCheck, "_NET_SUPPORTING_WM_CHECK");
+  N! (SystemTrayOpcode, "_NET_SYSTEM_TRAY_OPCODE");
+  N! (SystemTrayOrientation, "_NET_SYSTEM_TRAY_ORIENTATION");
+  N! (SystemTrayS0, "_NET_SYSTEM_TRAY_S0");
   N! (WMName, "_NET_WM_NAME");
   N! (WMState, "_NET_WM_STATE");
-  N! (WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
   N! (WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
+  N! (WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
+  N! (WMUserTime, "_NET_WM_USER_TIME");
   N! (WMWindowType, "_NET_WM_WINDOW_TYPE");
+  N! (WMWindowTypeDesktop, "_NET_WM_WINDOW_TYPE_DESKTOP");
   N! (WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
   N! (WMWindowTypeDock, "_NET_WM_WINDOW_TYPE_DOCK");
-  N! (WMWindowTypeDesktop, "_NET_WM_WINDOW_TYPE_DESKTOP");
-  N! (WMUserTime, "_NET_WM_USER_TIME");
 
-  log::debug! ("Net Properties: {:?}", net);
-  log::debug! ("WM Properties: {:?}", wm);
+  xembed[XEmbed::XEmbed as usize] = XInternAtom (display, c_str! ("_XEMBED"), X_FALSE);
+  xembed[XEmbed::Info as usize] = XInternAtom (display, c_str! ("_XEMBED_INFO"), X_FALSE);
+
+  other[Other::Manager as usize] = XInternAtom (display, c_str! ("MANAGER"), X_FALSE);
 }
 
 pub unsafe fn init_set_root_properties () {
