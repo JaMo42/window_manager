@@ -118,7 +118,11 @@ It can be disabled by calling `cargo build` with `--no-default-features`.
 See the [configuration file format](./doc/CONFIG.md) for customization options,
 currently only the font and colors can be changed.
 
-The bar contains a workspace switcher on the left and the current battery charge and time on the right.
+The bar contains the following widgets:
+
+ - Left: Workspace display and switcher
+
+ - Right: Battery charge, current time, and a system tray
 
 ## ws_tool
 
@@ -173,6 +177,8 @@ Some projects I used to learn how windows managers work.
 - [tinywm](https://github.com/mackstann/tinywm)
 - [How X Window Managers Work, And How To Write One](https://jichu4n.com/posts/how-x-window-managers-work-and-how-to-write-one-part-i/)
 - [Fvwm](https://www.fvwm.org/)
+
+And [polybar](https://github.com/polybar/polybar) for the system tray.
 
 ### Icons
 
