@@ -4,7 +4,7 @@ use x11::xlib::*;
 use crate::action::{move_snap_flags, snap_geometry};
 use crate::core::*;
 use crate::property;
-use crate::client::Client;
+use crate::client::{Client, Client_Geometry};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Geometry {
@@ -220,10 +220,10 @@ impl Preview {
       client.snap_state = move_snap_flags (
         self.geometry.x as u32, self.geometry.y as u32
       );
-      client.move_and_resize (self.snap_geometry);
+      client.move_and_resize (Client_Geometry::Snap (self.snap_geometry));
     } else {
       client.snap_state = SNAP_NONE;
-      client.move_and_resize (self.geometry);
+      client.move_and_resize (Client_Geometry::Frame (self.geometry));
     }
   }
 }

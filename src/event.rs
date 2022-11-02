@@ -329,7 +329,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       let mut rng = rand::thread_rng ();
       g.random_inside (&window_area.get_client (&frame_offset), &mut rng);
     }
-    c.set_position_and_size (g);
+    c.move_and_resize (Client_Geometry::Client (g));
     c.prev_geometry = g;
     // Add client
     if target_workspace == active_workspace {
@@ -375,7 +375,7 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
     if !client.is_snapped() {
       client.prev_geometry = client.geometry.get_frame (&client::frame_offset);
     }
-    client.set_position_and_size (client.geometry);
+    client.move_and_resize (Client_Geometry::Client (client.geometry));
   }
   else {
     XConfigureWindow (

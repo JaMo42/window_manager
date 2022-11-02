@@ -35,6 +35,16 @@ unsafe fn create_frame (base_geometry: &Geometry) -> Window {
 }
 
 
+pub enum Client_Geometry {
+  /// Set the size of the frame (outer window)
+  Frame (Geometry),
+  /// Set the size of the frame for snapping (applies gaps)
+  Snap (Geometry),
+  /// Set the size of the client (inner window)
+  Client (Geometry),
+}
+
+
 pub struct Client {
   pub window: Window,
   pub frame: Window,
@@ -195,32 +205,49 @@ impl Client {
     self.draw_border ();
   }
 
-  pub unsafe fn move_and_resize (&mut self, target: Geometry) {
-    let mut client_geometry = target;
-    if self.is_snapped () {
-      client_geometry.expand (-((*config).gap as i32));
+  pub unsafe fn move_and_resize (&mut self, geom: Client_Geometry) {
+    let fx;
+    let fy;
+    let fw;
+    let fh;
+    let cw;
+    let ch;
+    match geom {
+      Client_Geometry::Client (g) => {
+        fx = g.x - frame_offset.x;
+        fy = g.y - frame_offset.y;
+        fw = g.w + frame_offset.w;
+        fh = g.h + frame_offset.h;
+        cw = g.w;
+        ch = g.h;
+      }
+      Client_Geometry::Frame (g) => {
+        fx = g.x;
+        fy = g.y;
+        fw = g.w;
+        fh = g.h;
+        cw = g.w - frame_offset.w;
+        ch = g.h - frame_offset.h;
+      }
+      Client_Geometry::Snap (g) => {
+        fx = g.x + (*config).gap as i32;
+        fy = g.y + (*config).gap as i32;
+        fw = g.w - 2 * (*config).gap;
+        fh = g.h - 2 * (*config).gap;
+        cw = fw - frame_offset.w;
+        ch = fh - frame_offset.h;
+      }
     }
-    self.set_position_and_size (client_geometry.get_client (&frame_offset));
-  }
-
-  pub unsafe fn set_position_and_size (&mut self, target: Geometry) {
-    self.geometry = target;
+    self.geometry = Geometry::from_parts (fx, fy, fw, fh).get_client (&frame_offset);
     self.title_space = (self.geometry.w - left_buttons_width - right_buttons_width) as i32;
-    let fg = target.get_frame (&frame_offset);
-    XMoveResizeWindow (
-      display, self.frame,
-      fg.x,
-      fg.y,
-      fg.w,
-      fg.h
-    );
-    for i in 0..self.left_buttons.len (){
+    XMoveResizeWindow (display, self.frame, fx, fy, fw, fh);
+    for i in 0..self.left_buttons.len () {
       self.left_buttons[i].move_ (i as i32, true);
     }
-    for i in 0..self.right_buttons.len (){
+    for i in 0..self.right_buttons.len () {
       self.right_buttons[i].move_ (i as i32, false);
     }
-    XResizeWindow (display, self.window, target.w, target.h);
+    XResizeWindow (display, self.window, cw, ch);
     self.configure ();
     self.draw_border ();
     XSync (display, X_FALSE);
@@ -228,7 +255,7 @@ impl Client {
 
   pub unsafe fn unsnap (&mut self) {
     self.snap_state = SNAP_NONE;
-    self.move_and_resize (self.prev_geometry);
+    self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
   }
 
   pub unsafe fn focus (&mut self) {
@@ -341,7 +368,7 @@ impl Client {
       property::set (self.window, Net::WMState, XA_ATOM, 32,
         std::ptr::null::<c_uchar> (), 0);
       XReparentWindow (display, self.window, self.frame, frame_offset.x, frame_offset.y);
-      self.move_and_resize (self.prev_geometry);
+      self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
       self.focus ();
     }
   }

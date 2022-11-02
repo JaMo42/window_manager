@@ -73,7 +73,7 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
     return;
   }
   client.snap_state = flags;
-  client.move_and_resize (snap_geometry (flags));
+  client.move_and_resize (Client_Geometry::Snap (snap_geometry (flags)));
 }
 
 pub unsafe fn snap_left (client: &mut Client) {
