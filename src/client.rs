@@ -162,8 +162,7 @@ impl Client {
   }
 
   pub unsafe fn draw_border (&mut self) {
-    let frame_size = self.geometry.get_frame (&frame_offset);
-
+    let frame_size = self.frame_geometry ();
     (*draw).rect (0, frame_offset.y, frame_size.w, frame_size.h - frame_offset.y as u32)
       .color (*self.border_color)
       .draw ();
