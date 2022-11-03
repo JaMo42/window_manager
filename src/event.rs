@@ -62,11 +62,12 @@ pub unsafe fn motion (event: &XButtonEvent) {
       let mut lock_width = false;
       let mut lock_height = false;
       if (event.state & (*config).modifier) == 0 {
-        if event.x - c.geometry.x > 0 && event.y - c.geometry.y > 0 {
+        let g = c.client_geometry ();
+        if event.x - g.x > 0 && event.y - g.y > 0 {
           let extra = i32::max (10 - frame_offset.x, 0);
-          if event.x - c.geometry.x + extra < c.geometry.w as i32 {
+          if event.x - g.x + extra < g.w as i32 {
             lock_width = true;
-          } else if event.y - c.geometry.y + extra < c.geometry.h as i32 {
+          } else if event.y - g.y + extra < g.h as i32 {
             lock_height = true;
           }
           mouse_held = Button3;
@@ -146,8 +147,8 @@ unsafe fn mouse_move (client: &mut Client) {
     if client.is_snapped () {
       client.prev_geometry
     } else {
-      client.geometry
-    }.get_frame(&client::frame_offset)
+      client.frame_geometry ()
+    }
   );
   loop {
     XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
@@ -221,8 +222,8 @@ unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool
     if client.is_snapped () {
       client.prev_geometry
     } else {
-      client.geometry
-    }.get_frame(&client::frame_offset)
+      client.frame_geometry ()
+    }
   );
   loop {
     XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
@@ -308,7 +309,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       return;
     }
     let mut c = Client::new (window);
-    let mut g = c.geometry;
+    let mut g = c.client_geometry ();
     // Window type
     if get_atom (window, Net::WMWindowType) == atom (Net::WMWindowTypeDialog) {
       c.is_dialog = true;
@@ -321,7 +322,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       if let Some (trans) = win2client (trans_win) {
         has_trans_client = true;
         target_workspace = trans.workspace;
-        g.center (&trans.geometry)
+        g.center (&trans.client_geometry ())
           .clamp (&window_area.get_client (&frame_offset));
       }
     }
@@ -373,7 +374,7 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
       client.configure ();
     }
     if !client.is_snapped() {
-      client.prev_geometry = client.geometry.get_frame (&client::frame_offset);
+      client.prev_geometry = client.frame_geometry ();
     }
     client.move_and_resize (Client_Geometry::Client (client.geometry));
   }

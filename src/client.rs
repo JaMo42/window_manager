@@ -182,13 +182,10 @@ impl Client {
       .color ((*config).colors.bar_active_workspace_text)
       .width (self.title_space)
       .draw ();
-    (*draw).render (
-      self.frame,
-      0,
-      0,
-      self.geometry.w + frame_offset.w,
-      self.geometry.h + frame_offset.h
-    );
+
+    let g = self.frame_geometry ();
+    (*draw).render (self.frame, 0, 0, g.w, g.h);
+
     for b in self.buttons_mut () {
       b.draw (false);
     }
@@ -203,6 +200,14 @@ impl Client {
     self.title.clear ();
     self.title.push_str (title);
     self.draw_border ();
+  }
+
+  pub fn frame_geometry (&self) -> Geometry {
+    self.geometry.get_frame (unsafe { &frame_offset })
+  }
+
+  pub fn client_geometry (&self) -> Geometry {
+    self.geometry
   }
 
   pub unsafe fn move_and_resize (&mut self, geom: Client_Geometry) {
@@ -239,7 +244,7 @@ impl Client {
       }
     }
     self.geometry = Geometry::from_parts (fx, fy, fw, fh).get_client (&frame_offset);
-    self.title_space = (self.geometry.w - left_buttons_width - right_buttons_width) as i32;
+    self.title_space = (self.client_geometry ().w - left_buttons_width - right_buttons_width) as i32;
     XMoveResizeWindow (display, self.frame, fx, fy, fw, fh);
     for i in 0..self.left_buttons.len () {
       self.left_buttons[i].move_ (i as i32, true);
@@ -374,15 +379,16 @@ impl Client {
   }
 
   pub unsafe fn configure (&self) {
+    let g = self.client_geometry ();
     let mut ev: XConfigureEvent = uninitialized! ();
     ev.type_ = ConfigureNotify;
     ev.display = display;
     ev.event = self.window;
     ev.window = self.window;
-    ev.x = self.geometry.x;
-    ev.x = self.geometry.x;
-    ev.width = self.geometry.w as i32;
-    ev.height = self.geometry.h as i32;
+    ev.x = g.x;
+    ev.x = g.x;
+    ev.width = g.w as i32;
+    ev.height = g.h as i32;
     ev.border_width = 0;
     ev.above = X_NONE;
     ev.override_redirect = X_FALSE;

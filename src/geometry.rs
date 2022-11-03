@@ -38,7 +38,7 @@ impl Geometry {
     self
   }
 
-  pub unsafe fn clamp (&mut self, parent: &Geometry) {
+  pub fn clamp (&mut self, parent: &Geometry) {
     if self.x < parent.x {
       self.x = parent.x;
     }
@@ -53,19 +53,19 @@ impl Geometry {
     }
   }
 
-  pub unsafe fn center (&mut self, parent: &Geometry) -> &mut Self {
+  pub fn center (&mut self, parent: &Geometry) -> &mut Self {
     self.x = parent.x + (parent.w as i32 - self.w as i32) / 2;
     self.y = parent.y + (parent.h as i32 - self.h as i32) / 2;
     self
   }
 
-  pub unsafe fn center_inside (&mut self, parent: &Geometry) -> &mut Self{
+  pub fn center_inside (&mut self, parent: &Geometry) -> &mut Self{
     self.center (parent);
     self.clamp (parent);
     self
   }
 
-  pub unsafe fn random_inside (&mut self, parent: &Geometry, rng: &mut ThreadRng) -> &mut Self {
+  pub fn random_inside (&mut self, parent: &Geometry, rng: &mut ThreadRng) -> &mut Self {
     if self.w >= parent.w {
       self.w = parent.w;
       self.x = parent.x;
@@ -89,7 +89,7 @@ impl Geometry {
   // frame_offset fields:
   //   x, y: offset of the left corder of the window inside the frame
   //   w, h: extra width/height
-  pub unsafe fn get_frame (&self, frame_offset: &Geometry) -> Geometry {
+  pub fn get_frame (&self, frame_offset: &Geometry) -> Geometry {
     Geometry::from_parts (
       self.x - frame_offset.x,
       self.y - frame_offset.y,
@@ -99,7 +99,7 @@ impl Geometry {
   }
 
   // Inverse of `get_frame`
-  pub unsafe fn get_client (&self, frame_offset: &Geometry) -> Geometry {
+  pub fn get_client (&self, frame_offset: &Geometry) -> Geometry {
     Geometry::from_parts (
       self.x + frame_offset.x,
       self.y + frame_offset.y,
@@ -161,13 +161,13 @@ impl Preview {
     }
   }
 
-  pub unsafe fn move_by (&mut self, x: i32, y: i32) {
+  pub fn move_by (&mut self, x: i32, y: i32) {
     self.geometry.x += x;
     self.geometry.y += y;
     self.is_snapped = false;
   }
 
-  pub unsafe fn resize_by (&mut self, w: i32, h: i32) {
+  pub fn resize_by (&mut self, w: i32, h: i32) {
     const MIN_WIDTH: u32 = 3 * 160;
     const MIN_HEIGHT: u32 = 3 * 90;
     if w < 0 {

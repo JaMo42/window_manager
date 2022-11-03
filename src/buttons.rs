@@ -126,7 +126,7 @@ impl Button {
     let x = if left {
       frame_offset.y * index
     } else {
-      let width = self.owner.as_ref ().geometry.get_frame (&frame_offset).w;
+      let width = self.owner.as_ref ().frame_geometry ().w;
       width as i32 - frame_offset.y * (index + 1)
     };
     XMoveWindow (display, self.window, x, 0);
