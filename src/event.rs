@@ -145,7 +145,7 @@ unsafe fn mouse_move (client: &mut Client) {
   let mut state = 0;
   let mut preview = geometry::Preview::create (
     if client.is_snapped () {
-      client.prev_geometry
+      client.saved_geometry ()
     } else {
       client.frame_geometry ()
     }
@@ -220,7 +220,7 @@ unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool
   let height_mul = !lock_height as i32;
   let mut preview = geometry::Preview::create (
     if client.is_snapped () {
-      client.prev_geometry
+      client.saved_geometry ()
     } else {
       client.frame_geometry ()
     }
@@ -331,7 +331,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       g.random_inside (&window_area.get_client (&frame_offset), &mut rng);
     }
     c.move_and_resize (Client_Geometry::Client (g));
-    c.prev_geometry = g;
+    c.save_geometry ();
     // Add client
     if target_workspace == active_workspace {
       c.map ();
@@ -357,26 +357,27 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
     if event.value_mask & CWBorderWidth as u64 != 0 {
       return;
     }
+    let mut g = client.client_geometry ();
     if event.value_mask & CWX as u64 != 0 {
-      client.geometry.x = event.x;
+      g.x = event.x;
     }
     if event.value_mask & CWY as u64 != 0 {
-      client.geometry.y = event.y;
+      g.y = event.y;
     }
     if event.value_mask & CWWidth as u64 != 0 {
-      client.geometry.w = event.width as u32;
+      g.w = event.width as u32;
     }
     if event.value_mask & CWHeight as u64 != 0 {
-      client.geometry.h = event.height as u32;
+      g.h = event.height as u32;
+    }
+    client.move_and_resize (Client_Geometry::Client (g));
+    if !client.is_snapped() {
+      client.save_geometry ();
     }
     if (event.value_mask & (CWX|CWY) as u64 != 0)
       && (event.value_mask & (CWWidth|CWHeight) as u64 == 0) {
       client.configure ();
     }
-    if !client.is_snapped() {
-      client.prev_geometry = client.frame_geometry ();
-    }
-    client.move_and_resize (Client_Geometry::Client (client.geometry));
   }
   else {
     XConfigureWindow (

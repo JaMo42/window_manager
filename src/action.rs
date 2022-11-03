@@ -106,7 +106,9 @@ pub unsafe fn center (client: &mut Client) {
   if !client.may_move () {
     return;
   }
-  client.prev_geometry.center_inside (&window_area);
+  client.modify_saved_geometry (|g| {
+    g.center_inside (&window_area);
+  });
   client.unsnap ();
 }
 

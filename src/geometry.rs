@@ -215,8 +215,8 @@ impl Preview {
 
   pub unsafe fn finish (&mut self, client: &mut Client, snap: bool) {
     XDestroyWindow (display, self.window);
-    client.prev_geometry = self.geometry;
     if snap {
+      client.save_geometry ();
       client.snap_state = move_snap_flags (
         self.geometry.x as u32, self.geometry.y as u32
       );
@@ -224,6 +224,7 @@ impl Preview {
     } else {
       client.snap_state = SNAP_NONE;
       client.move_and_resize (Client_Geometry::Frame (self.geometry));
+      client.save_geometry ();
     }
   }
 }

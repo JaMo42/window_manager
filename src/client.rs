@@ -48,8 +48,6 @@ pub enum Client_Geometry {
 pub struct Client {
   pub window: Window,
   pub frame: Window,
-  pub geometry: Geometry,
-  pub prev_geometry: Geometry,
   pub workspace: usize,
   pub snap_state: u8,
   pub is_urgent: bool,
@@ -57,6 +55,8 @@ pub struct Client {
   pub is_dialog: bool,
   pub is_minimized: bool,
   pub border_color: &'static color::Color,
+  geometry: Geometry,
+  prev_geometry: Geometry,
   title: String,
   left_buttons: Vec<Button>,
   right_buttons: Vec<Button>,
@@ -81,8 +81,6 @@ impl Client {
     let mut c = Box::new (Client {
       window,
       frame,
-      geometry,
-      prev_geometry: geometry,
       workspace: active_workspace,
       snap_state: 0,
       is_urgent: false,
@@ -90,6 +88,8 @@ impl Client {
       is_dialog: false,
       is_minimized: false,
       border_color: &(*config).colors.normal,
+      geometry,
+      prev_geometry: geometry,
       title: window_title (window),
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
@@ -125,8 +125,6 @@ impl Client {
     Client {
       window,
       frame: X_NONE,
-      geometry: uninitialized! (),
-      prev_geometry: uninitialized! (),
       workspace: 0,
       snap_state: 0,
       is_urgent: false,
@@ -134,6 +132,8 @@ impl Client {
       is_dialog: false,
       is_minimized: false,
       border_color: &*(1 as *const color::Color),
+      geometry: uninitialized! (),
+      prev_geometry: uninitialized! (),
       title: String::new (),
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
@@ -202,12 +202,32 @@ impl Client {
     self.draw_border ();
   }
 
+  /// Rerturns the geometry of the frame window (outer window)
   pub fn frame_geometry (&self) -> Geometry {
     self.geometry.get_frame (unsafe { &frame_offset })
   }
 
+  /// Returns the geometry of the client window (inner window)
   pub fn client_geometry (&self) -> Geometry {
     self.geometry
+  }
+
+  /// Stores the unsnapped geometry
+  pub fn save_geometry (&mut self) {
+    if self.is_snapped () {
+      log::error! ("Client::save_geometry called while client is snapped");
+    }
+    self.prev_geometry = self.frame_geometry ();
+  }
+
+  /// Returns the frame geometry the client would have if it's not snapped
+  pub fn saved_geometry (&self) -> Geometry {
+    self.prev_geometry
+  }
+
+  /// Modify the saved frame geometry using a callback
+  pub fn modify_saved_geometry (&mut self, f: fn (&mut Geometry)) {
+    f (&mut self.prev_geometry);
   }
 
   pub unsafe fn move_and_resize (&mut self, geom: Client_Geometry) {
