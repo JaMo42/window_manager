@@ -2,7 +2,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::config::*;
 use super::action;
-use super::property::{Net, atom, get_atom};
+use super::property::{Net, atom, get_atom, Normal_Hints};
 use super::*;
 
 pub const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
@@ -157,7 +157,6 @@ unsafe fn mouse_move (client: &mut Client) {
       MapRequest => map_request (&event.map_request),
       MotionNotify => {
         let motion = event.motion;
-        // Only handle at 60 FPS
         if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
           continue;
         }
@@ -216,6 +215,8 @@ unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool
   let mut last_time: Time = 0;
   let mut prev_x = start_x;
   let mut prev_y = start_y;
+  let mut dx = 0;
+  let mut dy = 0;
   let width_mul = !lock_width as i32;
   let height_mul = !lock_height as i32;
   let mut preview = geometry::Preview::create (
@@ -225,6 +226,7 @@ unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool
       client.frame_geometry ()
     }
   );
+  let normal_hints = Normal_Hints::get (client.window);
   loop {
     XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
     match event.type_ {
@@ -232,15 +234,20 @@ unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool
       MapRequest => map_request (&event.map_request),
       MotionNotify => {
         let motion = event.motion;
-        // Only handle at 60 FPS
         if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
           continue;
         }
         last_time = motion.time;
-        preview.resize_by (
-          (motion.x - prev_x) * width_mul,
-          (motion.y - prev_y) * height_mul
-        );
+        let mx = (motion.x - prev_x) * width_mul;
+        let my = (motion.y - prev_y) * height_mul;
+        dx += mx;
+        dy += my;
+        preview.resize_by (mx, my);
+        if let Some (h) = normal_hints.as_ref () {
+          // If resizing freely prefer the direction the mouse has moved more in
+          let keep_height = lock_width || (!lock_height && dx > dy);
+          preview.apply_normal_hints (h, keep_height);
+        }
         preview.update ();
         prev_x = motion.x;
         prev_y = motion.y;
@@ -323,12 +330,12 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
         has_trans_client = true;
         target_workspace = trans.workspace;
         g.center (&trans.client_geometry ())
-          .clamp (&window_area.get_client (&frame_offset));
+          .clamp (&window_area.get_client ());
       }
     }
     if !has_trans_client {
       let mut rng = rand::thread_rng ();
-      g.random_inside (&window_area.get_client (&frame_offset), &mut rng);
+      g.random_inside (&window_area.get_client (), &mut rng);
     }
     c.move_and_resize (Client_Geometry::Client (g));
     c.save_geometry ();

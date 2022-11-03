@@ -2,6 +2,7 @@ use std::os::raw::*;
 use std::ffi::CString;
 use x11::xlib::*;
 use super::core::*;
+use super::geometry::Geometry;
 
 #[macro_export]
 macro_rules! set_cardinal {
@@ -336,4 +337,85 @@ pub unsafe fn get_atom<P: Into_Atom> (window: Window, property: P) -> Atom {
   )
   .map (|data| data.value ())
   .unwrap_or (X_NONE)
+}
+
+#[derive(Copy, Clone)]
+pub struct Normal_Hints {
+  min_size: Option<(u32, u32)>,
+  max_size: Option<(u32, u32)>,
+  resize_inc: Option<(u32, u32)>,
+  aspect_ratio: Option<(f64, f64)>,
+}
+
+impl Normal_Hints {
+  pub unsafe fn get (window: Window) -> Option<Normal_Hints> {
+    let hints = XAllocSizeHints ();
+    macro_rules! get_field {
+      ($field_1:ident, $field_2:ident, $flag:ident) => {
+        if (*hints).flags & $flag == $flag {
+          Some (((*hints).$field_1 as u32, (*hints).$field_2 as u32))
+        } else {
+          None
+        }
+      }
+    }
+    let mut _ignored = 0;
+    if XGetWMNormalHints (display, window, hints, &mut _ignored) == 0 {
+      XFree (hints as *mut c_void);
+      return None;
+    }
+    let mut result = Normal_Hints {
+      min_size: get_field! (min_width, min_height, PMinSize),
+      max_size: get_field! (max_width, max_height, PMaxSize),
+      resize_inc: get_field! (width_inc, height_inc, PResizeInc),
+      aspect_ratio: None,
+    };
+    if (*hints).flags & PAspect == PAspect {
+      result.aspect_ratio = Some ((
+        (*hints).min_aspect.x as f64 / (*hints).min_aspect.y as f64,
+        (*hints).max_aspect.x as f64 / (*hints).max_aspect.y as f64
+      ));
+    }
+    XFree (hints as *mut c_void);
+    Some (result)
+  }
+
+  /// Applies the hints to the given geometry.
+  /// If `keep_height` is `true` the width will be changed instead of the
+  /// height when adjusting the aspect ratio, it has no effect on the other
+  /// size limits.
+  /// This only applies size constraints, not resize increments.
+  pub fn constrain (&self, g_in: &Geometry, keep_height: bool) -> Geometry {
+    let mut g = *g_in;
+    if let Some ((minw, minh)) = self.min_size {
+      g.w = u32::max (g.w, minw);
+      g.h = u32::max (g.h, minh);
+    }
+    if let Some ((maxw, maxh)) = self.max_size {
+      g.w = u32::min (g.w, maxw);
+      g.h = u32::min (g.h, maxh);
+    }
+    if let Some ((min_aspect, max_aspect)) = self.aspect_ratio {
+      let in_ratio = g_in.w as f64 / g_in.h as f64;
+      let mut correct = None;
+      if in_ratio < min_aspect {
+        correct = Some (min_aspect);
+      } else if in_ratio > max_aspect {
+        correct = Some (max_aspect);
+      }
+      if let Some (ratio) = correct {
+        if keep_height {
+          g.w = (g.h as f64 / (1.0 / ratio)).round () as u32;
+        } else {
+          g.h = (g.w as f64 / ratio).round () as u32
+        }
+      }
+    }
+    g
+  }
+
+  pub fn resize_inc (&self) -> Option<(i32, i32)> {
+    // Storing it as u32 keeps get get_field! macro simpler
+    self.resize_inc.map (|(w, h)| (w as i32, h as i32))
+  }
 }

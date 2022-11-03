@@ -12,7 +12,7 @@ static mut title_x: i32 = 0;
 
 
 unsafe fn create_frame (base_geometry: &Geometry) -> Window {
-  let g = base_geometry.get_frame (&frame_offset);
+  let g = base_geometry.get_frame ();
   let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.background_pixmap = X_NONE;
   attributes.cursor = cursor::normal;
@@ -203,7 +203,7 @@ impl Client {
 
   /// Rerturns the geometry of the frame window (outer window)
   pub fn frame_geometry (&self) -> Geometry {
-    self.geometry.get_frame (unsafe { &frame_offset })
+    unsafe { self.geometry.get_frame () }
   }
 
   /// Returns the geometry of the client window (inner window)
@@ -262,7 +262,7 @@ impl Client {
         ch = fh - frame_offset.h;
       }
     }
-    self.geometry = Geometry::from_parts (fx, fy, fw, fh).get_client (&frame_offset);
+    self.geometry = Geometry::from_parts (fx, fy, fw, fh).get_client ();
     self.title_space = (self.client_geometry ().w - left_buttons_width - right_buttons_width) as i32;
     XMoveResizeWindow (display, self.frame, fx, fy, fw, fh);
     for i in 0..self.left_buttons.len () {

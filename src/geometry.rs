@@ -4,7 +4,7 @@ use x11::xlib::*;
 use crate::action::{move_snap_flags, snap_geometry};
 use crate::core::*;
 use crate::property;
-use crate::client::{Client, Client_Geometry};
+use crate::client::{Client, Client_Geometry, frame_offset};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Geometry {
@@ -85,11 +85,8 @@ impl Geometry {
     self
   }
 
-  // Get the geometry of a window frame around a window with this geometry
-  // frame_offset fields:
-  //   x, y: offset of the left corder of the window inside the frame
-  //   w, h: extra width/height
-  pub fn get_frame (&self, frame_offset: &Geometry) -> Geometry {
+  // Returns the geometry of a window frame around a window with this geometry
+  pub unsafe fn get_frame (&self) -> Geometry {
     Geometry::from_parts (
       self.x - frame_offset.x,
       self.y - frame_offset.y,
@@ -99,7 +96,7 @@ impl Geometry {
   }
 
   // Inverse of `get_frame`
-  pub fn get_client (&self, frame_offset: &Geometry) -> Geometry {
+  pub unsafe fn get_client (&self) -> Geometry {
     Geometry::from_parts (
       self.x + frame_offset.x,
       self.y + frame_offset.y,
@@ -111,13 +108,22 @@ impl Geometry {
 
 pub struct Preview {
   window: Window,
+  original_geometry: Geometry,
   geometry: Geometry,
   snap_geometry: Geometry,
+  final_geometry: Geometry,
   is_snapped: bool
 }
 
 impl Preview {
-  const border_width: c_int = 5;
+  const MIN_WIDTH: u32 = 3 * 160;
+  const MIN_HEIGHT: u32 = 3 * 90;
+  const BORDER_WIDTH: c_int = 5;
+  // Only apply resize increment if resize amount is larger than this value.
+  // (if this is 0 it becomes very hard to not resize should the user change
+  // their mind about resizing, if it's too large it may become impossible to
+  // resize by a single increment)
+  const RESIZE_INCREMENT_THRESHHOLD: i32 = 5;
 
   pub unsafe fn create (initial_geometry: Geometry) -> Self {
     let mut vi: XVisualInfo = uninitialized! ();
@@ -131,11 +137,11 @@ impl Preview {
     let window = XCreateWindow (
       display,
       root,
-      initial_geometry.x - Preview::border_width,
-      initial_geometry.y - Preview::border_width,
+      initial_geometry.x - Self::BORDER_WIDTH,
+      initial_geometry.y - Self::BORDER_WIDTH,
       initial_geometry.w,
       initial_geometry.h,
-      Preview::border_width as c_uint,
+      Self::BORDER_WIDTH as c_uint,
       vi.depth,
       InputOutput as c_uint,
       vi.visual,
@@ -155,8 +161,10 @@ impl Preview {
     XMapWindow (display, window);
     Preview {
       window,
+      original_geometry: initial_geometry,
       geometry: initial_geometry,
       snap_geometry: Geometry::new (),
+      final_geometry: initial_geometry,
       is_snapped: false
     }
   }
@@ -165,14 +173,13 @@ impl Preview {
     self.geometry.x += x;
     self.geometry.y += y;
     self.is_snapped = false;
+    self.final_geometry = self.geometry;
   }
 
   pub fn resize_by (&mut self, w: i32, h: i32) {
-    const MIN_WIDTH: u32 = 3 * 160;
-    const MIN_HEIGHT: u32 = 3 * 90;
     if w < 0 {
       let ww = -w as u32;
-      if self.geometry.w > ww && self.geometry.w - ww >= MIN_WIDTH {
+      if self.geometry.w > ww && self.geometry.w - ww >= Self::MIN_WIDTH {
         self.geometry.w -= ww as u32;
       }
     }
@@ -181,19 +188,55 @@ impl Preview {
     }
     if h < 0 {
       let hh = -h as u32;
-      if self.geometry.h > hh && self.geometry.h - hh >= MIN_HEIGHT {
+      if self.geometry.h > hh && self.geometry.h - hh >= Self::MIN_HEIGHT {
         self.geometry.h -= hh;
       }
     }
     else {
       self.geometry.h += h as u32;
     }
+    self.final_geometry = self.geometry;
   }
 
   pub unsafe fn snap (&mut self, x: i32, y: i32) {
     let flags = move_snap_flags (x as u32, y as u32);
     self.is_snapped = true;
     self.snap_geometry = snap_geometry (flags);
+  }
+
+  pub unsafe fn apply_normal_hints (&mut self, hints: &property::Normal_Hints, keep_height: bool) {
+    let g;
+    // Apply resize increment
+    if let Some ((winc, hinc)) = hints.resize_inc () {
+      let mut dw = self.geometry.w  as i32 - self.original_geometry.w as i32;
+      let mut dh = self.geometry.h  as i32 - self.original_geometry.h as i32;
+      if dw < -Self::RESIZE_INCREMENT_THRESHHOLD {
+        dw = (dw - winc + 1) / winc * winc;
+      }
+      else if dw > Self::RESIZE_INCREMENT_THRESHHOLD {
+        dw = (dw + winc - 1) / winc * winc;
+      } else {
+        dw = 0;
+      }
+      if dh < -Self::RESIZE_INCREMENT_THRESHHOLD {
+        dh = (dh - hinc + 1) / hinc * hinc;
+      }
+      else if dh > Self::RESIZE_INCREMENT_THRESHHOLD {
+        dh = (dh + hinc - 1) / hinc * hinc;
+      } else {
+        dh = 0;
+      }
+      g = Geometry::from_parts (
+        self.geometry.x,
+        self.geometry.y,
+        (self.original_geometry.w as i32 + dw) as u32,
+        (self.original_geometry.h as i32 + dh) as u32
+      );
+    } else {
+      g = self.geometry;
+    }
+    // Apply size constraints
+    self.final_geometry = hints.constrain (&g.get_client (), keep_height).get_frame ();
   }
 
   pub unsafe fn update (&self) {
@@ -203,9 +246,9 @@ impl Preview {
       gg.h -= 2 * (*config).gap;
       gg
     } else {
-      let mut gg = self.geometry;
-      gg.x -= Preview::border_width;
-      gg.y -= Preview::border_width;
+      let mut gg = self.final_geometry;
+      gg.x -= Preview::BORDER_WIDTH;
+      gg.y -= Preview::BORDER_WIDTH;
       gg
     };
     XMoveResizeWindow (display, self.window, g.x, g.y, g.w, g.h);
@@ -223,7 +266,7 @@ impl Preview {
       client.move_and_resize (Client_Geometry::Snap (self.snap_geometry));
     } else {
       client.snap_state = SNAP_NONE;
-      client.move_and_resize (Client_Geometry::Frame (self.geometry));
+      client.move_and_resize (Client_Geometry::Frame (self.final_geometry));
       client.save_geometry ();
     }
   }
