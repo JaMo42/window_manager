@@ -211,6 +211,14 @@ impl<'a> Rendered_Text<'a> {
     }
   }
 
+  pub fn get_width (&self) -> u32 {
+    self.width as u32
+  }
+
+  pub fn get_height (&self) -> u32 {
+    self.height as u32
+  }
+
   pub fn at (&mut self, x: i32, y: i32) -> &mut Self {
     self.x = x;
     self.y = y;
@@ -255,6 +263,9 @@ impl<'a> Rendered_Text<'a> {
   pub fn width (&mut self, width: i32) -> &mut Self {
     self.layout.set_width (width * pango::SCALE);
     self.layout.set_ellipsize (pango::EllipsizeMode::Middle);
+    let (width, height) = self.layout.size ();
+    self.width = width;
+    self.height = height;
     self
   }
 
@@ -308,13 +319,13 @@ impl<'a> Shape_Builder<'a> {
   }
 
   // top -> bottom
-  pub fn vertical_gradient (&mut self, c1: Color, c2: Color) -> &mut Self {
-    self.gradient ((0.0, 0.0), c1, (0.0, 1.0), c2)
+  pub fn vertical_gradient (&mut self, top: Color, bottom: Color) -> &mut Self {
+    self.gradient ((0.0, 0.0), top, (0.0, 1.0), bottom)
   }
 
   // left -> right
-  pub fn horizontal_gradient (&mut self, c1: Color, c2: Color) -> &mut Self {
-    self.gradient ((0.0, 0.0), c1, (1.0, 0.0), c2)
+  pub fn horizontal_gradient (&mut self, left: Color, right: Color) -> &mut Self {
+    self.gradient ((0.0, 0.0), left, (1.0, 0.0), right)
   }
 
   pub fn stroke (&mut self, width: u32, color: Color) -> &mut Self {
@@ -417,4 +428,13 @@ pub unsafe fn load_resources () {
   load_svg (&mut resources::close_button);
   load_svg (&mut resources::maximize_button);
   load_svg (&mut resources::minimize_button);
+}
+
+
+#[allow(dead_code)]
+pub unsafe fn get_app_icon (app_name: &str) {
+  let _desktop_file_path = format! ("/usr/share/applications/{}.desktop", app_name);
+  let icon_name = "applications-system.svg"; // TODO: read from desktop file
+  let icon_theme = "Papirus"; // TODO: get from config
+  let _icon_path = format! ("/usr/share/icons/{}/48x48/apps/{}", icon_theme, icon_name);
 }

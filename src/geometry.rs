@@ -212,16 +212,14 @@ impl Preview {
       let mut dh = self.geometry.h  as i32 - self.original_geometry.h as i32;
       if dw < -Self::RESIZE_INCREMENT_THRESHHOLD {
         dw = (dw - winc + 1) / winc * winc;
-      }
-      else if dw > Self::RESIZE_INCREMENT_THRESHHOLD {
+      } else if dw > Self::RESIZE_INCREMENT_THRESHHOLD {
         dw = (dw + winc - 1) / winc * winc;
       } else {
         dw = 0;
       }
       if dh < -Self::RESIZE_INCREMENT_THRESHHOLD {
         dh = (dh - hinc + 1) / hinc * hinc;
-      }
-      else if dh > Self::RESIZE_INCREMENT_THRESHHOLD {
+      } else if dh > Self::RESIZE_INCREMENT_THRESHHOLD {
         dh = (dh + hinc - 1) / hinc * hinc;
       } else {
         dh = 0;

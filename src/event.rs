@@ -32,8 +32,12 @@ pub unsafe fn button_press (event: &XButtonEvent) {
     }
   }
   if event.subwindow == X_NONE {
-    if let Some (client) = win2client (event.window) {
+    if event.window == root {
+    }
+    else if let Some (client) = win2client (event.window) {
       client.click (event.window);
+    }
+    else if notifications::maybe_close (event.window) {
     }
     return;
   }
@@ -337,6 +341,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       let mut rng = rand::thread_rng ();
       g.random_inside (&window_area.get_client (), &mut rng);
     }
+    // Set size
     c.move_and_resize (Client_Geometry::Client (g));
     c.save_geometry ();
     // Add client

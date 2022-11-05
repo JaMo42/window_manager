@@ -22,6 +22,8 @@
 
 - Builtin status bar
 
+- Desktop notifications (using the [org.freedesktop.Notifications](https://specifications.freedesktop.org/notification-spec/notification-spec-latest.html) D-BUS service)
+
 ## Dependencies
 
 Written in rust, `cargo` required.

@@ -100,6 +100,8 @@ pub struct Color_Scheme {
   pub bar_active_workspace_text: Color,
   pub bar_urgent_workspace: Color,
   pub bar_urgent_workspace_text: Color,
+  pub notification_background: Color,
+  pub notification_text: Color
 }
 const COLOR_COUNT: usize = size_of::<Color_Scheme> () / size_of::<Color> ();
 const COLOR_NAMES: [&str; COLOR_COUNT] = [
@@ -125,7 +127,9 @@ const COLOR_NAMES: [&str; COLOR_COUNT] = [
   "Bar::ActiveWorkspace",
   "Bar::ActiveWorkspaceText",
   "Bar::UrgentWorkspace",
-  "Bar::UrgentWorkspaceText"
+  "Bar::UrgentWorkspaceText",
+  "NotificationBackground",
+  "NotificationText"
 ];
 const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   // Window borders
@@ -169,6 +173,10 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
     // Workspace with urgent client
     "Urgent",
     "UrgentText",
+
+    // Notifications
+    "Bar::Background",
+    "Bar::Text"
 ];
 
 impl std::ops::Index<usize> for Color_Scheme {

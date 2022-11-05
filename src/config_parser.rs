@@ -65,7 +65,8 @@ pub enum Definition_Type {
   Left_Buttons (Vec<String>),
   Right_Buttons (Vec<String>),
   Button_Icon_Size (u8),
-  Circle_Buttons
+  Circle_Buttons,
+  Default_Notification_Timeout (i32)
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -260,6 +261,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       ),
       "button_icon_size" => Button_Icon_Size (self.parse_percentage ()),
       "circle_buttons" => Circle_Buttons,
+      "default_notification_timeout" => Default_Notification_Timeout (self.parse_number ()),
       _ => {
         self.fail ("Unknown keyword");
       }

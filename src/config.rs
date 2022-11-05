@@ -139,7 +139,8 @@ pub struct Config {
   pub left_buttons: Vec<String>,
   pub right_buttons: Vec<String>,
   pub button_icon_size: u8,
-  pub circle_buttons: bool
+  pub circle_buttons: bool,
+  pub default_notification_timeout: i32
 }
 
 impl Config {
@@ -163,7 +164,8 @@ impl Config {
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
       button_icon_size: 75,
-      circle_buttons: false
+      circle_buttons: false,
+      default_notification_timeout: 6000
     }
   }
 
@@ -291,6 +293,10 @@ impl Config {
         Circle_Buttons => {
           log::info! ("config: circle buttons");
           self.circle_buttons = true;
+        }
+        Default_Notification_Timeout (millis) => {
+          log::info! ("config: default notification timeout: {}ms", millis);
+          self.default_notification_timeout = millis;
         }
       }
     }

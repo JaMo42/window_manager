@@ -17,8 +17,6 @@ color SelectedText DarkText
 # Color of a window that demands attention
 color Urgent #d9534f
 color UrgentText FocusedText
-# Solid background color
-color Background #111111
 # Close button
 color CloseButton ButtonNormal
 color CloseButtonHovered #ff3b30
@@ -31,3 +29,12 @@ color MinimizeButtonHovered #ffcc00
 
 color Bar::Background #161514
 color Bar::Text LightText
+
+# Other
+
+# Solid background color
+color Background #111111
+
+# Notifications
+color NotificationBackground #1F1F1F
+color NotificationText #E9EBEB

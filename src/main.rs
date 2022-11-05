@@ -24,6 +24,7 @@ mod cursor;
 mod draw;
 mod bar;
 mod buttons;
+mod notifications;
 
 use crate::core::*;
 use client::*;
@@ -227,6 +228,8 @@ unsafe fn init () {
   }
   // Set window border size info
   client::set_border_info ();
+  // Initialize notifications
+  notifications::init ();
 }
 
 
@@ -358,6 +361,8 @@ unsafe fn cleanup () {
   XDestroyWindow (display, property::wm_check_window);
   property::delete (root, Net::ActiveWindow);
   XSync (display, X_FALSE);
+  // Notifications
+  notifications::quit ();
 }
 
 

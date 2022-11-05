@@ -33,11 +33,11 @@ impl Bar {
 
   pub unsafe fn create () -> Self {
     let screen = XDefaultScreen (display);
-    let mut atributes: XSetWindowAttributes = uninitialized! ();
-    atributes.override_redirect = X_TRUE;
-    atributes.background_pixmap = X_NONE;
-    atributes.event_mask = ButtonPressMask|ExposureMask;
-    atributes.cursor = cursor::normal;
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
+    attributes.override_redirect = X_TRUE;
+    attributes.background_pixmap = X_NONE;
+    attributes.event_mask = ButtonPressMask|ExposureMask;
+    attributes.cursor = cursor::normal;
     let mut class_hint = XClassHint {
       res_name: c_str! ("window_manager_bar") as *mut c_char,
       res_class: c_str! ("window_manager_bar") as *mut c_char
@@ -56,7 +56,7 @@ impl Bar {
       CopyFromParent as u32,
       XDefaultVisual(display, screen),
       CWOverrideRedirect|CWBackPixmap|CWEventMask|CWCursor,
-      &mut atributes
+      &mut attributes
     );
     XSetClassHint (display, window, &mut class_hint);
     let window_type_dock = property::atom (property::Net::WMWindowTypeDock);

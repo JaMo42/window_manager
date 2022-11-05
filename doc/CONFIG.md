@@ -141,6 +141,12 @@ circle_buttons
 ```
 Enable circle buttons.
 
+```
+default_notification_timeout <milliseconds>
+```
+Specifies the default time desktop notifications are displayed if no time is specified.
+If not set it defaults to 6 seconds, if set to `0` notifications never expire.
+
 ## Modifiers
 
 - `Win` Windows key
@@ -210,6 +216,8 @@ If the number for the absolute value is 0, the height of the font is used.
 | Bar::ActiveWorkspaceText |
 | Bar::UrgentWorkspace | as `Bar::Workspace` but for workspaces that contain windows  that demand attention
 | Bar::UrgentWorkspaceText |
+| NotificationBackground | Background color for desktop notifications
+| NotificationText | Text color for desktop notifications
 
 ### Circle buttons
 

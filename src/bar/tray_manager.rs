@@ -73,12 +73,12 @@ impl Tray_Manager {
   pub unsafe fn create (height: u32) -> Self {
     log::trace! ("Creating tray window");
     let screen = XDefaultScreen (display);
-    let mut atributes: XSetWindowAttributes = uninitialized! ();
-    atributes.override_redirect = X_TRUE;
-    atributes.background_pixel = (*config).colors.bar_background.pixel;
-    atributes.event_mask = SubstructureRedirectMask | StructureNotifyMask
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
+    attributes.override_redirect = X_TRUE;
+    attributes.background_pixel = (*config).colors.bar_background.pixel;
+    attributes.event_mask = SubstructureRedirectMask | StructureNotifyMask
       | ExposureMask | PropertyChangeMask;
-    atributes.cursor = cursor::normal;
+    attributes.cursor = cursor::normal;
     let window = XCreateWindow (
       display,
       root,
@@ -91,7 +91,7 @@ impl Tray_Manager {
       CopyFromParent as u32,
       XDefaultVisual(display, screen),
       CWOverrideRedirect|CWBackPixel|CWEventMask|CWCursor,
-      &mut atributes
+      &mut attributes
     );
     meta_windows.push (window);
     let window_type_dock = property::atom (property::Net::WMWindowTypeDock);
