@@ -24,6 +24,9 @@ unsafe fn win2client (window: Window) -> Option<&'static mut Client> {
 
 
 pub unsafe fn button_press (event: &XButtonEvent) {
+  if is_kind (event.subwindow, Window_Kind::Meta_Or_Unmanaged) {
+    return;
+  }
   if cfg! (feature = "bar") {
     // Meta key is ignored when clicking on bar
     if event.window == bar.window || event.subwindow == bar.window {
@@ -32,16 +35,19 @@ pub unsafe fn button_press (event: &XButtonEvent) {
     }
   }
   if event.subwindow == X_NONE {
-    if event.window == root {
+    if let Some (kind) = get_window_kind (event.window) {
+      match kind {
+        Window_Kind::Frame_Button => {
+          if let Some (client) = win2client (event.window) {
+            client.click (event.window);
+          }
+        },
+        Window_Kind::Notification => {
+          notifications::maybe_close (event.window);
+        }
+        _ => {}
+      }
     }
-    else if let Some (client) = win2client (event.window) {
-      client.click (event.window);
-    }
-    else if notifications::maybe_close (event.window) {
-    }
-    return;
-  }
-  if meta_windows.contains (&event.subwindow) {
     return;
   }
   if let Some (client) = win2client (event.subwindow) {
@@ -510,6 +516,10 @@ pub unsafe fn mapping_notify (event: &XMappingEvent) {
 
 pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
   let window = event.window;
+  if is_kind (event.window, Window_Kind::Tray_Client) {
+    bar::tray.maybe_remove_client (window);
+    return;
+  }
   for workspace in &mut workspaces {
     if workspace.contains (window) {
       workspace.remove (&Client::dummy (window))
@@ -517,9 +527,6 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
       update_client_list ();
       break;
     }
-  }
-  if bar::tray.maybe_remove_client (window) {
-    return;
   }
 }
 
@@ -534,10 +541,12 @@ pub unsafe fn expose (event: &XExposeEvent) {
 }
 
 pub unsafe fn crossing (event: &XCrossingEvent) {
-  if let Some (client) = win2client (event.window) {
-    for b in client.buttons_mut () {
-      if b.window == event.window {
-        b.draw (event.type_ == EnterNotify);
+  if is_kind (event.window, Window_Kind::Frame_Button) {
+    if let Some (client) = win2client (event.window) {
+      for b in client.buttons_mut () {
+        if b.window == event.window {
+          b.draw (event.type_ == EnterNotify);
+        }
       }
     }
   }

@@ -56,6 +56,19 @@ pub const SNAP_MAXIMIZED: u8 = 0x10;
 
 pub const MOUSE_MOVE_RESIZE_RATE: u64 = 1000 / 30;
 
+#[repr(usize)]
+#[derive(PartialEq)]
+pub enum Window_Kind {
+  Root,
+  Client,
+  Frame,
+  Frame_Button,
+  Status_Bar,
+  Notification,
+  Meta_Or_Unmanaged,
+  Tray_Client,
+}
+
 pub static mut display: *mut Display = std::ptr::null_mut ();
 pub static mut root: Window = X_NONE;
 pub static mut workspaces: Vec<Workspace> = Vec::new ();
@@ -71,3 +84,4 @@ pub static mut meta_windows: Vec<Window> = Vec::new ();
 pub static mut draw: *mut Drawing_Context = std::ptr::null_mut ();
 pub static mut bar: Bar = Bar::new ();
 pub static mut wm_context: XContext = X_NONE as i32;
+pub static mut wm_winkind_context: XContext = X_NONE as i32;

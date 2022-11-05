@@ -195,40 +195,29 @@ fn run_autostartrc () {
 
 
 unsafe fn init () {
-  // Create context type
   wm_context = XUniqueContext ();
-  // Create workspaces
+  wm_winkind_context = XUniqueContext ();
   workspaces.reserve ((*config).workspace_count);
   for _ in 0..(*config).workspace_count {
     workspaces.push (Workspace::new ());
   }
-  // Set error handler
   XSetErrorHandler (Some (x_error));
-  // Colors
   XSetWindowBackground (display, root, (*config).colors.background.pixel);
   XClearWindow (display, root);
-  // Properties
   property::load_atoms ();
   property::init_set_root_properties ();
-  // Cursors
   cursor::load_cursors ();
-  // Grab input
   grab_keys ();
   grab_buttons ();
-  // Select input
   select_input (0);
   // Ignore SIGCHLD so we don't leave defunct processes behind
   libc::signal (libc::SIGCHLD, libc::SIG_IGN);
-  // Run autostart script
   run_autostartrc ();
-  // Bar
   if cfg! (feature = "bar") {
     bar = Bar::create ();
     bar::tray = bar::tray_manager::Tray_Manager::create (bar.height);
   }
-  // Set window border size info
   client::set_border_info ();
-  // Initialize notifications
   notifications::init ();
 }
 
@@ -421,6 +410,56 @@ unsafe fn update_client_list () {
     for c in ws.iter () {
       property::append (root, Net::ClientList, XA_WINDOW, 32, &c.window, 1);
     }
+  }
+}
+
+
+unsafe fn get_window_kind (window: Window) -> Option<Window_Kind> {
+  let mut data: XPointer = std::ptr::null_mut ();
+  if window == root {
+    Some (Window_Kind::Root)
+  } else if window == X_NONE
+    || XFindContext (display, window, wm_winkind_context, &mut data) != 0 {
+    None
+  } else if !data.is_null () {
+    // Can't to conversions in the match
+    const kind_root: usize = Window_Kind::Root as usize;
+    const kind_client: usize = Window_Kind::Client as usize;
+    const kind_frame: usize = Window_Kind::Frame as usize;
+    const kind_frame_button: usize = Window_Kind::Frame_Button as usize;
+    const kind_status_bar: usize = Window_Kind::Status_Bar as usize;
+    const kind_notification: usize = Window_Kind::Notification as usize;
+    const kind_meta_or_unmanaged: usize = Window_Kind::Meta_Or_Unmanaged as usize;
+    const kind_tray_client: usize = Window_Kind::Tray_Client as usize;
+    Some (match data as usize {
+      kind_root => Window_Kind::Root,
+      kind_client => Window_Kind::Client,
+      kind_frame => Window_Kind::Frame,
+      kind_frame_button => Window_Kind::Frame_Button,
+      kind_status_bar => Window_Kind::Status_Bar,
+      kind_notification => Window_Kind::Notification,
+      kind_meta_or_unmanaged => Window_Kind::Meta_Or_Unmanaged,
+      kind_tray_client  => Window_Kind::Tray_Client,
+      _ => {
+        my_panic! ("Invalid Window_Kind value on {}: {}", window, data as usize);
+      }
+    })
+  } else {
+    None
+  }
+}
+
+
+unsafe fn set_window_kind (window: Window, kind: Window_Kind) {
+  XSaveContext (display, window, wm_winkind_context, kind as usize as *const i8);
+}
+
+
+unsafe fn is_kind (window: Window, kind: Window_Kind) -> bool {
+  if let Some (window_kind) = get_window_kind (window) {
+    kind == window_kind
+  } else {
+    false
   }
 }
 

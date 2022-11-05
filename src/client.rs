@@ -98,6 +98,8 @@ impl Client {
     let this = &mut *c as *mut Client as XPointer;
     XSaveContext (display, window, wm_context, this);
     XSaveContext (display, frame, wm_context, this);
+    set_window_kind (window, Window_Kind::Client);
+    set_window_kind (frame, Window_Kind::Frame);
 
     let mut i = 0;
     for name in (*config).left_buttons.iter () {

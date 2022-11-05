@@ -1,7 +1,8 @@
-use super::core::*;
 use std::ptr::NonNull;
 use libc::c_uint;
 use x11::xlib::*;
+use super::core::*;
+use super::set_window_kind;
 use super::draw::{resources, Svg_Resource};
 use super::client::{Client, frame_offset};
 use super::action;
@@ -53,6 +54,7 @@ impl Button {
       &mut attributes
     );
     XSaveContext (display, window, wm_context, owner as *mut Client as XPointer);
+    set_window_kind (window, Window_Kind::Frame_Button);
     Self {
       owner: NonNull::new_unchecked (owner as *mut Client),
       icon,

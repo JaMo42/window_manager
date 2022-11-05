@@ -6,6 +6,7 @@ use x11::xlib::*;
 use std::ffi::CString;
 use libc::{c_char, c_uchar, c_uint};
 use crate::core::*;
+use crate::set_window_kind;
 use crate::cursor;
 use crate::property;
 use crate::action::select_workspace;
@@ -73,6 +74,7 @@ impl Bar {
       let value = 42949672u32 * (*config).bar_opacity as u32;
       set_cardinal! (window, atom, value);
     }
+    set_window_kind (window, Window_Kind::Status_Bar);
     XMapRaised (display, window);
     Self {
       width,

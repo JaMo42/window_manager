@@ -1,5 +1,6 @@
 use x11::xlib::*;
 use crate::core::*;
+use crate::set_window_kind;
 use crate::property::{self, WM};
 use super::xembed;
 
@@ -12,6 +13,7 @@ pub struct Tray_Client {
 
 impl Tray_Client {
   pub fn new (window: Window, size: u32) -> Self {
+    unsafe { set_window_kind (window, Window_Kind::Tray_Client); }
     Self {
       window,
       xembed_info: xembed::Info::new (),

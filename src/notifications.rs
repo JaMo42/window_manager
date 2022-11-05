@@ -4,6 +4,7 @@ use zbus::zvariant;
 use futures::executor;
 use x11::xlib::*;
 use super::core::*;
+use super::set_window_kind;
 use super::property::{self, Net};
 
 /// The notification expired
@@ -61,6 +62,7 @@ impl Notification {
         &property::atom (Net::WMWindowTypeNotification),
         1
       );
+      set_window_kind (window, Window_Kind::Notification);
     }
     let mut this = Self {
       id,
