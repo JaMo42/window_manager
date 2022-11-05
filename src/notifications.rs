@@ -113,27 +113,30 @@ impl Notification {
         .color (foreground)
         .draw ();
     }
-    // Body
-    {
-      let mut body_text = (*draw).text (&self.body);
-      height = body_y + body_text.get_height () + 2*BORDER;
-      (*draw).fill_rect (
-        0, body_y as i32,
-        width + 2*BORDER, height - body_y,
-        background
-      );
-      body_text.at (BORDER as i32, (body_y + BORDER) as i32)
-        .color (foreground)
+    if !self.body.is_empty () {
+      // Body
+      {
+        let mut body_text = (*draw).text (&self.body);
+        height = body_y + body_text.get_height () + 2*BORDER;
+        (*draw).fill_rect (
+          0, body_y as i32,
+          width + 2*BORDER, height - body_y,
+          background
+        );
+        body_text.at (BORDER as i32, (body_y + BORDER) as i32)
+          .color (foreground)
+          .draw ();
+      }
+      // Separator
+      (*draw).rect (0, body_y as i32 - 1, width, 2)
+        .color (background.scale (1.1))
         .draw ();
+    } else {
+      height = body_y;
     }
-    // Separator
-    (*draw).rect (0, body_y as i32 - 1, width, 2)
-      .color (background.scale (1.1))
-      .draw ();
     // Render
     XResizeWindow (display, self.window, width, height);
     (*draw).render (self.window, 0, 0, width, height);
-    log::trace! ("Drew notification: summary=\"{}\" body=\"{}\"", self.summary, self.body);
     (width, height)
   }
 
