@@ -128,7 +128,7 @@ The bar contains the following widgets:
 
  - Left: Workspace display and switcher
 
- - Right: Battery charge, current time, and a system tray
+ - Right: Battery charge, volume, current time, and a system tray
 
 ## ws_tool
 

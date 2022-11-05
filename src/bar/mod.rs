@@ -11,6 +11,7 @@ use crate::cursor;
 use crate::property;
 use crate::action::select_workspace;
 use crate::draw::Alignment;
+use crate::platform;
 use tray_manager::Tray_Manager;
 
 pub static mut tray: Tray_Manager = Tray_Manager::new ();
@@ -132,28 +133,48 @@ impl Bar {
     (*draw).text_color((*config).colors.bar_text);
     // ==== RIGHT ====
     // Time
-    let now= chrono::Local::now ();
-    let time_text = format! ("{}", now.format ((*config).bar_time_format.as_str ()));
-    let x = (*draw).text (time_text.as_str ())
-      .at_right (self.width as i32 - 10, 0)
-      .align_vertically (Alignment::Centered, self.height as i32)
-      .draw ()
-      .x;
+    let mut x = self.width as i32;
+    {
+      let now= chrono::Local::now ();
+      let time_text = format! ("{}", now.format ((*config).bar_time_format.as_str ()));
+      x = (*draw).text (time_text.as_str ())
+        .at_right (x - 10, 0)
+        .align_vertically (Alignment::Centered, self.height as i32)
+        .draw ()
+        .x;
+    }
+    // Volume
+    {
+      if let Some ((is_muted, level)) = platform::get_volume_info () {
+        let text = if is_muted {
+          "Volume: muted".to_owned ()
+        } else {
+          format! ("Volume: {}%", level)
+        };
+        x = (*draw).text (text.as_str ())
+          .at_right (x - 20, 0)
+          .align_vertically (Alignment::Centered, self.height as i32)
+          .draw ()
+          .x;
+      }
+    }
     // Battery
-    let power_supply = "BAT0";
-    let mut capacity = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/capacity", power_supply)
-    ).expect("Could not read battery status");
-    capacity.pop ();
-    let mut status = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/status", power_supply)
-    ).expect("Could not read battery status");
-    status.pop ();
-    let battery_text = format! ("{}:{}%({})", power_supply, capacity, status);
-    (*draw).text (battery_text.as_str ())
-      .at_right (x - 20, 0)
-      .align_vertically (Alignment::Centered, self.height as i32)
-      .draw ();
+    {
+      let power_supply = "BAT0";
+      let mut capacity = std::fs::read_to_string (
+        format! ("/sys/class/power_supply/{}/capacity", power_supply)
+      ).expect("Could not read battery status");
+      capacity.pop ();
+      let mut status = std::fs::read_to_string (
+        format! ("/sys/class/power_supply/{}/status", power_supply)
+      ).expect("Could not read battery status");
+      status.pop ();
+      let battery_text = format! ("{}:{}%({})", power_supply, capacity, status);
+      (*draw).text (battery_text.as_str ())
+        .at_right (x - 20, 0)
+        .align_vertically (Alignment::Centered, self.height as i32)
+        .draw ();
+    }
 
     (*draw).render (bar.window, 0, 0, bar.width, bar.height);
   }
@@ -193,4 +214,10 @@ impl Bar {
     self.width = width;
     self.draw ();
   }
+}
+
+/// Redraws the bar if the "bar" feature is enabled
+pub fn update () {
+  // Note: bar.draw already does the feature check, this is mostly just a safe wrapper
+  unsafe { bar.draw (); }
 }

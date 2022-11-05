@@ -1,4 +1,5 @@
 use super::notifications;
+use super::bar;
 
 pub mod actions {
   pub unsafe fn increase_volume () {
@@ -16,7 +17,7 @@ pub mod actions {
 }
 
 /// Executes `amixer get Master` and extracts whether it is muted and the volume level
-fn get_volume_info () -> Option<(bool, u32)> {
+pub fn get_volume_info () -> Option<(bool, u32)> {
   unsafe { libc::signal (libc::SIGCHLD, libc::SIG_DFL); }
   let result = match std::process::Command::new ("amixer")
       .args (["get", "Master"])
@@ -70,6 +71,7 @@ fn mute_volume () {
     process.wait ().ok ();
   }
   unsafe { libc::signal (libc::SIGCHLD, libc::SIG_IGN); }
+  bar::update ();
 }
 
 /// Executes `amixer -q sset Master [value]%[+/-] unmute`
@@ -82,4 +84,5 @@ fn change_volume (by: i32) {
     process.wait ().ok ();
   }
   unsafe { libc::signal (libc::SIGCHLD, libc::SIG_IGN); }
+  bar::update ();
 }
