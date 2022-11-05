@@ -56,6 +56,7 @@ pub enum Action {
 impl Action {
   pub fn from_str (s: &str) -> Self {
     use Action::*;
+    use super::platform::actions::*;
     match s {
       "close_window" => WM (action::close_client),
       "quit" => Generic (action::quit),
@@ -80,6 +81,9 @@ impl Action {
       "snap_down" => WM (action::snap_down),
       "minimize" => WM (action::minimize),
       "raise_all" => Generic (action::raise_all),
+      "mute_volume" => Generic (mute_volume),
+      "increase_volume" => Generic (increase_volume),
+      "decrease_volume" => Generic (decrease_volume),
       _ => my_panic! ("action::from_str: unknown action: {}", s)
     }
   }

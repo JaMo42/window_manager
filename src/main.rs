@@ -25,6 +25,7 @@ mod draw;
 mod bar;
 mod buttons;
 mod notifications;
+mod platform;
 
 use crate::core::*;
 use client::*;
@@ -422,7 +423,7 @@ unsafe fn get_window_kind (window: Window) -> Option<Window_Kind> {
     || XFindContext (display, window, wm_winkind_context, &mut data) != 0 {
     None
   } else if !data.is_null () {
-    // Can't to conversions in the match
+    // Can't do conversions in the match
     const kind_root: usize = Window_Kind::Root as usize;
     const kind_client: usize = Window_Kind::Client as usize;
     const kind_frame: usize = Window_Kind::Frame as usize;

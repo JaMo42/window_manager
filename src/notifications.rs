@@ -366,3 +366,14 @@ pub unsafe fn quit () {
 pub fn maybe_close (window: Window) -> bool {
   manager ().maybe_close (window)
 }
+
+/// Spawns a notification
+pub fn notify (summary: &str, body: &str, timeout: i32) {
+  let id = manager ().get_id (0);
+  manager ().new_notification (id, summary, body);
+  if timeout < 0 && unsafe {&*config}.default_notification_timeout != 0{
+    manager ().close_after (id, unsafe {&*config}.default_notification_timeout);
+  } else if timeout > 0 {
+    manager ().close_after (id, timeout);
+  }
+}

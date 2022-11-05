@@ -41,6 +41,10 @@ bind Mod+M minimize
 bind Mod+R raise_all
 bind Mod+Print $ scrot ~/Pictures/Screenshots/%Y-%m-%d-%H%M%S-screenshot.jpg
 
+bind XF86AudioLowerVolume decrease_volume
+bind XF86AudioRaiseVolume increase_volume
+bind XF86AudioMute mute_volume
+
 # Define colors
 %include colors/default
 

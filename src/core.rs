@@ -83,5 +83,5 @@ pub static mut mouse_held: c_uint = 0;
 pub static mut meta_windows: Vec<Window> = Vec::new ();
 pub static mut draw: *mut Drawing_Context = std::ptr::null_mut ();
 pub static mut bar: Bar = Bar::new ();
-pub static mut wm_context: XContext = X_NONE as i32;
-pub static mut wm_winkind_context: XContext = X_NONE as i32;
+pub static mut wm_context: XContext = X_NONE as XContext;
+pub static mut wm_winkind_context: XContext = X_NONE as XContext;

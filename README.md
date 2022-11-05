@@ -36,6 +36,10 @@ Libraries:
 
 - `XRes`
 
+### Optional
+
+- `amixer` required for volume control actions
+
 ## Compiling
 
 ### Debug

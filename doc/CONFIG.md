@@ -175,6 +175,16 @@ If not set it defaults to 6 seconds, if set to `0` notifications never expire.
 
 - `unsnap_or_center` If the focused window is snapped, un-snap it, restoring it to it's position before it was last snapped. If it is not snapped, center it.
 
+### Volume control
+
+These are wrappers around the `amixer` command, they all affect the `Master` device.
+
+- `increase_volume` increases the volume by 5%
+
+- `decrease_volume` decreases the volume by 5%
+
+- `mute_volume` toggles volume muting and sends a desktop notification whether volume is on or off
+
 ## Height values
 
 A height value can be either `<number>` or `+<number>`, the former specifying a absolute value and the letter a value that's added on the font-size of the element.
