@@ -5,6 +5,7 @@ use crate::core::*;
 use crate::{get_window_geometry, set_window_kind};
 use crate::property;
 use crate::draw::{Alignment, Svg_Resource, resources};
+use crate::color::Color;
 use crate::platform;
 use crate::tooltip::tooltip;
 
@@ -66,16 +67,22 @@ pub trait Widget {
 
 
 
-unsafe fn draw_icon_and_text (string: &str, icon: Option<&'static mut Svg_Resource>, height: u32) -> u32 {
+unsafe fn draw_icon_and_text (
+  string: &str,
+  icon: Option<&'static mut Svg_Resource>,
+  color: Option<Color>,
+  height: u32
+) -> u32 {
   const ICON_TEXT_GAP: i32 = 3;
+  let color = color.unwrap_or ((*config).colors.bar_text);
   let mut width = 0;
   (*draw).fill_rect (0, 0, screen_size.w, height, (*config).colors.bar_background);
-  if icon.is_some () {
+  if let Some (svg) = icon {
     let size = (height as f64 * 0.9).round () as u32;
     let pos = ((height - size) / 2) as i32;
     (*draw).draw_colored_svg (
-      icon.unwrap_unchecked (),
-      (*config).colors.bar_text,
+      svg,
+      color,
       pos,pos,
       size, size
     );
@@ -85,10 +92,10 @@ unsafe fn draw_icon_and_text (string: &str, icon: Option<&'static mut Svg_Resour
     return width;
   }
   // Font is selected by bar
-  (*draw).text_color((*config).colors.bar_text);
   width += (*draw).text (&string)
     .at (width as i32, 0)
     .align_vertically (Alignment::Centered, height as i32)
+    .color (color)
     .draw ()
     .w;
   width
@@ -128,7 +135,7 @@ impl Widget for DateTime {
     if label == self.last_label {
       return self.width;
     }
-    let width = draw_icon_and_text (&label, Some (&mut resources::calendar), height);
+    let width = draw_icon_and_text (&label, Some (&mut resources::calendar), None, height);
     resize_and_render (self.window, width, height, gap);
     self.last_label = label;
     self.width = width;
@@ -146,6 +153,7 @@ pub struct Battery {
   window: Window,
   hover_text: String,
   last_capacity: String,
+  last_status: String,
   width: u32
 }
 
@@ -158,10 +166,28 @@ impl Battery {
         window: unsafe { create_window () },
         hover_text: String::new (),
         last_capacity: String::new (),
+        last_status: String::new (),
         width: 0
       })
     } else {
       None
+    }
+  }
+
+  unsafe fn get_icon (status: &str, capacity: u32) -> (&'static mut Svg_Resource, Color) {
+    let c = (*config).colors.bar_text;
+    if status == "Charging" || status == "Not charging" {
+      (&mut resources::battery_charging, c)
+    } else {
+      if capacity >= 90 {
+        (&mut resources::battery_full, c)
+      } else if capacity < 10 {
+        (&mut resources::battery_critical, (*config).colors.urgent)
+      } else {
+        let percent = (capacity - 10) as f64 / 80.0;
+        let idx = (percent * (resources::battery_bars.len ()) as f64) as usize;
+        (&mut resources::battery_bars[idx], c)
+      }
     }
   }
 }
@@ -176,18 +202,20 @@ impl Widget for Battery {
       format! ("/sys/class/power_supply/{}/capacity", (*config).bar_power_supply)
     ).expect("Could not read battery status");
     capacity.pop ();
-    if capacity == self.last_capacity {
-      return self.width;
-    }
     let mut status = std::fs::read_to_string (
       format! ("/sys/class/power_supply/{}/status", (*config).bar_power_supply)
     ).expect("Could not read battery status");
     status.pop ();
+    if capacity == self.last_capacity && status == self.last_status {
+      return self.width;
+    }
     self.hover_text = format! ("{}, {}", (*config).bar_power_supply, status);
     let label = format! ("{}%", capacity);
-    let width = draw_icon_and_text (&label, Some (&mut resources::battery), height);
+    let (icon, color) = Self::get_icon (&status, capacity.parse ().unwrap ());
+    let width = draw_icon_and_text (&label, Some (icon), Some (color), height);
     resize_and_render (self.window, width, height, gap);
     self.last_capacity = capacity;
+    self.last_status = status;
     self.width = width;
     width
   }
@@ -243,10 +271,10 @@ impl Widget for Volume {
         return self.width;
       }
       let width = if is_muted {
-        draw_icon_and_text ("muted", Some (&mut resources::volume_muted), height)
+        draw_icon_and_text ("muted", Some (&mut resources::volume_muted), None, height)
       } else {
         let label = format! ("{}%", level);
-        draw_icon_and_text (&label, Some (&mut resources::volume), height)
+        draw_icon_and_text (&label, Some (&mut resources::volume), None, height)
       };
       resize_and_render (self.window, width, height, gap);
       self.last_level = level;
@@ -290,7 +318,7 @@ impl Workspaces {
     unsafe { XResizeWindow (
       display,
       window,
-      // Note assumes this is never the rightmost widget, this way we don't
+      // Note: assumes this is never the rightmost widget, this way we don't
       // need to resize on every update
       bar.height * workspaces.len () as u32 + super::Bar::WIDGET_GAP as u32,
       bar.height

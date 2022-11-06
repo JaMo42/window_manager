@@ -14,7 +14,17 @@ pub mod resources {
   pub static mut calendar: Svg_Resource = Svg_Resource::new ("calendar.svg");
   pub static mut volume: Svg_Resource = Svg_Resource::new ("volume.svg");
   pub static mut volume_muted: Svg_Resource = Svg_Resource::new ("volume_muted.svg");
-  pub static mut battery: Svg_Resource = Svg_Resource::new ("battery.svg");
+  pub static mut battery_full: Svg_Resource = Svg_Resource::new ("battery_full.svg");
+  pub static mut battery_critical: Svg_Resource = Svg_Resource::new ("battery_critical.svg");
+  pub static mut battery_charging: Svg_Resource = Svg_Resource::new ("battery_charging.svg");
+  pub static mut battery_bars: [Svg_Resource; 6] = [
+    Svg_Resource::new ("battery_1_bar.svg"),
+    Svg_Resource::new ("battery_2_bar.svg"),
+    Svg_Resource::new ("battery_3_bar.svg"),
+    Svg_Resource::new ("battery_4_bar.svg"),
+    Svg_Resource::new ("battery_5_bar.svg"),
+    Svg_Resource::new ("battery_6_bar.svg")
+  ];
 }
 
 
@@ -436,7 +446,12 @@ pub unsafe fn load_resources () {
   load_svg (&mut resources::calendar);
   load_svg (&mut resources::volume);
   load_svg (&mut resources::volume_muted);
-  load_svg (&mut resources::battery);
+  load_svg (&mut resources::battery_full);
+  load_svg (&mut resources::battery_critical);
+  load_svg (&mut resources::battery_charging);
+  for i in resources::battery_bars.iter_mut () {
+    load_svg (i);
+  }
 }
 
 
