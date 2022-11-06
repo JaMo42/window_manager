@@ -29,6 +29,11 @@ pub struct Bar {
 }
 
 impl Bar {
+  /// Space between widgets
+  pub const WIDGET_GAP: i32 = 10;
+  /// Space between rightmost widget and system tray
+  pub const RIGHT_GAP: u32 = 5;
+
   pub const fn new () -> Self {
     Self {
       width: 0,
@@ -119,8 +124,6 @@ impl Bar {
   }
 
   pub unsafe fn draw (&mut self) {
-    const WIDGET_GAP: i32 = 10;
-    const RIGHT_GAP: u32 = 5;
     if !cfg! (feature="bar") { return; }
     (*draw).select_font((*config).bar_font.as_str ());
 
@@ -128,30 +131,27 @@ impl Bar {
     let mut x;
     x = 0;
     for w in self.left_widgets.iter_mut () {
-      let width = w.draw (self.height);
-      w.resize (x, width + WIDGET_GAP as u32, self.height);
+      let width = w.update (self.height, Self::WIDGET_GAP as u32);
+      XMoveWindow (display, w.window (), x, 0);
       x += width as i32;
-      x += WIDGET_GAP;
-      (*draw).render (w.window (), 0, 0, width, self.height);
+      x += Self::WIDGET_GAP;
     }
     let mid_x = x;
 
     // Right
-    x = (self.width - RIGHT_GAP) as i32;
+    x = (self.width - Self::RIGHT_GAP) as i32;
     let mut first = true;
     for w in self.right_widgets.iter_mut () {
-      // TODO: `draw` should resize and render itself, this should only move.
-      //       `draw` should also be renamed to `update`.
-      let width = w.draw (self.height);
-      x -= width as i32;
       if first {
-        w.resize (x, width + RIGHT_GAP, self.height);
-        (*draw).render (w.window (), 0, 0, width, self.height);
+        let width = w.update (self.height, Self::RIGHT_GAP);
+        x -= width as i32;
+        XMoveWindow (display, w.window (), x, 0);
         first = false;
       } else {
-        x -= WIDGET_GAP;
-        w.resize (x, width + WIDGET_GAP as u32, self.height);
-        (*draw).render (w.window (), 0, 0, width, self.height);
+        let width = w.update (self.height, Self::WIDGET_GAP as u32);
+        x -= width as i32;
+        x -= Self::WIDGET_GAP;
+        XMoveWindow (display, w.window (), x, 0);
       }
     }
     let mid_width = (x - mid_x) as u32;

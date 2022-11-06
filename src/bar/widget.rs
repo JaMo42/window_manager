@@ -52,7 +52,7 @@ pub trait Widget {
 
   fn window (&self) -> Window;
 
-  unsafe fn draw (&mut self, height: u32) -> u32;
+  unsafe fn update (&mut self, height: u32, gap: u32) -> u32;
 
   unsafe fn click (&mut self, _event: &XButtonEvent) {}
 
@@ -91,6 +91,11 @@ unsafe fn draw_icon_and_text (string: &str, icon: Option<&'static mut Svg_Resour
   width
 }
 
+unsafe fn resize_and_render (window: Window, width: u32, height: u32, gap: u32) {
+  XResizeWindow (display, window, width + gap, height);
+  (*draw).render (window, 0, 0, width, height);
+}
+
 
 
 pub struct DateTime {
@@ -110,10 +115,12 @@ impl Widget for DateTime {
     self.window
   }
 
-  unsafe fn draw (&mut self, height: u32) -> u32 {
+  unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
     let now = chrono::Local::now ();
     let label = format! ("{}", now.format ((*config).bar_time_format.as_str ()));
-    draw_icon_and_text (&label, Some (&mut resources::calendar), height)
+    let width = draw_icon_and_text (&label, Some (&mut resources::calendar), height);
+    resize_and_render (self.window, width, height, gap);
+    width
   }
 }
 
@@ -138,7 +145,7 @@ impl Widget for Battery {
     self.window
   }
 
-  unsafe fn draw (&mut self, height: u32) -> u32 {
+  unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
     let power_supply = "BAT0";
     let mut capacity = std::fs::read_to_string (
       format! ("/sys/class/power_supply/{}/capacity", power_supply)
@@ -150,7 +157,9 @@ impl Widget for Battery {
     status.pop ();
     self.hover_text = format! ("{}, {}", power_supply, status);
     let label = format! ("{}%", capacity);
-    draw_icon_and_text (&label, Some (&mut resources::battery), height)
+    let width = draw_icon_and_text (&label, Some (&mut resources::battery), height);
+    resize_and_render (self.window, width, height, gap);
+    width
   }
 
   unsafe fn enter (&mut self) {
@@ -183,14 +192,16 @@ impl Widget for Volume {
     self.window
   }
 
-  unsafe fn draw (&mut self, height: u32) -> u32 {
+  unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
     if let Some ((is_muted, level)) = platform::get_volume_info () {
-      if is_muted {
+      let width = if is_muted {
         draw_icon_and_text ("muted", Some (&mut resources::volume_muted), height)
       } else {
         let label = format! ("{}%", level);
         draw_icon_and_text (&label, Some (&mut resources::volume), height)
-      }
+      };
+      resize_and_render (self.window, width, height, gap);
+      width
     } else {
       1
     }
@@ -218,8 +229,17 @@ pub struct Workspace_Widget {
 
 impl Workspace_Widget {
   pub fn new () -> Self {
+    let window = unsafe { create_window () };
+    unsafe { XResizeWindow (
+      display,
+      window,
+      // Note assumes this is never the rightmost widget, this way we don't
+      // need to resize on every update
+      bar.height * workspaces.len () as u32 + super::Bar::WIDGET_GAP as u32,
+      bar.height
+    )};
     Self {
-      window: unsafe { create_window () }
+      window
     }
   }
 }
@@ -229,7 +249,7 @@ impl Widget for Workspace_Widget {
     self.window
   }
 
-  unsafe fn draw (&mut self, height: u32) -> u32 {
+  unsafe fn update (&mut self, height: u32, _gap: u32) -> u32 {
     let width = height * workspaces.len () as u32;
     (*draw).fill_rect (0, 0, screen_size.w, height, (*config).colors.bar_background);
     for (idx, workspace) in workspaces.iter ().enumerate () {
