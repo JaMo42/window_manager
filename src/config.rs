@@ -136,6 +136,7 @@ pub struct Config {
   pub bar_font: String,
   pub bar_opacity: u8,
   pub bar_time_format: String,
+  pub bar_power_supply: String,
   pub bar_height: Height,
   pub title_font: String,
   pub title_height: Height,
@@ -161,6 +162,7 @@ impl Config {
       bar_font: "sans".to_string (),
       bar_opacity: 100,
       bar_time_format: "%a %b %e %H:%M %Y".to_string (),
+      bar_power_supply: "BAT0".to_string (),
       bar_height: Height::FontPlus (5),
       title_font: "sans".to_string (),
       title_height: Height::FontPlus (1),
@@ -259,6 +261,10 @@ impl Config {
         Bar_Time_Format (format) => {
           log::info! ("config: bar time format: '{}'", format);
           self.bar_time_format = format;
+        }
+        Bar_Power_Supply (power_supply) => {
+          log::info! ("config: bar power supply: {}", power_supply);
+          self.bar_power_supply = power_supply;
         }
         Bar_Height (height) => {
           log::info! ("config: bar height: {}", height);

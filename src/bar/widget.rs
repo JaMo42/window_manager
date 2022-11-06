@@ -150,10 +150,10 @@ pub struct Battery {
 }
 
 impl Battery {
-  const power_supply: &'static str = "BAT0";
-
   pub fn new () -> Option<Self> {
-    if std::fs::metadata (format! ("/sys/class/power_supply/{}", Self::power_supply)).is_ok () {
+    if std::fs::metadata (
+      format! ("/sys/class/power_supply/{}", unsafe {&*config}.bar_power_supply)
+    ).is_ok () {
       Some (Self {
         window: unsafe { create_window () },
         hover_text: String::new (),
@@ -173,17 +173,17 @@ impl Widget for Battery {
 
   unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
     let mut capacity = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/capacity", Self::power_supply)
+      format! ("/sys/class/power_supply/{}/capacity", (*config).bar_power_supply)
     ).expect("Could not read battery status");
     capacity.pop ();
     if capacity == self.last_capacity {
       return self.width;
     }
     let mut status = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/status", Self::power_supply)
+      format! ("/sys/class/power_supply/{}/status", (*config).bar_power_supply)
     ).expect("Could not read battery status");
     status.pop ();
-    self.hover_text = format! ("{}, {}", Self::power_supply, status);
+    self.hover_text = format! ("{}, {}", (*config).bar_power_supply, status);
     let label = format! ("{}%", capacity);
     let width = draw_icon_and_text (&label, Some (&mut resources::battery), height);
     resize_and_render (self.window, width, height, gap);

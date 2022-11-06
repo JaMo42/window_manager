@@ -102,6 +102,13 @@ bar_time_format <format>
 Set the format string for the time widget (man strftime).
 
 ```
+bar_power_supply <power supply>
+```
+Set the power supply to use for the battery widget. This should be the name of
+a folder in `/sys/class/power_supply`, if it does not exist the widget is disabled.
+The default value is `BAT0`.
+
+```
 bar_height <height>
 ```
 Set the height of the status bar; see [Height values](#height-values).
