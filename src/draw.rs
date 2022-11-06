@@ -11,6 +11,10 @@ pub mod resources {
   pub static mut close_button: Svg_Resource = Svg_Resource::new ("close_button.svg");
   pub static mut maximize_button: Svg_Resource = Svg_Resource::new ("maximize_button.svg");
   pub static mut minimize_button: Svg_Resource = Svg_Resource::new ("minimize_button.svg");
+  pub static mut calendar: Svg_Resource = Svg_Resource::new ("calendar.svg");
+  pub static mut volume: Svg_Resource = Svg_Resource::new ("volume.svg");
+  pub static mut volume_muted: Svg_Resource = Svg_Resource::new ("volume_muted.svg");
+  pub static mut battery: Svg_Resource = Svg_Resource::new ("battery.svg");
 }
 
 
@@ -225,6 +229,7 @@ impl<'a> Rendered_Text<'a> {
     self
   }
 
+  #[allow(dead_code)]
   pub fn at_right (&mut self, x: i32, y: i32) -> &mut Self {
     self.x = x - self.width;
     self.y = y;
@@ -428,6 +433,10 @@ pub unsafe fn load_resources () {
   load_svg (&mut resources::close_button);
   load_svg (&mut resources::maximize_button);
   load_svg (&mut resources::minimize_button);
+  load_svg (&mut resources::calendar);
+  load_svg (&mut resources::volume);
+  load_svg (&mut resources::volume_muted);
+  load_svg (&mut resources::battery);
 }
 
 

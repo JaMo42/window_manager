@@ -34,6 +34,7 @@ pub enum Net {
   WMWindowTypeDialog,
   WMWindowTypeDock,
   WMWindowTypeNotification,
+  WMWindowTypeTooltip,
   Last
 }
 
@@ -166,6 +167,7 @@ pub unsafe fn load_atoms () {
   N! (WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
   N! (WMWindowTypeDock, "_NET_WM_WINDOW_TYPE_DOCK");
   N! (WMWindowTypeNotification, "_NET_WM_WINDOW_TYPE_NOTIFICATION");
+  N! (WMWindowTypeTooltip, "_NET_WM_WINDOW_TYPE_TOOLTIP");
 
   xembed[XEmbed::XEmbed as usize] = XInternAtom (display, c_str! ("_XEMBED"), X_FALSE);
   xembed[XEmbed::Info as usize] = XInternAtom (display, c_str! ("_XEMBED_INFO"), X_FALSE);

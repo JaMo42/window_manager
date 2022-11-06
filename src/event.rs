@@ -27,12 +27,13 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   if is_kind (event.subwindow, Window_Kind::Meta_Or_Unmanaged) {
     return;
   }
-  if cfg! (feature = "bar") {
-    // Meta key is ignored when clicking on bar
-    if event.window == bar.window || event.subwindow == bar.window {
-      bar.button_press (event);
-      return;
-    }
+  if is_kind (event.window, Window_Kind::Status_Bar) {
+    bar.click (event.window, event);
+    return;
+  }
+  if is_kind (event.subwindow, Window_Kind::Status_Bar) {
+    bar.click (event.subwindow, event);
+    return;
   }
   if event.subwindow == X_NONE {
     if let Some (kind) = get_window_kind (event.window) {
@@ -548,6 +549,12 @@ pub unsafe fn crossing (event: &XCrossingEvent) {
           b.draw (event.type_ == EnterNotify);
         }
       }
+    }
+  } else if is_kind (event.window, Window_Kind::Status_Bar) {
+    if event.type_ == EnterNotify {
+      bar.enter (event.window);
+    } else {
+      bar.leave (event.window);
     }
   }
 }

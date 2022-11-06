@@ -1,6 +1,7 @@
 mod xembed;
 mod tray_client;
 pub mod tray_manager;
+mod widget;
 
 use x11::xlib::*;
 use std::ffi::CString;
@@ -9,10 +10,9 @@ use crate::core::*;
 use crate::set_window_kind;
 use crate::cursor;
 use crate::property;
-use crate::action::select_workspace;
-use crate::draw::Alignment;
-use crate::platform;
 use tray_manager::Tray_Manager;
+
+use self::widget::Widget;
 
 pub static mut tray: Tray_Manager = Tray_Manager::new ();
 
@@ -20,7 +20,12 @@ pub struct Bar {
   pub width: u32,
   pub height: u32,
   pub window: Window,
-  last_scroll_time: Time
+  last_scroll_time: Time,
+  left_widgets: Vec<Box<dyn Widget>>,
+  right_widgets: Vec<Box<dyn Widget>>,
+  // The widget under the mouse, gets set on enter/leave events we don't need
+  // to resolve it for clicks
+  mouse_widget: *mut dyn Widget
 }
 
 impl Bar {
@@ -29,7 +34,10 @@ impl Bar {
       width: 0,
       height: 0,
       window: X_NONE,
-      last_scroll_time: 0
+      last_scroll_time: 0,
+      left_widgets: Vec::new (),
+      right_widgets: Vec::new (),
+      mouse_widget: widget::null_ptr ()
     }
   }
 
@@ -37,7 +45,7 @@ impl Bar {
     let screen = XDefaultScreen (display);
     let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.override_redirect = X_TRUE;
-    attributes.background_pixmap = X_NONE;
+    attributes.background_pixel = (*config).colors.bar_background.pixel;
     attributes.event_mask = ButtonPressMask|ExposureMask;
     attributes.cursor = cursor::normal;
     let mut class_hint = XClassHint {
@@ -57,7 +65,7 @@ impl Bar {
       XDefaultDepth (display, screen),
       CopyFromParent as u32,
       XDefaultVisual(display, screen),
-      CWOverrideRedirect|CWBackPixmap|CWEventMask|CWCursor,
+      CWOverrideRedirect|CWBackPixel|CWEventMask|CWCursor,
       &mut attributes
     );
     XSetClassHint (display, window, &mut class_hint);
@@ -75,111 +83,91 @@ impl Bar {
       let value = 42949672u32 * (*config).bar_opacity as u32;
       set_cardinal! (window, atom, value);
     }
-    set_window_kind (window, Window_Kind::Status_Bar);
+    // We don't want to interact with the blank part, instead the widgets
+    // use `Window_Kind::Status_Bar`.
+    set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
     XMapRaised (display, window);
     Self {
       width,
       height,
       window,
-      last_scroll_time: 0
+      last_scroll_time: 0,
+      left_widgets: Vec::new (),
+      right_widgets: Vec::new (),
+      mouse_widget: widget::null_ptr ()
     }
   }
 
-  pub unsafe fn draw (&self) {
+  /// Adds widgets
+  pub unsafe fn build (&mut self) {
+    self.left_widgets.push (
+      Box::new (widget::Workspace_Widget::new ())
+    );
+    self.right_widgets.push (
+      Box::new (widget::DateTime::new ())
+    );
+    if let Some (_) = crate::platform::get_volume_info () {
+      // If this fails it's probably because `amixer` is not available
+      self.right_widgets.push (
+        Box::new (widget::Volume::new ())
+      );
+    }
+    // TODO: also detect if battery information is available
+    self.right_widgets.push (
+      Box::new (widget::Battery::new ())
+    );
+  }
+
+  pub unsafe fn draw (&mut self) {
+    const WIDGET_GAP: i32 = 10;
+    const RIGHT_GAP: u32 = 5;
     if !cfg! (feature="bar") { return; }
     (*draw).select_font((*config).bar_font.as_str ());
-    (*draw).fill_rect (0, 0, bar.width, bar.height, (*config).colors.bar_background);
-    // ==== LEFT ====
-    // Workspaces
-    for (idx, workspace) in workspaces.iter ().enumerate () {
-      /*(*draw).fill_rect (
-        (idx as u32 * self.height) as i32, 0,
-        self.height, self.height,
-        if workspace.has_urgent () {
-          (*config).colors.bar_urgent_workspace
-        } else if idx == active_workspace {
-          (*config).colors.bar_active_workspace
-        } else {
-          (*config).colors.bar_workspace
-        },
-      );*/
-      let color = if workspace.has_urgent () {
-        (*config).colors.bar_urgent_workspace
-      } else if idx == active_workspace {
-        (*config).colors.bar_active_workspace
+
+    // Left
+    let mut x;
+    x = 0;
+    for w in self.left_widgets.iter_mut () {
+      let width = w.draw (self.height);
+      w.resize (x, width + WIDGET_GAP as u32, self.height);
+      x += width as i32;
+      x += WIDGET_GAP;
+      (*draw).render (w.window (), 0, 0, width, self.height);
+    }
+    let mid_x = x;
+
+    // Right
+    x = (self.width - RIGHT_GAP) as i32;
+    let mut first = true;
+    for w in self.right_widgets.iter_mut () {
+      // TODO: `draw` should resize and render itself, this should only move.
+      //       `draw` should also be renamed to `update`.
+      let width = w.draw (self.height);
+      x -= width as i32;
+      if first {
+        w.resize (x, width + RIGHT_GAP, self.height);
+        (*draw).render (w.window (), 0, 0, width, self.height);
+        first = false;
       } else {
-        (*config).colors.bar_workspace
-      };
-      (*draw).square ((idx as u32 * self.height) as i32, 0, self.height)
-        .color (color)
-        .stroke (2, color.scale (0.8))
-        .draw ();
-      (*draw).text (format! ("{}", idx+1).as_str ())
-        .at ((idx as u32 * self.height) as i32, 0)
-        .align_horizontally (Alignment::Centered, self.height as i32)
-        .align_vertically (Alignment::Centered, self.height as i32)
-        .color (
-          if workspace.has_urgent () {
-            (*config).colors.bar_urgent_workspace_text
-          }
-          else if idx == active_workspace {
-            (*config).colors.bar_active_workspace_text
-          } else {
-            (*config).colors.bar_text
-          }
-        )
-        .draw ();
-    }
-    (*draw).text_color((*config).colors.bar_text);
-    // ==== RIGHT ====
-    // Time
-    let mut x = self.width as i32;
-    {
-      let now= chrono::Local::now ();
-      let time_text = format! ("{}", now.format ((*config).bar_time_format.as_str ()));
-      x = (*draw).text (time_text.as_str ())
-        .at_right (x - 10, 0)
-        .align_vertically (Alignment::Centered, self.height as i32)
-        .draw ()
-        .x;
-    }
-    // Volume
-    {
-      if let Some ((is_muted, level)) = platform::get_volume_info () {
-        let text = if is_muted {
-          "Volume: muted".to_owned ()
-        } else {
-          format! ("Volume: {}%", level)
-        };
-        x = (*draw).text (text.as_str ())
-          .at_right (x - 20, 0)
-          .align_vertically (Alignment::Centered, self.height as i32)
-          .draw ()
-          .x;
+        x -= WIDGET_GAP;
+        w.resize (x, width + WIDGET_GAP as u32, self.height);
+        (*draw).render (w.window (), 0, 0, width, self.height);
       }
     }
-    // Battery
-    {
-      let power_supply = "BAT0";
-      let mut capacity = std::fs::read_to_string (
-        format! ("/sys/class/power_supply/{}/capacity", power_supply)
-      ).expect("Could not read battery status");
-      capacity.pop ();
-      let mut status = std::fs::read_to_string (
-        format! ("/sys/class/power_supply/{}/status", power_supply)
-      ).expect("Could not read battery status");
-      status.pop ();
-      let battery_text = format! ("{}:{}%({})", power_supply, capacity, status);
-      (*draw).text (battery_text.as_str ())
-        .at_right (x - 20, 0)
-        .align_vertically (Alignment::Centered, self.height as i32)
-        .draw ();
-    }
+    let mid_width = (x - mid_x) as u32;
 
-    (*draw).render (bar.window, 0, 0, bar.width, bar.height);
+    XMoveResizeWindow (display, self.window, mid_x, 0, mid_width, self.height);
+    XClearWindow (display, self.window);
+    XSync (display, X_FALSE);
   }
 
-  pub unsafe fn button_press (&mut self, event: &XButtonEvent) {
+  pub unsafe fn resize (&mut self, width: u32) {
+    XResizeWindow (display, self.window, width, self.height);
+    self.width = width;
+    self.draw ();
+  }
+
+  pub unsafe fn click (&mut self, window: Window, event: &XButtonEvent) {
     // Limit scroll speed
     // We just do this for all button types as it doesn't matter for normal
     // button presses.
@@ -187,32 +175,45 @@ impl Bar {
       return;
     }
     self.last_scroll_time = event.time;
-    // Ignore clicks outside of workspace widget
-    if event.x < (self.height * workspaces.len () as u32) as i32 {
-      if event.button == Button1 || event.button == Button2 || event.button == Button3 {
-        // Left/Middle/Right click selects workspace under cursor
-        select_workspace (event.x as usize / self.height as usize, None);
-      }
-      else if event.button == Button5 {
-        // Scrolling up selects the next workspace
-        select_workspace ((active_workspace + 1) % workspaces.len (), None)
-      }
-      else if event.button == Button4 {
-        // Scrolling down selects the previous workspace
-        if active_workspace == 0 {
-          select_workspace (workspaces.len () - 1, None);
-        }
-        else {
-          select_workspace (active_workspace - 1, None);
-        }
+    if self.mouse_widget.is_null () {
+      log::debug! ("MOUSE WIDGET IS NULL");
+    } else if (*self.mouse_widget).window () != window {
+      log::debug! ("MOUSE WIDGET HAS DIFFERENT WINDOW");
+    }else {
+      (*self.mouse_widget).click (event);
+    }
+  }
+
+  pub unsafe fn enter (&mut self, window: Window) {
+    for w in self.left_widgets.iter_mut ().chain (self.right_widgets.iter_mut ()) {
+      if w.window () == window {
+        self.mouse_widget = w.as_mut ();
+        w.enter ();
+        return;
       }
     }
   }
 
-  pub unsafe fn resize (&mut self, width: u32) {
-    XResizeWindow (display, self.window, width, self.height);
-    self.width = width;
-    self.draw ();
+  pub unsafe fn leave (&mut self, window: Window) {
+    for w in self.left_widgets.iter_mut ().chain (self.right_widgets.iter_mut ()) {
+      if w.window () == window {
+        w.leave ();
+        self.mouse_widget = widget::null_ptr ();
+        return;
+      }
+    }
+  }
+}
+
+impl Drop for Bar {
+  fn drop (&mut self) {
+    // TODO: same issue as with tooltip, display should already be closed here
+    for w in self.left_widgets.iter () {
+      unsafe { XDestroyWindow (display, w.window ()); }
+    }
+    for w in self.right_widgets.iter () {
+      unsafe { XDestroyWindow (display, w.window ()); }
+    }
   }
 }
 

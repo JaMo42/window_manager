@@ -26,6 +26,7 @@ mod bar;
 mod buttons;
 mod notifications;
 mod platform;
+mod tooltip;
 
 use crate::core::*;
 use client::*;
@@ -216,6 +217,7 @@ unsafe fn init () {
   run_autostartrc ();
   if cfg! (feature = "bar") {
     bar = Bar::create ();
+    bar.build ();
     bar::tray = bar::tray_manager::Tray_Manager::create (bar.height);
   }
   client::set_border_info ();
