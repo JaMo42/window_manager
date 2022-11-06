@@ -30,6 +30,7 @@ impl Tooltip {
     let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.background_pixel = (*config).colors.bar_background.pixel;
     attributes.event_mask = NoEventMask;
+    attributes.override_redirect = X_TRUE;
     self.window = XCreateWindow (
       display, root,
       0, 0, 10, 10,
@@ -37,7 +38,7 @@ impl Tooltip {
       CopyFromParent,
       CopyFromParent as u32,
       CopyFromParent as *mut Visual,
-      CWBackPixel|CWEventMask,
+      CWBackPixel|CWEventMask|CWOverrideRedirect,
       &mut attributes
     );
     let window_type_dock = property::atom (Net::WMWindowTypeTooltip);
@@ -81,7 +82,7 @@ impl Tooltip {
     text.at (Self::BORDER as i32, Self::BORDER as i32)
       .color ((*config).colors.bar_text)
       .draw ();
-    XMapWindow (display, self.window);
+    XMapRaised (display, self.window);
     (*draw).render (self.window, 0, 0, width, height);
     self.active = true;
   }
