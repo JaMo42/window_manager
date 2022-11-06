@@ -161,6 +161,12 @@ impl Bar {
     XSync (display, X_FALSE);
   }
 
+  pub fn invalidate_widgets (&mut self) {
+    for w in self.left_widgets.iter_mut ().chain (self.right_widgets.iter_mut ()) {
+      w.invalidate ();
+    }
+  }
+
   pub unsafe fn resize (&mut self, width: u32) {
     XResizeWindow (display, self.window, width, self.height);
     self.width = width;

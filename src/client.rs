@@ -328,6 +328,7 @@ impl Client {
       XSetWMHints (display, self.window, hints);
       XFree (hints as *mut c_void);
     }
+    bar.invalidate_widgets ();
     bar.draw ();
   }
 

@@ -29,7 +29,7 @@ impl Tooltip {
   unsafe fn create (&mut self) {
     let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.background_pixel = (*config).colors.bar_background.pixel;
-    attributes.event_mask = ButtonPressMask | EnterWindowMask | LeaveWindowMask;
+    attributes.event_mask = NoEventMask;
     self.window = XCreateWindow (
       display, root,
       0, 0, 10, 10,

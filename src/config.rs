@@ -160,7 +160,7 @@ impl Config {
       colors: Color_Scheme::new_uninit (),
       bar_font: "sans".to_string (),
       bar_opacity: 100,
-      bar_time_format: "%a %b %e %T %Y".to_string (),
+      bar_time_format: "%a %b %e %H:%M %Y".to_string (),
       bar_height: Height::FontPlus (5),
       title_font: "sans".to_string (),
       title_height: Height::FontPlus (1),

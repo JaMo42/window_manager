@@ -12,6 +12,7 @@ unsafe fn create_window () -> Window {
   let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.background_pixel = (*config).colors.bar_background.pixel;
   attributes.event_mask = ButtonPressMask | EnterWindowMask | LeaveWindowMask;
+  attributes.backing_store = WhenMapped;
   let window = XCreateWindow (
     display, root,
     0, 0, 10, 10,
@@ -19,7 +20,7 @@ unsafe fn create_window () -> Window {
     CopyFromParent,
     CopyFromParent as u32,
     CopyFromParent as *mut Visual,
-    CWBackPixel|CWEventMask,
+    CWBackPixel|CWEventMask|CWBackingStore,
     &mut attributes
   );
     let window_type_dock = property::atom (property::Net::WMWindowTypeDock);
@@ -59,6 +60,8 @@ pub trait Widget {
   unsafe fn enter (&mut self) {}
 
   unsafe fn leave (&mut self) {}
+
+  fn invalidate (&mut self) {}
 }
 
 
@@ -99,13 +102,17 @@ unsafe fn resize_and_render (window: Window, width: u32, height: u32, gap: u32) 
 
 
 pub struct DateTime {
-  window: Window
+  window: Window,
+  last_label: String,
+  width: u32
 }
 
 impl DateTime {
   pub fn new () -> Self {
     Self {
-      window: unsafe { create_window () }
+      window: unsafe { create_window () },
+      last_label: String::new (),
+      width: 0
     }
   }
 }
@@ -118,9 +125,18 @@ impl Widget for DateTime {
   unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
     let now = chrono::Local::now ();
     let label = format! ("{}", now.format ((*config).bar_time_format.as_str ()));
+    if label == self.last_label {
+      return self.width;
+    }
     let width = draw_icon_and_text (&label, Some (&mut resources::calendar), height);
     resize_and_render (self.window, width, height, gap);
+    self.last_label = label;
+    self.width = width;
     width
+  }
+
+  fn invalidate (&mut self) {
+    self.last_label.clear ()
   }
 }
 
@@ -128,14 +144,18 @@ impl Widget for DateTime {
 
 pub struct Battery {
   window: Window,
-  hover_text: String
+  hover_text: String,
+  last_capacity: String,
+  width: u32
 }
 
 impl Battery {
   pub fn new () -> Self {
     Self {
       window: unsafe { create_window () },
-      hover_text: String::new ()
+      hover_text: String::new (),
+      last_capacity: String::new (),
+      width: 0
     }
   }
 }
@@ -151,6 +171,9 @@ impl Widget for Battery {
       format! ("/sys/class/power_supply/{}/capacity", power_supply)
     ).expect("Could not read battery status");
     capacity.pop ();
+    if capacity == self.last_capacity {
+      return self.width;
+    }
     let mut status = std::fs::read_to_string (
       format! ("/sys/class/power_supply/{}/status", power_supply)
     ).expect("Could not read battery status");
@@ -159,6 +182,8 @@ impl Widget for Battery {
     let label = format! ("{}%", capacity);
     let width = draw_icon_and_text (&label, Some (&mut resources::battery), height);
     resize_and_render (self.window, width, height, gap);
+    self.last_capacity = capacity;
+    self.width = width;
     width
   }
 
@@ -171,18 +196,29 @@ impl Widget for Battery {
   unsafe fn leave (&mut self) {
     tooltip.close ();
   }
+
+  fn invalidate (&mut self) {
+    self.last_capacity.clear ()
+  }
 }
 
 
 
 pub struct Volume {
-  window: Window
+  window: Window,
+  last_level: u32,
+  // This is a bool but we need a 3rd state for the initial value
+  last_mute_state: u8,
+  width: u32
 }
 
 impl Volume {
   pub fn new () -> Self {
     Self {
-      window: unsafe { create_window () }
+      window: unsafe { create_window () },
+      last_level: 101,
+      last_mute_state: 2,
+      width: 0
     }
   }
 }
@@ -194,6 +230,9 @@ impl Widget for Volume {
 
   unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
     if let Some ((is_muted, level)) = platform::get_volume_info () {
+      if level == self.last_level && is_muted as u8 == self.last_mute_state {
+        return self.width;
+      }
       let width = if is_muted {
         draw_icon_and_text ("muted", Some (&mut resources::volume_muted), height)
       } else {
@@ -201,6 +240,9 @@ impl Widget for Volume {
         draw_icon_and_text (&label, Some (&mut resources::volume), height)
       };
       resize_and_render (self.window, width, height, gap);
+      self.last_level = level;
+      self.last_mute_state = is_muted as u8;
+      self.width = width;
       width
     } else {
       1
@@ -219,12 +261,18 @@ impl Widget for Volume {
       decrease_volume ();
     }
   }
+
+  fn invalidate (&mut self) {
+    self.last_level = 101;
+    self.last_mute_state = 2;
+  }
 }
 
 
 
 pub struct Workspace_Widget {
-  window: Window
+  window: Window,
+  last_workspace: usize
 }
 
 impl Workspace_Widget {
@@ -239,7 +287,8 @@ impl Workspace_Widget {
       bar.height
     )};
     Self {
-      window
+      window,
+      last_workspace: unsafe { workspaces.len () }
     }
   }
 }
@@ -251,6 +300,10 @@ impl Widget for Workspace_Widget {
 
   unsafe fn update (&mut self, height: u32, _gap: u32) -> u32 {
     let width = height * workspaces.len () as u32;
+    if active_workspace == self.last_workspace {
+      return width;
+    }
+    self.last_workspace = active_workspace;
     (*draw).fill_rect (0, 0, screen_size.w, height, (*config).colors.bar_background);
     for (idx, workspace) in workspaces.iter ().enumerate () {
       let color = if workspace.has_urgent () {
@@ -303,6 +356,10 @@ impl Widget for Workspace_Widget {
         select_workspace (active_workspace - 1, None);
       }
     }
+  }
+
+  fn invalidate (&mut self) {
+    self.last_workspace = unsafe { workspaces.len () };
   }
 }
 
