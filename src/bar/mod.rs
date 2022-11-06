@@ -105,22 +105,19 @@ impl Bar {
 
   /// Adds widgets
   pub unsafe fn build (&mut self) {
-    self.left_widgets.push (
-      Box::new (widget::Workspace_Widget::new ())
-    );
-    self.right_widgets.push (
-      Box::new (widget::DateTime::new ())
-    );
-    if let Some (_) = crate::platform::get_volume_info () {
-      // If this fails it's probably because `amixer` is not available
-      self.right_widgets.push (
-        Box::new (widget::Volume::new ())
-      );
+    macro_rules! push {
+      ($target:expr, $widget:ident) => {
+        if let Some (w) = widget::$widget::new () {
+          $target.push (Box::new (w));
+        } else {
+          log::warn! ("Could not create widget: {}", stringify! ($widget));
+        }
+      }
     }
-    // TODO: also detect if battery information is available
-    self.right_widgets.push (
-      Box::new (widget::Battery::new ())
-    );
+    push! (self.left_widgets, Workspaces);
+    push! (self.right_widgets, DateTime);
+    push! (self.right_widgets, Volume);
+    push! (self.right_widgets, Battery);
   }
 
   pub unsafe fn draw (&mut self) {

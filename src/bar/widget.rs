@@ -108,12 +108,12 @@ pub struct DateTime {
 }
 
 impl DateTime {
-  pub fn new () -> Self {
-    Self {
+  pub fn new () -> Option<Self> {
+   Some (Self {
       window: unsafe { create_window () },
       last_label: String::new (),
       width: 0
-    }
+    })
   }
 }
 
@@ -150,12 +150,18 @@ pub struct Battery {
 }
 
 impl Battery {
-  pub fn new () -> Self {
-    Self {
-      window: unsafe { create_window () },
-      hover_text: String::new (),
-      last_capacity: String::new (),
-      width: 0
+  const power_supply: &'static str = "BAT0";
+
+  pub fn new () -> Option<Self> {
+    if std::fs::metadata (format! ("/sys/class/power_supply/{}", Self::power_supply)).is_ok () {
+      Some (Self {
+        window: unsafe { create_window () },
+        hover_text: String::new (),
+        last_capacity: String::new (),
+        width: 0
+      })
+    } else {
+      None
     }
   }
 }
@@ -166,19 +172,18 @@ impl Widget for Battery {
   }
 
   unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
-    let power_supply = "BAT0";
     let mut capacity = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/capacity", power_supply)
+      format! ("/sys/class/power_supply/{}/capacity", Self::power_supply)
     ).expect("Could not read battery status");
     capacity.pop ();
     if capacity == self.last_capacity {
       return self.width;
     }
     let mut status = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/status", power_supply)
+      format! ("/sys/class/power_supply/{}/status", Self::power_supply)
     ).expect("Could not read battery status");
     status.pop ();
-    self.hover_text = format! ("{}, {}", power_supply, status);
+    self.hover_text = format! ("{}, {}", Self::power_supply, status);
     let label = format! ("{}%", capacity);
     let width = draw_icon_and_text (&label, Some (&mut resources::battery), height);
     resize_and_render (self.window, width, height, gap);
@@ -207,18 +212,22 @@ impl Widget for Battery {
 pub struct Volume {
   window: Window,
   last_level: u32,
-  // This is a bool but we need a 3rd state for the initial value
+  // This is a bool but we need a 3rd state for the initial/invalidated value
   last_mute_state: u8,
   width: u32
 }
 
 impl Volume {
-  pub fn new () -> Self {
-    Self {
-      window: unsafe { create_window () },
-      last_level: 101,
-      last_mute_state: 2,
-      width: 0
+  pub fn new () -> Option<Self> {
+    if let Some (_) = crate::platform::get_volume_info () {
+      Some (Self {
+        window: unsafe { create_window () },
+        last_level: 101,
+        last_mute_state: 2,
+        width: 0
+      })
+    } else {
+      None
     }
   }
 }
@@ -270,13 +279,13 @@ impl Widget for Volume {
 
 
 
-pub struct Workspace_Widget {
+pub struct Workspaces {
   window: Window,
   last_workspace: usize
 }
 
-impl Workspace_Widget {
-  pub fn new () -> Self {
+impl Workspaces {
+  pub fn new () -> Option<Self> {
     let window = unsafe { create_window () };
     unsafe { XResizeWindow (
       display,
@@ -286,14 +295,14 @@ impl Workspace_Widget {
       bar.height * workspaces.len () as u32 + super::Bar::WIDGET_GAP as u32,
       bar.height
     )};
-    Self {
+    Some (Self {
       window,
       last_workspace: unsafe { workspaces.len () }
-    }
+    })
   }
 }
 
-impl Widget for Workspace_Widget {
+impl Widget for Workspaces {
   fn window (&self) -> Window {
     self.window
   }
@@ -365,5 +374,5 @@ impl Widget for Workspace_Widget {
 
 pub const fn null_ptr () -> *mut dyn Widget {
   // The actual type doesn't matter here, just need to have one
-  std::ptr::null_mut::<Workspace_Widget> ()
+  std::ptr::null_mut::<Workspaces> ()
 }
