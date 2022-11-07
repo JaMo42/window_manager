@@ -221,7 +221,7 @@ impl Widget for Battery {
   unsafe fn enter (&mut self) {
     // not optimal since this contains the gap on one side
     let g = get_window_geometry (self.window);
-    tooltip.show (&self.hover_text, g.x - g.w as i32 / 2, g.h as i32);
+    tooltip.show (&self.hover_text, g.x + g.w as i32 / 2, g.h as i32);
   }
 
   unsafe fn leave (&mut self) {

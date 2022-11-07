@@ -54,7 +54,7 @@ impl Tooltip {
   }
 
   unsafe fn move_and_resize (&mut self, x: i32, y: i32, w: u32, h: u32) {
-    self.geometry = Geometry::from_parts (x, y, w, h);
+    self.geometry = Geometry::from_parts (x - w as i32 / 2, y, w, h);
     self.geometry.clamp (&screen_size);
     XMoveResizeWindow (
       display, self.window,
