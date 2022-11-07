@@ -5,7 +5,7 @@ use futures::executor;
 use x11::xlib::*;
 use super::core::*;
 use super::set_window_kind;
-use super::property::{self, Net};
+use super::property::Net;
 
 /// The notification expired
 const CLOSE_REASON_EXPIRED: u32 = 1;

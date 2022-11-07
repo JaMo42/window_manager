@@ -5,9 +5,8 @@ mod widget;
 
 use x11::xlib::*;
 use std::ffi::CString;
-use libc::{c_char, c_uchar, c_uint};
 use crate::core::*;
-use crate::set_window_kind;
+use crate::{set_window_kind, set_window_opacity};
 use crate::cursor;
 use crate::property;
 use tray_manager::Tray_Manager;
@@ -54,8 +53,8 @@ impl Bar {
     attributes.event_mask = ButtonPressMask|ExposureMask;
     attributes.cursor = cursor::normal;
     let mut class_hint = XClassHint {
-      res_name: c_str! ("window_manager_bar") as *mut c_char,
-      res_class: c_str! ("window_manager_bar") as *mut c_char
+      res_name: c_str! ("window_manager_bar") as *mut libc::c_char,
+      res_class: c_str! ("window_manager_bar") as *mut libc::c_char
     };
     let width = screen_size.w as u32;
     let height = (*config).bar_height.get (Some (&(*config).bar_font));
@@ -83,11 +82,7 @@ impl Bar {
       &window_type_dock,
       1
     );
-    if (*config).bar_opacity != 100 {
-      let atom = XInternAtom (display, c_str! ("_NET_WM_WINDOW_OPACITY"), X_FALSE);
-      let value = 42949672u32 * (*config).bar_opacity as u32;
-      set_cardinal! (window, atom, value);
-    }
+    set_window_opacity (window, (*config).bar_opacity);
     // We don't want to interact with the blank part, instead the widgets
     // use `Window_Kind::Status_Bar`.
     set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
@@ -181,7 +176,7 @@ impl Bar {
       log::debug! ("MOUSE WIDGET IS NULL");
     } else if (*self.mouse_widget).window () != window {
       log::debug! ("MOUSE WIDGET HAS DIFFERENT WINDOW");
-    }else {
+    } else {
       (*self.mouse_widget).click (event);
     }
   }
@@ -196,14 +191,9 @@ impl Bar {
     }
   }
 
-  pub unsafe fn leave (&mut self, window: Window) {
-    for w in self.left_widgets.iter_mut ().chain (self.right_widgets.iter_mut ()) {
-      if w.window () == window {
-        w.leave ();
-        self.mouse_widget = widget::null_ptr ();
-        return;
-      }
-    }
+  pub unsafe fn leave (&mut self, _window: Window) {
+    (*self.mouse_widget).leave ();
+    self.mouse_widget = widget::null_ptr ();
   }
 }
 

@@ -29,6 +29,7 @@ pub enum Net {
   WMStateDemandsAttention,
   WMStateFullscreen,
   WMUserTime,
+  WMWindowOpacity,
   WMWindowType,
   WMWindowTypeDesktop,
   WMWindowTypeDialog,
@@ -163,6 +164,7 @@ pub unsafe fn load_atoms () {
   N! (WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
   N! (WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
   N! (WMUserTime, "_NET_WM_USER_TIME");
+  N! (WMWindowOpacity, "_NET_WM_WINDOW_OPACITY");
   N! (WMWindowType, "_NET_WM_WINDOW_TYPE");
   N! (WMWindowTypeDesktop, "_NET_WM_WINDOW_TYPE_DESKTOP");
   N! (WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");

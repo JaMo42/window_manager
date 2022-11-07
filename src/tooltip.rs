@@ -2,7 +2,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::set_window_kind;
 use super::geometry::Geometry;
-use super::property::{self, Net};
+use super::property::Net;
 
 pub struct Tooltip {
   window: Window,
