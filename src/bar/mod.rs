@@ -9,6 +9,7 @@ use crate::core::*;
 use crate::{set_window_kind, set_window_opacity};
 use crate::cursor;
 use crate::property;
+use crate::ewmh;
 use tray_manager::Tray_Manager;
 
 use self::widget::Widget;
@@ -73,15 +74,7 @@ impl Bar {
       &mut attributes
     );
     XSetClassHint (display, window, &mut class_hint);
-    let window_type_dock = property::atom (property::Net::WMWindowTypeDock);
-    property::set (
-      window,
-      property::Net::WMWindowType,
-      XA_ATOM,
-      32,
-      &window_type_dock,
-      1
-    );
+    ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
     set_window_opacity (window, (*config).bar_opacity);
     // We don't want to interact with the blank part, instead the widgets
     // use `Window_Kind::Status_Bar`.

@@ -3,6 +3,7 @@ use super::core::*;
 use super::set_window_kind;
 use super::geometry::Geometry;
 use super::property::Net;
+use super::ewmh;
 
 pub struct Tooltip {
   window: Window,
@@ -41,15 +42,7 @@ impl Tooltip {
       CWBackPixel|CWEventMask|CWOverrideRedirect,
       &mut attributes
     );
-    let window_type_dock = property::atom (Net::WMWindowTypeTooltip);
-    property::set (
-      self.window,
-      property::Net::WMWindowType,
-      XA_ATOM,
-      32,
-      &window_type_dock,
-      1
-    );
+    ewmh::set_window_type (self.window, Net::WMWindowTypeTooltip);
     set_window_kind (self.window, Window_Kind::Meta_Or_Unmanaged);
   }
 

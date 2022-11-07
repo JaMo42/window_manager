@@ -5,6 +5,7 @@ use crate::action::{move_snap_flags, snap_geometry};
 use crate::core::*;
 use crate::property;
 use crate::client::{Client, Client_Geometry, frame_offset};
+use crate::ewmh;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Geometry {
@@ -148,15 +149,7 @@ impl Preview {
       CWEventMask|CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap,
       &mut attributes
     );
-    let window_type_desktop = property::atom (property::Net::WMWindowTypeDesktop);
-    property::set (
-      window,
-      property::Net::WMWindowType,
-      XA_ATOM,
-      32,
-      &window_type_desktop,
-      1
-    );
+    ewmh::set_window_type (window, property::Net::WMWindowTypeDesktop);
     XClearWindow (display, window);
     XMapWindow (display, window);
     Preview {

@@ -27,6 +27,7 @@ mod buttons;
 mod notifications;
 mod platform;
 mod tooltip;
+mod ewmh;
 
 use crate::core::*;
 use client::*;

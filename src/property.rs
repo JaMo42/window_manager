@@ -42,6 +42,7 @@ pub enum Net {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub enum WM {
+  ChangeState,
   Class,
   DeleteWindow,
   Protocols,
@@ -144,6 +145,7 @@ pub unsafe fn load_atoms () {
     }
   }
 
+  W! (ChangeState, "WM_CHANGE_STATE");
   W! (Class, "WM_CLASS");
   W! (DeleteWindow, "WM_DELETE_WINDOW");
   W! (DeleteWindow, "WM_DELETE_WINDOW");

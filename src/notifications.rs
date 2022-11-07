@@ -6,6 +6,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::set_window_kind;
 use super::property::Net;
+use super::ewmh;
 
 /// The notification expired
 const CLOSE_REASON_EXPIRED: u32 = 1;
@@ -54,14 +55,7 @@ impl Notification {
       )
     };
     unsafe {
-      property::set (
-        window,
-        Net::WMWindowType,
-        XA_ATOM,
-        32,
-        &property::atom (Net::WMWindowTypeNotification),
-        1
-      );
+      ewmh::set_window_type (window, Net::WMWindowTypeNotification);
       set_window_kind (window, Window_Kind::Notification);
     }
     let mut this = Self {

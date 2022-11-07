@@ -1,13 +1,12 @@
-use libc::{c_uchar, c_uint};
-use std::ffi::CString;
 use x11::xlib::*;
 use crate::core::*;
-use crate::{get_window_geometry, set_window_kind};
+use crate::{get_window_geometry, set_window_kind, set_window_opacity};
 use crate::property;
 use crate::draw::{Alignment, Svg_Resource, resources};
 use crate::color::Color;
 use crate::platform;
 use crate::tooltip::tooltip;
+use crate::ewmh;
 
 unsafe fn create_window () -> Window {
   let mut attributes: XSetWindowAttributes = uninitialized! ();
@@ -24,20 +23,8 @@ unsafe fn create_window () -> Window {
     CWBackPixel|CWEventMask|CWBackingStore,
     &mut attributes
   );
-    let window_type_dock = property::atom (property::Net::WMWindowTypeDock);
-    property::set (
-      window,
-      property::Net::WMWindowType,
-      XA_ATOM,
-      32,
-      &window_type_dock,
-      1
-    );
-    if (*config).bar_opacity != 100 {
-      let atom = XInternAtom (display, c_str! ("_NET_WM_WINDOW_OPACITY"), X_FALSE);
-      let value = 42949672u32 * (*config).bar_opacity as u32;
-      set_cardinal! (window, atom, value);
-    }
+  ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
+  set_window_opacity (window, (*config).bar_opacity);
   set_window_kind (window, Window_Kind::Status_Bar);
   XMapWindow (display, window);
   window
