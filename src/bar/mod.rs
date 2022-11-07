@@ -125,8 +125,7 @@ impl Bar {
     (*draw).select_font((*config).bar_font.as_str ());
 
     // Left
-    let mut x;
-    x = 0;
+    let mut x = 0;
     for w in self.left_widgets.iter_mut () {
       let width = w.update (self.height, Self::WIDGET_GAP as u32);
       XMoveWindow (display, w.window (), x, 0);

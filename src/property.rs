@@ -50,6 +50,7 @@ pub enum WM {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
+#[allow(clippy::enum_variant_names)]
 pub enum XEmbed {
   XEmbed,
   Info,
@@ -309,7 +310,7 @@ pub unsafe fn get_data_for_scalar<T, P: Into_Atom> (
 ) -> Option<Property_Data> {
   let long_length = std::mem::size_of::<T> () / 4;
   let long_offset = (offset * std::mem::size_of::<T> ()) / 4;
-  return get (window, property, long_offset, long_length, type_);
+  get (window, property, long_offset, long_length, type_)
 }
 
 pub unsafe fn get_data_for_array<T, P: Into_Atom> (
@@ -317,7 +318,7 @@ pub unsafe fn get_data_for_array<T, P: Into_Atom> (
 ) -> Option<Property_Data> {
   let long_length = (length * std::mem::size_of::<T> ()) / 4;
   let long_offset = (offset * std::mem::size_of::<T> ()) / 4;
-  return get (window, property, long_offset, long_length, type_);
+  get (window, property, long_offset, long_length, type_)
 }
 
 pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<String> {

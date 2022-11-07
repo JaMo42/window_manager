@@ -274,6 +274,7 @@ impl Server {
   }
 
   /// `org.freedesktop.Notifications.Notify`
+  #[allow(clippy::too_many_arguments)]
   async fn notify (
     &mut self,
     _app_name: &str,

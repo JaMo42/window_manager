@@ -92,7 +92,7 @@ unsafe fn draw_icon_and_text (
     return width;
   }
   // Font is selected by bar
-  width += (*draw).text (&string)
+  width += (*draw).text (string)
     .at (width as i32, 0)
     .align_vertically (Alignment::Centered, height as i32)
     .color (color)
@@ -178,16 +178,14 @@ impl Battery {
     let c = (*config).colors.bar_text;
     if status == "Charging" || status == "Not charging" {
       (&mut resources::battery_charging, c)
+    } else if capacity >= 90 {
+      (&mut resources::battery_full, c)
+    } else if capacity < 10 {
+      (&mut resources::battery_critical, (*config).colors.urgent)
     } else {
-      if capacity >= 90 {
-        (&mut resources::battery_full, c)
-      } else if capacity < 10 {
-        (&mut resources::battery_critical, (*config).colors.urgent)
-      } else {
-        let percent = (capacity - 10) as f64 / 80.0;
-        let idx = (percent * (resources::battery_bars.len ()) as f64) as usize;
-        (&mut resources::battery_bars[idx], c)
-      }
+      let percent = (capacity - 10) as f64 / 80.0;
+      let idx = (percent * (resources::battery_bars.len ()) as f64) as usize;
+      (&mut resources::battery_bars[idx], c)
     }
   }
 }
@@ -247,7 +245,7 @@ pub struct Volume {
 
 impl Volume {
   pub fn new () -> Option<Self> {
-    if let Some (_) = crate::platform::get_volume_info () {
+    if crate::platform::get_volume_info ().is_some () {
       Some (Self {
         window: unsafe { create_window () },
         last_level: 101,

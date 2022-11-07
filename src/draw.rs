@@ -303,6 +303,7 @@ pub struct Shape_Builder<'a> {
   shape: Shape,
   bounding_box: Geometry,
   stroke: Option<(u32, Color)>,
+  #[allow(clippy::type_complexity)]
   gradient: Option<((f64, f64), Color, (f64, f64), Color)>,
   color: Option<Color>,
   // percentage of the bounding boxes smaller side to use as corner radius

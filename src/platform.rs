@@ -24,10 +24,10 @@ pub fn get_volume_info () -> Option<(bool, u32)> {
       .output () {
     Ok (raw_output) => {
       let output = String::from_utf8 (raw_output.stdout).unwrap ();
-      // <level>%] [<on.off>]
-      let info = &output[output.find ("[").unwrap () + 1 ..];
+      // <level>%] [<on/off>]
+      let info = &output[output.find ('[').unwrap () + 1 ..];
       let level = info.split ('%').next ().unwrap ().parse ().unwrap ();
-      let muted = info.split ('[').skip (1).next ().unwrap ().starts_with ("off]");
+      let muted = info.split ('[').nth (1).unwrap ().starts_with ("off]");
       Some ((muted, level))
     }
     Err (err) => {
@@ -44,19 +44,17 @@ pub fn get_volume_info () -> Option<(bool, u32)> {
 /// been muted or unmuted.
 fn notify_volume (mute_notification: bool) {
   if let Some ((is_muted, level)) = get_volume_info () {
-    let summary;
-    if mute_notification {
-      summary = if is_muted {"Volume muted"} else {"Volume unmuted"};
+    let summary = if mute_notification {
+      if is_muted {"Volume muted"} else {"Volume unmuted"}
     } else {
-      summary = "Volume level changed";
-    }
-    let body;
-    if !mute_notification || !is_muted {
-      body = format! ("volume level is {}%", level);
+      "Volume level changed"
+    };
+    let body = if !mute_notification || !is_muted {
+      format! ("volume level is {}%", level)
     } else {
-      body = String::new ();
-    }
-    notifications::notify (&summary, &body, 2000);
+      String::new ()
+    };
+    notifications::notify (summary, &body, 2000);
   } else {
     log::error! ("Failed to get volume information");
   }

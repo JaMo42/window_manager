@@ -243,7 +243,7 @@ impl Tray_Manager {
 
   /// Sorts clients alphabetically by their class
   unsafe fn sort_clients (&mut self) {
-    self.clients.sort_by (|a, b| a.class ().cmp (&b.class ()));
+    self.clients.sort_by_key (|c| c.class ());
   }
 
   /// Handles a docking request
@@ -254,7 +254,7 @@ impl Tray_Manager {
     let client = self.clients.last_mut ().unwrap ();
 
     client.query_xembed_info ();
-    let should_map = client.xembed_info ().is_mapped ();
+    //let should_map = client.xembed_info ().is_mapped ();
 
     log::trace! ("tray: update client attributes");
     let mut attributes: XSetWindowAttributes = uninitialized! ();
@@ -273,7 +273,9 @@ impl Tray_Manager {
 
     self.sort_clients ();
 
-    if should_map || true {
+    // TODO: some clients are never mapped for some reason (observed with `nm-tray`)
+    //if should_map {
+    if true {
       log::trace! ("tray: map client");
       XMapWindow (display, window);
       self.update_mapped_count ();
@@ -298,13 +300,8 @@ impl Tray_Manager {
     let opcode = event.data.get_long (1) as u32;
     const OPCODE_NAMES: [&str; 3] = ["REQUEST_DOCK", "BEGIN_MESSAGE", "CANCEL_MESSAGE"];
     log::debug! ("  Opcode: {} ({})", opcode, OPCODE_NAMES[opcode as usize]);
-    match opcode {
-      OPCODE_REQUEST_DOCK => {
-        let window = event.data.get_long (2) as Window;
-        log::debug! ("    Icon window: {}", window);
-        self.dock (window);
-      }
-      _ => {}
+    if opcode == OPCODE_REQUEST_DOCK {
+      self.dock (event.data.get_long (2) as Window);
     }
   }
 

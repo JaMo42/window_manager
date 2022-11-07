@@ -156,7 +156,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
 
   fn parse_height (&mut self) -> Height {
     let thing = self.next_thing ();
-    let is_plus = thing.starts_with ("+");
+    let is_plus = thing.starts_with ('+');
     let num_str = if is_plus {
       let mut it = thing.chars ();
       it.next ();

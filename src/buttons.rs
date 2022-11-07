@@ -68,12 +68,10 @@ impl Button {
   pub unsafe fn draw (&mut self, hovered: bool) {
     let color = if (*config).circle_buttons {
       self.hovered_color.scale (0.3)
+    } else if hovered {
+      self.hovered_color
     } else {
-      if hovered {
-        self.hovered_color
-      } else {
-        self.base_color
-      }
+      self.base_color
     };
 
     // Redraw window border below button (?)
