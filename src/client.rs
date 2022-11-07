@@ -288,10 +288,12 @@ impl Client {
     if self.is_urgent {
       self.set_urgency (false);
     }
+    if self.is_minimized {
+      self.map ();
+    }
     if self.is_fullscreen {
       XRaiseWindow (display, self.window);
-    }
-    else {
+    } else {
       self.set_border (&(*config).colors.focused);
       XRaiseWindow (display, self.frame);
     }

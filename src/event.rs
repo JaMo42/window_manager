@@ -7,7 +7,7 @@ use super::*;
 pub const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
 
 
-unsafe fn win2client (window: Window) -> Option<&'static mut Client> {
+pub unsafe fn win2client (window: Window) -> Option<&'static mut Client> {
   let mut data: XPointer = std::ptr::null_mut ();
   if window == X_NONE || window == root
     || XFindContext (display, window, wm_context, &mut data) != 0 {

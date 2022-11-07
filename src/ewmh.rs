@@ -1,8 +1,10 @@
+use libc::c_long;
 use x11::xlib::*;
 use super::core::*;
-use super::property::{self, Net, atom};
+use super::property::{self, Net, WM, atom};
 use super::client::Client;
 use super::action;
+use super::event::win2client;
 
 pub unsafe fn set_window_type (window: Window, type_: Net) {
   property::set (
@@ -13,6 +15,20 @@ pub unsafe fn set_window_type (window: Window, type_: Net) {
     &property::atom (type_),
     1
   );
+}
+
+unsafe fn wm_change_state (window: Window, state: c_long) {
+  const NormalState: c_long = 1;
+  const IconicState: c_long = 3;
+  if let Some (client) = win2client (window) {
+    if state == NormalState {
+      if workspaces[active_workspace].contains (window) {
+        workspaces[active_workspace].focus (window);
+      }
+    } else if state == IconicState {
+      action::minimize (client);
+    }
+  }
 }
 
 /// Maybe handles a client message to a client window, returns whether the
@@ -53,10 +69,12 @@ pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) 
     }
     if workspaces[active_workspace].contains (client.window) {
       workspaces[active_workspace].focus (client.window);
-    }
-    else {
+    } else {
       client.set_urgency (true);
     }
+  }
+  else if event.message_type == atom (WM::ChangeState) {
+    wm_change_state (event.window, event.data.get_long (0));
   }
   false
 }
@@ -66,10 +84,6 @@ pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) 
 pub unsafe fn root_message (event: &XClientMessageEvent) -> bool {
   if event.message_type == atom (Net::CurrentDesktop) {
     action::select_workspace (event.data.get_long (0) as usize, None);
-  }
-  else if event.message_type == atom (Net::ActiveWindow) {
-    log::debug! ("_NET_CURRENT_DESKTOP message to root");
-    return false;
   }
   false
 }
