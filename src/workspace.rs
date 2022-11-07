@@ -82,9 +82,7 @@ impl Workspace {
   pub unsafe fn switch_window (&mut self) {
     if self.clients.len () <= 1 {
       if self.clients.len () == 1 && self.clients[0].is_minimized {
-        self.clients[0].is_minimized = false;
-        self.clients[0].map ();
-        self.clients[0].set_border (&(*config).colors.focused);
+        self.clients[0].focus ();
       }
       return;
     }
@@ -142,7 +140,6 @@ impl Workspace {
     XUngrabKeyboard (display, CurrentTime);
     XDestroyWindow (display, w);
     // Focus the resulting window
-    self.clients[switch_idx].is_minimized = false;
     self.focus_client (switch_idx);
     // Re-grab main input
     super::grab_keys ();

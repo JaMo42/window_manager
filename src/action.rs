@@ -73,6 +73,12 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
     return;
   }
   client.snap_state = flags;
+  if flags == SNAP_MAXIMIZED {
+    ewmh::set_net_wm_state (client, &[
+      property::atom (Net::WMStateMaximizedHorz),
+      property::atom (Net::WMStateMaximizedVert)
+    ]);
+  }
   client.move_and_resize (Client_Geometry::Snap (snap_geometry (flags)));
 }
 
@@ -119,6 +125,7 @@ pub unsafe fn minimize (client: &mut Client) {
   }
   client.is_minimized = true;
   client.unmap ();
+  ewmh::set_net_wm_state (client, &[property::atom (Net::WMStateHidden)]);
   if let Some (f) = focused_client! () {
     workspaces[active_workspace].focus (f.window);
   } else {

@@ -28,6 +28,9 @@ pub enum Net {
   WMState,
   WMStateDemandsAttention,
   WMStateFullscreen,
+  WMStateHidden,
+  WMStateMaximizedHorz,
+  WMStateMaximizedVert,
   WMUserTime,
   WMWindowOpacity,
   WMWindowType,
@@ -165,6 +168,9 @@ pub unsafe fn load_atoms () {
   N! (WMState, "_NET_WM_STATE");
   N! (WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");
   N! (WMStateFullscreen, "_NET_WM_STATE_FULLSCREEN");
+  N! (WMStateHidden, "_NET_WM_STATE_HIDDEN");
+  N! (WMStateMaximizedHorz, "_NET_WM_STATE_MAXIMIZED_HORZ");
+  N! (WMStateMaximizedVert, "_NET_WM_STATE_MAXIMIZED_VERT");
   N! (WMUserTime, "_NET_WM_USER_TIME");
   N! (WMWindowOpacity, "_NET_WM_WINDOW_OPACITY");
   N! (WMWindowType, "_NET_WM_WINDOW_TYPE");

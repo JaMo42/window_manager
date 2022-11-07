@@ -280,8 +280,11 @@ impl Client {
   }
 
   pub unsafe fn unsnap (&mut self) {
-    self.snap_state = SNAP_NONE;
-    self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
+    if self.is_snapped () {
+      self.snap_state = SNAP_NONE;
+      self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
+      ewmh::set_net_wm_state (self, &[]);
+    }
   }
 
   pub unsafe fn focus (&mut self) {
@@ -290,6 +293,8 @@ impl Client {
     }
     if self.is_minimized {
       self.map ();
+      self.is_minimized = false;
+      ewmh::set_net_wm_state (self, &[]);
     }
     if self.is_fullscreen {
       XRaiseWindow (display, self.window);
@@ -392,6 +397,7 @@ impl Client {
       XResizeWindow (display, self.window, screen_size.w, screen_size.h);
       XRaiseWindow (display, self.window);
       XSetInputFocus (display, self.window, RevertToNone, CurrentTime);
+      ewmh::set_net_wm_state (self, &[property::atom (Net::WMStateFullscreen)]);
     }
     else {
       property::set (self.window, Net::WMState, XA_ATOM, 32,
@@ -399,6 +405,7 @@ impl Client {
       XReparentWindow (display, self.window, self.frame, frame_offset.x, frame_offset.y);
       self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
       self.focus ();
+      ewmh::set_net_wm_state (self, &[]);
     }
   }
 
