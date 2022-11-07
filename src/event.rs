@@ -1,7 +1,6 @@
 use x11::xlib::*;
 use super::core::*;
 use super::config::*;
-use super::action;
 use super::property::{Net, atom, get_atom, Normal_Hints};
 use super::*;
 
@@ -441,67 +440,17 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
 }
 
 pub unsafe fn client_message (event: &XClientMessageEvent) {
-  if let Some (client) = win2client (event.window) {
-    log::debug! ("Client message: {}", event.message_type);
-    // Something about just printing 'client' here sometimes just freezes the
-    // entire program (TODO)
-    log::debug! ("  Recipient: {}", client.window);
-    log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
-    if event.message_type == atom (Net::WMState) {
-      // _NET_WM_STATE
-      let data = event.data.as_longs ();
-      macro_rules! new_state {
-        ($member:ident) => { data[0] == 1 || (data[0] == 2 && !client.$member) }
-      }
-      if data[1] as Atom == atom (Net::WMStateFullscreen)
-        || data[2] as Atom == atom (Net::WMStateFullscreen) {
-        // _NET_WM_STATE_FULLSCREEN
-        client.set_fullscreen (new_state! (is_fullscreen));
-      }
-      if data[1] as Atom == atom (Net::WMStateDemandsAttention)
-        || data[2] as Atom == atom (Net::WMStateDemandsAttention) {
-        // _NET_WM_STATE_DEMANDS_ATTENTION
-        {
-          // Don't set if already focused
-          let f = focused_client! ();
-          if f.is_some () && *f.unwrap () == *client {
-            return;
-          }
-        }
-        client.set_urgency (new_state! (is_urgent));
-      }
-    }
-    else if event.message_type == atom (Net::ActiveWindow) {
-      // This is what DWM uses for urgency
-      {
-        let f = focused_client! ();
-        if f.is_some () && *f.unwrap () == *client {
-          return;
-        }
-      }
-      if workspaces[active_workspace].contains (client.window) {
-        workspaces[active_workspace].focus (client.window);
-      }
-      else {
-        client.set_urgency (true);
-      }
-    }
+  if event.window == root {
+    ewmh::root_message (event);
   }
-  else if event.window == root {
-    log::debug! ("Client message: {}", event.message_type);
-    log::debug! ("  Recipient: <root> ({})", event.window);
-    log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
-    if event.message_type == atom (Net::CurrentDesktop) {
-      action::select_workspace (event.data.get_long (0) as usize, None);
-    }
+  else if let Some (client) = win2client (event.window) {
+    ewmh::client_message (client, event);
   }
   else if event.message_type == property::atom (Net::SystemTrayOpcode) {
-    log::debug! ("Client message: {}", event.message_type);
-    log::debug! ("  Recipient: Tray ({})", event.window);
     bar::tray.client_message (event);
   }
   else {
-    log::debug! ("Unhandeled client message: {}", event.message_type);
+    log::debug! ("Unhandeled client message event: {}", event.message_type);
     log::debug! ("  Recipient: {}", event.window);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
   }
