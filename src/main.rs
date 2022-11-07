@@ -471,7 +471,7 @@ unsafe fn is_kind (window: Window, kind: Window_Kind) -> bool {
 /// Sets the `_NET_WM_WINDOW_OPACITY` property. This has no effect on the
 /// window manager but a compositor may use this to set the opacity of the
 /// entire window.
-pub unsafe fn set_window_opacity (window: Window, percent: u8) {
+unsafe fn set_window_opacity (window: Window, percent: u8) {
   if percent != 100 {
     let value = 42949672u32 * percent as u32;
     property::set (
@@ -505,28 +505,42 @@ fn run_process (command_line: &str) {
 }
 
 
+unsafe fn configure_logging () {
+  use log4rs::{
+    append::file::FileAppender,
+    encode::pattern::PatternEncoder,
+    config::{Appender, Config, Root, Logger}
+  };
+  use log::LevelFilter;
+  let log_file = FileAppender::builder ()
+    .encoder (Box::new (PatternEncoder::new ("{l:<5}| {m}\n")))
+    .build (paths::logfile.as_str ())
+    .unwrap ();
+  let log_config = Config::builder ()
+    .appender (Appender::builder ()
+      .build ("log_file", Box::new (log_file)))
+    // Enable logging for this crate
+    .logger (Logger::builder ()
+      .appender ("log_file")
+      .build (
+        "window_manager",
+        if cfg! (debug_assertions) {
+          LevelFilter::Trace
+        } else {
+          LevelFilter::Info
+        }
+      ))
+    // librsvg and zbus use the root logger so turn that off
+    .build (Root::builder ().build (LevelFilter::Off))
+    .unwrap ();
+  log4rs::init_config (log_config).unwrap ();
+}
+
+
 fn main () {
   unsafe {
     paths::load ();
-    // Configure logging
-    let log_file = log4rs::append::file::FileAppender::builder ()
-      .encoder (Box::new (log4rs::encode::pattern::PatternEncoder::new ("{l:<5}| {m}\n")))
-      .build (paths::logfile.as_str ())
-      .unwrap ();
-    let log_config = log4rs::config::Config::builder ()
-      .appender (log4rs::config::Appender::builder ()
-        .build ("log_file", Box::new (log_file)))
-      .build (log4rs::config::Root::builder ()
-        .appender ("log_file")
-        .build (
-          if cfg! (debug_assertions) {
-            log::LevelFilter::Trace
-          }
-          else {
-            log::LevelFilter::Info
-          }))
-      .unwrap ();
-    log4rs::init_config (log_config).unwrap ();
+    configure_logging ();
     // Run window manager
     std::env::set_var ("WM", "window_manager");
     log::trace! ("Connecting to X server");
