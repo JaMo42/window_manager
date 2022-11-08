@@ -287,14 +287,21 @@ impl Client {
     }
   }
 
+  pub unsafe fn unminimize (&mut self, redraw: bool) {
+    self.map ();
+    self.is_minimized = false;
+    ewmh::set_net_wm_state (self, &[]);
+    if redraw {
+      self.draw_border ();
+    }
+  }
+
   pub unsafe fn focus (&mut self) {
     if self.is_urgent {
       self.set_urgency (false);
     }
     if self.is_minimized {
-      self.map ();
-      self.is_minimized = false;
-      ewmh::set_net_wm_state (self, &[]);
+      self.unminimize (false);
     }
     if self.is_fullscreen {
       XRaiseWindow (display, self.window);

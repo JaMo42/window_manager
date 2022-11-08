@@ -138,9 +138,7 @@ pub unsafe fn minimize (client: &mut Client) {
 pub unsafe fn raise_all () {
   for c in workspaces[active_workspace].iter_mut () {
     if c.is_minimized {
-      c.is_minimized = false;
-      c.map ();
-      c.draw_border ();
+      c.unminimize (true);
     }
   }
   workspaces[active_workspace].focus_client (0);

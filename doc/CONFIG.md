@@ -182,6 +182,12 @@ If not set it defaults to 6 seconds, if set to `0` notifications never expire.
 
 - `unsnap_or_center` If the focused window is snapped, un-snap it, restoring it to it's position before it was last snapped. If it is not snapped, center it.
 
+- `minimize` Minimizes the focused window, it can be made visible again using the alt+tab window switching or the `raise_all` action.
+
+- `raise_all` Un-minimizes all windows on the current workspace.
+
+- `unsnap_or_minimize` If the focused window is snapped, un-snap it, otherwise minimize it.
+
 ### Volume control
 
 These are wrappers around the `amixer` command, they all affect the `Master` device.

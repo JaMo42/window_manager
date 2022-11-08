@@ -71,8 +71,7 @@ impl Action {
         |c| unsafe {
           if c.is_snapped () {
             c.unsnap ();
-          }
-          else {
+          } else {
             action::center (c);
           }
         }
@@ -80,6 +79,15 @@ impl Action {
       "snap_up" => WM (action::snap_up),
       "snap_down" => WM (action::snap_down),
       "minimize" => WM (action::minimize),
+      "unsnap_or_minimize" => WM (
+        |c| unsafe {
+          if c.is_snapped () {
+            c.unsnap ();
+          } else {
+            action::minimize (c);
+          }
+        }
+      ),
       "raise_all" => Generic (action::raise_all),
       "mute_volume" => Generic (mute_volume),
       "increase_volume" => Generic (increase_volume),
