@@ -4,7 +4,7 @@ use x11::xlib::*;
 use super::core::*;
 use super::set_window_kind;
 use super::draw::{resources, Svg_Resource};
-use super::client::{Client, frame_offset};
+use super::client::{Client, decorated_frame_offset};
 use super::action;
 use super::color::Color;
 
@@ -32,7 +32,7 @@ impl Button {
     hovered_color: Color,
     action: unsafe fn (&mut Client)
   ) -> Self {
-    let button_size = frame_offset.y as u32;
+    let button_size = decorated_frame_offset.y as u32;
     let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.override_redirect = X_TRUE;
     attributes.event_mask = ButtonPressMask|ButtonReleaseMask|EnterWindowMask|LeaveWindowMask;
@@ -124,10 +124,10 @@ impl Button {
 
   pub unsafe fn move_ (&self, index: i32, left: bool) {
     let x = if left {
-      frame_offset.y * index
+      decorated_frame_offset.y * index
     } else {
       let width = self.owner.as_ref ().frame_geometry ().w;
-      width as i32 - frame_offset.y * (index + 1)
+      width as i32 - decorated_frame_offset.y * (index + 1)
     };
     XMoveWindow (display, self.window, x, 0);
   }

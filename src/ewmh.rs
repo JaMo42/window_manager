@@ -91,7 +91,6 @@ unsafe fn net_wm_state (client: &mut Client, event: &XClientMessageEvent) {
 pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) -> bool {
   if event.message_type == atom (Net::WMState) {
     // _NET_WM_STATE
-    log::debug! ("{:?}", event.data.as_longs ());
     net_wm_state (client, event);
   }
   else if event.message_type == atom (Net::ActiveWindow) {

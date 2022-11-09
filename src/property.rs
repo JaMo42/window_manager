@@ -66,6 +66,7 @@ pub enum XEmbed {
 #[repr(C)]
 pub enum Other {
   Manager,
+  MotfifWMHints,
   Last
 }
 
@@ -127,7 +128,6 @@ impl Class_Hints {
   }
 }
 
-
 pub static mut net: [Atom; Net::Last as usize] = [X_NONE; Net::Last as usize];
 pub static mut wm: [Atom; WM::Last as usize] = [X_NONE; WM::Last as usize];
 pub static mut xembed: [Atom; XEmbed::Last as usize] = [X_NONE; XEmbed::Last as usize];
@@ -184,6 +184,7 @@ pub unsafe fn load_atoms () {
   xembed[XEmbed::Info as usize] = XInternAtom (display, c_str! ("_XEMBED_INFO"), X_FALSE);
 
   other[Other::Manager as usize] = XInternAtom (display, c_str! ("MANAGER"), X_FALSE);
+  other[Other::MotfifWMHints as usize] = XInternAtom (display, c_str! ("_MOTIF_WM_HINTS"), X_FALSE);
 }
 
 pub unsafe fn init_set_root_properties () {
@@ -432,5 +433,26 @@ impl Normal_Hints {
   pub fn resize_inc (&self) -> Option<(i32, i32)> {
     // Storing it as u32 keeps get get_field! macro simpler
     self.resize_inc.map (|(w, h)| (w as i32, h as i32))
+  }
+}
+
+pub const MWM_HINTS_DECORATIONS: c_ulong = 1 << 1;
+
+// MotifWmHints
+#[derive(Debug, Copy, Clone)]
+#[repr(C)]
+pub struct Motif_Hints {
+  pub flags: c_ulong,
+  pub functions: c_ulong,
+  pub decorations: c_ulong,
+  pub input_mode: c_long,
+  pub status: c_ulong
+}
+
+impl Motif_Hints {
+  pub unsafe fn get (window: Window) -> Option<Self> {
+    let atom = atom (Other::MotfifWMHints);
+    get_data_for_scalar::<Motif_Hints, _> (window, atom, atom, 0)
+      .map (|data| data.value ())
   }
 }

@@ -4,7 +4,7 @@ use x11::xlib::*;
 use crate::action::{move_snap_flags, snap_geometry};
 use crate::core::*;
 use crate::property;
-use crate::client::{Client, Client_Geometry, frame_offset};
+use crate::client::{Client, Client_Geometry, decorated_frame_offset};
 use crate::ewmh;
 
 #[derive(Clone, Copy, Debug)]
@@ -89,20 +89,20 @@ impl Geometry {
   // Returns the geometry of a window frame around a window with this geometry
   pub unsafe fn get_frame (&self) -> Geometry {
     Geometry::from_parts (
-      self.x - frame_offset.x,
-      self.y - frame_offset.y,
-      self.w + frame_offset.w,
-      self.h + frame_offset.h
+      self.x - decorated_frame_offset.x,
+      self.y - decorated_frame_offset.y,
+      self.w + decorated_frame_offset.w,
+      self.h + decorated_frame_offset.h
     )
   }
 
   // Inverse of `get_frame`
   pub unsafe fn get_client (&self) -> Geometry {
     Geometry::from_parts (
-      self.x + frame_offset.x,
-      self.y + frame_offset.y,
-      self.w - frame_offset.w,
-      self.h - frame_offset.h
+      self.x + decorated_frame_offset.x,
+      self.y + decorated_frame_offset.y,
+      self.w - decorated_frame_offset.w,
+      self.h - decorated_frame_offset.h
     )
   }
 }

@@ -2,23 +2,22 @@ use x11::xlib::*;
 use super::core::*;
 use super::geometry::*;
 use super::*;
-use super::property::WM;
+use super::property::{WM, Motif_Hints, MWM_HINTS_DECORATIONS};
 use super::buttons::Button;
 
-pub static mut frame_offset: Geometry = Geometry::new ();
+pub static mut decorated_frame_offset: Geometry = Geometry::new ();
+pub static mut border_frame_offset: Geometry = Geometry::new ();
 static mut left_buttons_width: u32 = 0;
 static mut right_buttons_width: u32 = 0;
 static mut title_x: i32 = 0;
 
 
-unsafe fn create_frame (base_geometry: &Geometry) -> Window {
-  let g = base_geometry.get_frame ();
+unsafe fn create_frame (g: Geometry) -> Window {
   let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.background_pixmap = X_NONE;
   attributes.cursor = cursor::normal;
   attributes.override_redirect = X_TRUE;
   attributes.event_mask = SubstructureRedirectMask;
-  attributes.save_under = X_FALSE;
   let screen = XDefaultScreen (display);
 
   XCreateWindow (
@@ -29,12 +28,13 @@ unsafe fn create_frame (base_geometry: &Geometry) -> Window {
     XDefaultDepth (display, screen),
     InputOutput as u32,
     XDefaultVisual (display, screen),
-    CWBackPixmap|CWEventMask|CWCursor|CWSaveUnder,
+    CWBackPixmap|CWEventMask|CWCursor,
     &mut attributes
   )
 }
 
 
+/// Specifies how to change the frame and client geometry when resizing a client
 pub enum Client_Geometry {
   /// Set the size of the frame (outer window)
   Frame (Geometry),
@@ -42,6 +42,73 @@ pub enum Client_Geometry {
   Snap (Geometry),
   /// Set the size of the client (inner window)
   Client (Geometry),
+}
+
+
+pub enum Frame_Kind {
+  // Frame with title bar and buttons, used for normal clients
+  Decorated,
+  // Frame with only a border, used for popups
+  Border,
+  // No visible frame, used for windows with a custom title bar
+  None
+}
+
+impl Frame_Kind {
+  fn get_frame (&self, mut client_geometry: Geometry) -> Geometry {
+    match self {
+      Frame_Kind::Decorated => unsafe {
+        client_geometry.get_frame ()
+      }
+      Frame_Kind::Border => {
+        *client_geometry.expand (unsafe {border_frame_offset.x})
+      }
+      Frame_Kind::None => {
+        client_geometry
+      }
+    }
+  }
+
+  fn get_client (&self, mut frame_geometry: Geometry) -> Geometry {
+    match self {
+      Frame_Kind::Decorated => unsafe {
+        frame_geometry.get_client ()
+      }
+      Frame_Kind::Border => {
+        *frame_geometry.expand (0 - unsafe {border_frame_offset.x})
+      }
+      Frame_Kind::None => {
+        frame_geometry
+      }
+    }
+  }
+
+  /// Should decorations be drawn on this kind of frame?
+  fn should_draw_decorations (&self) -> bool {
+    matches! (self, Frame_Kind::Decorated)
+  }
+
+  /// Should this kind of frame be drawn at all?
+  fn should_draw_border (&self) -> bool {
+    !matches! (self, Frame_Kind::None)
+  }
+
+  fn parent_offset (&self) -> (i32, i32) {
+    match self {
+      Frame_Kind::Decorated => unsafe {(decorated_frame_offset.x, decorated_frame_offset.y)}
+      Frame_Kind::Border => unsafe {(border_frame_offset.x, border_frame_offset.y)}
+      Frame_Kind::None => (0, 0)
+    }
+  }
+
+  fn frame_offset (&self) -> &'static Geometry {
+    static no_offset: Geometry = Geometry::new ();
+    match self {
+      Frame_Kind::Decorated => unsafe {&decorated_frame_offset}
+      Frame_Kind::Border => unsafe {&border_frame_offset}
+      Frame_Kind::None => &no_offset
+    }
+  }
 }
 
 
@@ -60,7 +127,8 @@ pub struct Client {
   title: String,
   left_buttons: Vec<Button>,
   right_buttons: Vec<Button>,
-  title_space: i32
+  title_space: i32,
+  frame_kind: Frame_Kind
 }
 
 impl Client {
@@ -75,17 +143,32 @@ impl Client {
     XChangeWindowAttributes (display, window, CWEventMask|CWDontPropagate, &mut attributes);
     XSetWindowBorderWidth (display, window, 0);
 
-    let frame = create_frame (&geometry);
-    XReparentWindow (display, window, frame, frame_offset.x, frame_offset.y);
+    let mut frame_kind = Frame_Kind::Decorated;
+    let mut is_dialog = false;
 
-    let mut c = Box::new (Client {
+    if let Some (motif_hints) = Motif_Hints::get (window) {
+      // Assume that is has its own title bar if it specifies any decorations
+      if motif_hints.flags & MWM_HINTS_DECORATIONS == MWM_HINTS_DECORATIONS {
+        frame_kind = Frame_Kind::None;
+      }
+    }
+    else if property::get_atom (window, Net::WMWindowType) == property::atom (Net::WMWindowTypeDialog) {
+      is_dialog = true;
+      frame_kind = Frame_Kind::Border;
+    }
+
+    let frame = create_frame (frame_kind.get_frame (geometry));
+    let (reparent_x, reparent_y) = frame_kind.parent_offset ();
+    XReparentWindow (display, window, frame, reparent_x, reparent_y);
+
+    let mut result = Box::new (Client {
       window,
       frame,
       workspace: active_workspace,
       snap_state: 0,
       is_urgent: false,
       is_fullscreen: false,
-      is_dialog: false,
+      is_dialog,
       is_minimized: false,
       border_color: &(*config).colors.normal,
       geometry,
@@ -93,34 +176,37 @@ impl Client {
       title: window_title (window),
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
-      title_space: 0
+      title_space: 0,
+      frame_kind
     });
-    let this = &mut *c as *mut Client as XPointer;
+    let this = result.as_mut () as *mut Client as XPointer;
     XSaveContext (display, window, wm_context, this);
     XSaveContext (display, frame, wm_context, this);
     set_window_kind (window, Window_Kind::Client);
     set_window_kind (frame, Window_Kind::Frame);
 
-    let mut i = 0;
-    for name in (*config).left_buttons.iter () {
-      let b = buttons::from_string (&mut c, name);
-      b.move_ (i, true);
-      c.left_buttons.push (b);
-      i += 1;
-    }
-    i = 0;
-    // Reverse the iterator so the leftmost button in the config is the
-    // leftmost button on the window
-    for name in (*config).right_buttons.iter ().rev () {
-      let b = buttons::from_string (&mut c, name);
-      b.move_ (i, false);
-      c.right_buttons.push (b);
-      i += 1;
+    if result.frame_kind.should_draw_decorations () {
+      let mut i = 0;
+      for name in (*config).left_buttons.iter () {
+        let b = buttons::from_string (&mut result, name);
+        b.move_ (i, true);
+        result.left_buttons.push (b);
+        i += 1;
+      }
+      i = 0;
+      // Reverse the iterator so the leftmost button in the config is the
+      // leftmost button on the window
+      for name in (*config).right_buttons.iter ().rev () {
+        let b = buttons::from_string (&mut result, name);
+        b.move_ (i, false);
+        result.right_buttons.push (b);
+        i += 1;
+      }
     }
 
     XMapSubwindows (display, frame);
 
-    c
+    result
   }
 
   pub unsafe fn dummy (window: Window) -> Self {
@@ -139,7 +225,8 @@ impl Client {
       title: String::new (),
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
-      title_space: 0
+      title_space: 0,
+      frame_kind: Frame_Kind::Decorated
     }
   }
 
@@ -164,48 +251,58 @@ impl Client {
   }
 
   pub unsafe fn draw_border (&mut self) {
-    let frame_size = self.frame_geometry ();
-    (*draw).rect (0, frame_offset.y, frame_size.w, frame_size.h - frame_offset.y as u32)
-      .color (*self.border_color)
-      .draw ();
-    (*draw).rect (0, 0, frame_size.w, frame_offset.y as u32)
-      .vertical_gradient (
-        self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
-        *self.border_color
-      )
-      .draw ();
+    if self.frame_kind.should_draw_decorations () {
+      let frame_size = self.frame_geometry ();
+      let frame_offset = self.frame_kind.frame_offset ();
+      (*draw).fill_rect (0, frame_offset.y, frame_size.w, frame_size.h - frame_offset.y as u32, *self.border_color);
+      (*draw).rect (0, 0, frame_size.w, frame_offset.y as u32)
+        .vertical_gradient (
+          self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
+          *self.border_color
+        )
+        .draw ();
 
-    (*draw).select_font (&(*config).title_font);
-    (*draw).text (&self.title)
-      .at (title_x, 0)
-      .align_vertically (draw::Alignment::Centered, frame_offset.y)
-      .align_horizontally((*config).title_alignment, self.title_space)
-      .color ((*config).colors.bar_active_workspace_text)
-      .width (self.title_space)
-      .draw ();
+      (*draw).select_font (&(*config).title_font);
+      (*draw).text (&self.title)
+        .at (title_x, 0)
+        .align_vertically (draw::Alignment::Centered, frame_offset.y)
+        .align_horizontally((*config).title_alignment, self.title_space)
+        .color ((*config).colors.bar_active_workspace_text)
+        .width (self.title_space)
+        .draw ();
 
-    let g = self.frame_geometry ();
-    (*draw).render (self.frame, 0, 0, g.w, g.h);
+      let g = self.frame_geometry ();
+      (*draw).render (self.frame, 0, 0, g.w, g.h);
 
-    for b in self.buttons_mut () {
-      b.draw (false);
+      for b in self.buttons_mut () {
+        b.draw (false);
+      }
+    }
+    else if self.frame_kind.should_draw_border () {
+      let g = self.frame_geometry ();
+      (*draw).fill_rect (0, 0, g.w, g.h, *self.border_color);
+      (*draw).render (self.frame, 0, 0, g.w, g.h);
     }
   }
 
   pub unsafe fn set_border (&mut self, color: &'static color::Color) {
-    self.border_color = color;
-    self.draw_border ();
+    if self.frame_kind.should_draw_border () {
+      self.border_color = color;
+      self.draw_border ();
+    }
   }
 
   pub unsafe fn set_title (&mut self, title: &str) {
-    self.title.clear ();
-    self.title.push_str (title);
-    self.draw_border ();
+    if self.frame_kind.should_draw_decorations () {
+      self.title.clear ();
+      self.title.push_str (title);
+      self.draw_border ();
+    }
   }
 
   /// Rerturns the geometry of the frame window (outer window)
   pub fn frame_geometry (&self) -> Geometry {
-    unsafe { self.geometry.get_frame () }
+    self.frame_kind.get_frame (self.geometry)
   }
 
   /// Returns the geometry of the client window (inner window)
@@ -232,6 +329,7 @@ impl Client {
   }
 
   pub unsafe fn move_and_resize (&mut self, geom: Client_Geometry) {
+    let frame_offset = self.frame_kind.frame_offset ();
     let fx;
     let fy;
     let fw;
@@ -264,7 +362,7 @@ impl Client {
         ch = fh - frame_offset.h;
       }
     }
-    self.geometry = Geometry::from_parts (fx, fy, fw, fh).get_client ();
+    self.geometry = self.frame_kind.get_client (Geometry::from_parts (fx, fy, fw, fh));
     self.title_space = (self.client_geometry ().w - left_buttons_width - right_buttons_width) as i32;
     XMoveResizeWindow (display, self.frame, fx, fy, fw, fh);
     for i in 0..self.left_buttons.len () {
@@ -397,8 +495,6 @@ impl Client {
     }
     self.is_fullscreen = state;
     if state {
-      property::set (self.window, Net::WMState, XA_ATOM, 32,
-        &property::atom (Net::WMStateFullscreen), 1);
       self.snap_state = SNAP_NONE;
       XReparentWindow (display, self.window, root, 0, 0);
       XResizeWindow (display, self.window, screen_size.w, screen_size.h);
@@ -407,9 +503,8 @@ impl Client {
       ewmh::set_net_wm_state (self, &[property::atom (Net::WMStateFullscreen)]);
     }
     else {
-      property::set (self.window, Net::WMState, XA_ATOM, 32,
-        std::ptr::null::<c_uchar> (), 0);
-      XReparentWindow (display, self.window, self.frame, frame_offset.x, frame_offset.y);
+      let (reparent_x, reparent_y) = self.frame_kind.parent_offset ();
+      XReparentWindow (display, self.window, self.frame, reparent_x, reparent_y);
       self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
       self.focus ();
       ewmh::set_net_wm_state (self, &[]);
@@ -486,12 +581,13 @@ impl std::fmt::Display for Client {
 pub unsafe fn set_border_info () {
   let title_height = (*config).title_height.get (Some (&(*config).title_font));
   let b = (*config).border_width;
-  frame_offset = Geometry::from_parts  (
+  decorated_frame_offset = Geometry::from_parts (
     b,
     title_height as i32,
     2 * b as u32,
     title_height + b as u32
   );
+  border_frame_offset = Geometry::from_parts (b, b, 2*b as u32, 2*b as u32);
   left_buttons_width = (*config).left_buttons.len () as u32 * title_height;
   right_buttons_width = (*config).right_buttons.len () as u32 * title_height;
   title_x = left_buttons_width as i32 + b;

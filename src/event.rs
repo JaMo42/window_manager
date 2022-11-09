@@ -74,7 +74,7 @@ pub unsafe fn motion (event: &XButtonEvent) {
       if (event.state & (*config).modifier) == 0 {
         let g = c.client_geometry ();
         if event.x - g.x > 0 && event.y - g.y > 0 {
-          let extra = i32::max (10 - frame_offset.x, 0);
+          let extra = i32::max (10 - decorated_frame_offset.x, 0);
           if event.x - g.x + extra < g.w as i32 {
             lock_width = true;
           } else if event.y - g.y + extra < g.h as i32 {
