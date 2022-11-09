@@ -24,6 +24,15 @@ pub enum Net {
   SystemTrayOpcode,
   SystemTrayOrientation,
   SystemTrayS0,
+  WMActionClose,
+  WMActionChangeDesktop,
+  WMActionFullscreen,
+  WMActionMaximizeHorz,
+  WMActionMaximizeVert,
+  WMActionMove,
+  WMActionResize,
+  WMAllowedActions,
+  WMMoveresize,
   WMName,
   WMState,
   WMStateDemandsAttention,
@@ -164,6 +173,15 @@ pub unsafe fn load_atoms () {
   N! (SystemTrayOpcode, "_NET_SYSTEM_TRAY_OPCODE");
   N! (SystemTrayOrientation, "_NET_SYSTEM_TRAY_ORIENTATION");
   N! (SystemTrayS0, "_NET_SYSTEM_TRAY_S0");
+  N! (WMActionChangeDesktop, "_NET_WM_ACTION_CHANGE_DESKTOP");
+  N! (WMActionClose, "_NET_WM_ACTION_CLOSE");
+  N! (WMActionFullscreen, "_NET_WM_ACTION_FULLSCREEN");
+  N! (WMActionMaximizeHorz, "_NET_WM_ACTION_MAXIMIZE_HORZ");
+  N! (WMActionMaximizeVert, "_NET_WM_ACTION_MAXIMIZE_VERT");
+  N! (WMActionMove, "_NET_WM_ACTION_MOVE");
+  N! (WMActionResize, "_NET_WM_ACTION_RESIZE");
+  N! (WMAllowedActions, "_NET_WM_ALLOWED_ACTIONS");
+  N! (WMMoveresize, "_NET_WM_MOVERESIZE");
   N! (WMName, "_NET_WM_NAME");
   N! (WMState, "_NET_WM_STATE");
   N! (WMStateDemandsAttention, "_NET_WM_STATE_DEMANDS_ATTENTION");

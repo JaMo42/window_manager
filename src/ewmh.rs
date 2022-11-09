@@ -4,7 +4,20 @@ use super::core::*;
 use super::property::{self, Net, WM, atom};
 use super::client::Client;
 use super::action;
-use super::event::win2client;
+use super::event::{mouse_move, mouse_resize};
+
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm46435610090352
+const _NET_WM_MOVERESIZE_SIZE_TOPLEFT: c_long = 0;
+const _NET_WM_MOVERESIZE_SIZE_TOP: c_long = 1;
+const _NET_WM_MOVERESIZE_SIZE_TOPRIGHT: c_long = 2;
+const _NET_WM_MOVERESIZE_SIZE_RIGHT: c_long = 3;
+const _NET_WM_MOVERESIZE_SIZE_BOTTOMRIGHT: c_long = 4;
+const _NET_WM_MOVERESIZE_SIZE_BOTTOM: c_long = 5;
+const _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT: c_long = 6;
+const _NET_WM_MOVERESIZE_SIZE_LEFT: c_long = 7;
+const _NET_WM_MOVERESIZE_MOVE: c_long = 8;
+const _NET_WM_MOVERESIZE_SIZE_KEYBOARD: c_long = 9;
+const _NET_WM_MOVERESIZE_MOVE_KEYBOARD: c_long = 10;
 
 pub unsafe fn set_window_type (window: Window, type_: Net) {
   property::set (
@@ -17,17 +30,19 @@ pub unsafe fn set_window_type (window: Window, type_: Net) {
   );
 }
 
-unsafe fn wm_change_state (window: Window, state: c_long) {
+unsafe fn wm_change_state (client: &mut Client, state: c_long) {
   const NormalState: c_long = 1;
   const IconicState: c_long = 3;
-  if let Some (client) = win2client (window) {
-    if state == NormalState {
-      if workspaces[active_workspace].contains (window) {
-        workspaces[active_workspace].focus (window);
-      }
-    } else if state == IconicState {
-      action::minimize (client);
+  if state == NormalState {
+    if client.workspace == active_workspace {
+      workspaces[active_workspace].focus (client.window)
+    } else {
+      // `client.unminimize` would map it
+      client.is_minimized = false;
+      set_net_wm_state (client, &[]);
     }
+  } else if state == IconicState {
+    action::minimize (client);
   }
 }
 
@@ -86,6 +101,42 @@ unsafe fn net_wm_state (client: &mut Client, event: &XClientMessageEvent) {
   }
 }
 
+unsafe fn net_wm_moveresize (client: &mut Client, event: &XClientMessageEvent) {
+  //let x_root = event.data.get_long (0);
+  //let y_root = event.data.get_long (1);
+  let direction = event.data.get_long (2);
+  //let button = event.data.get_long (3);
+  //let source_indication = event.data.get_long (0);
+
+  // Note: resizing from the left, top, or any corner that's not the bottom-right
+  //       corner is kinda weird since the mouse_resize expects to resize in the
+  //       bottom and/or right direction, we could just ignore them but it's
+  //       probably nicer to have them anyways.
+
+  if direction == _NET_WM_MOVERESIZE_MOVE  && client.may_move (){
+    mouse_move (client);
+  }
+  else if (direction == _NET_WM_MOVERESIZE_SIZE_LEFT
+        || direction == _NET_WM_MOVERESIZE_SIZE_RIGHT)
+        && client.may_resize () {
+    mouse_resize (client, false, true);
+  }
+  else if (direction == _NET_WM_MOVERESIZE_SIZE_TOP
+        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOM)
+        && client.may_resize () {
+    mouse_resize (client, true, false);
+  }
+  else if (direction == _NET_WM_MOVERESIZE_SIZE_TOPLEFT
+        || direction == _NET_WM_MOVERESIZE_SIZE_TOPRIGHT
+        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMRIGHT
+        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT)
+        && client.may_resize () {
+    mouse_resize (client, false, false);
+  }
+  // _NET_WM_MOVERESIZE_SIZE_KEYBOARD and _NET_WM_MOVERESIZE_MOVE_KEYBOARD are
+  // not implemented.
+}
+
 /// Maybe handles a client message to a client window, returns whether the
 /// message was handled or not.
 pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) -> bool {
@@ -101,15 +152,19 @@ pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) 
         return true;
       }
     }
-    if workspaces[active_workspace].contains (client.window) {
+    if client.workspace == active_workspace {
       workspaces[active_workspace].focus (client.window);
     } else {
       client.set_urgency (true);
     }
   }
   else if event.message_type == atom (WM::ChangeState) {
-    wm_change_state (event.window, event.data.get_long (0));
-  } else {
+    wm_change_state (client, event.data.get_long (0));
+  }
+  else if event.message_type == atom (Net::WMMoveresize) {
+    net_wm_moveresize (client, event);
+  }
+  else {
     return false;
   }
   true
@@ -124,4 +179,26 @@ pub unsafe fn root_message (event: &XClientMessageEvent) -> bool {
     return false;
   }
   true
+}
+
+pub unsafe fn set_allowed_actions (window: Window, may_resize: bool) {
+  let mut actions = vec![
+    atom (Net::WMActionMove),
+    atom (Net::WMActionClose),
+    atom (Net::WMActionChangeDesktop)
+  ];
+  if may_resize {
+    actions.push (atom (Net::WMActionResize));
+    actions.push (atom (Net::WMActionMaximizeHorz));
+    actions.push (atom (Net::WMActionMaximizeVert));
+    actions.push (atom (Net::WMActionFullscreen));
+  }
+  property::set (
+    window,
+    Net::WMAllowedActions,
+    XA_ATOM,
+    32,
+    actions.as_ptr (),
+    actions.len () as i32
+  );
 }

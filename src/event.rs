@@ -125,7 +125,7 @@ unsafe fn pointer_position () -> Option<(c_int, c_int)> {
 }
 
 
-unsafe fn mouse_move (client: &mut Client) {
+pub unsafe fn mouse_move (client: &mut Client) {
   if XGrabPointer (
     display,
     root,
@@ -191,7 +191,7 @@ unsafe fn mouse_move (client: &mut Client) {
 }
 
 
-unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool) {
+pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool) {
   let cursor = if lock_height {
     cursor::resizing_horizontal
   } else if lock_width {
@@ -314,6 +314,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   if maybe_class_hints.is_some () && maybe_class_hints.as_ref ().unwrap ().is_meta ()
     || name == "window_manager_bar" {
     meta_windows.push (window);
+    set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
     XMapWindow (display, window);
     log::info! ("New meta window: {} ({})", name, window);
   }

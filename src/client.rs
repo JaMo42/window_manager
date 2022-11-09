@@ -185,6 +185,8 @@ impl Client {
     set_window_kind (window, Window_Kind::Client);
     set_window_kind (frame, Window_Kind::Frame);
 
+    ewmh::set_allowed_actions (window, !is_dialog);
+
     if result.frame_kind.should_draw_decorations () {
       let mut i = 0;
       for name in (*config).left_buttons.iter () {

@@ -267,7 +267,7 @@ impl Widget for Volume {
       self.width = width;
       width
     } else {
-      1
+      self.width
     }
   }
 

@@ -299,6 +299,7 @@ impl Tray_Manager {
   pub unsafe fn client_message (&mut self, event: &XClientMessageEvent) {
     let opcode = event.data.get_long (1) as u32;
     const OPCODE_NAMES: [&str; 3] = ["REQUEST_DOCK", "BEGIN_MESSAGE", "CANCEL_MESSAGE"];
+    log::debug! ("Tray client message");
     log::debug! ("  Opcode: {} ({})", opcode, OPCODE_NAMES[opcode as usize]);
     if opcode == OPCODE_REQUEST_DOCK {
       self.dock (event.data.get_long (2) as Window);
