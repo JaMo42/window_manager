@@ -59,7 +59,6 @@ unsafe fn net_wm_state (client: &mut Client, event: &XClientMessageEvent) {
   let data = event.data.as_longs ();
   macro_rules! new_state {
     ($member:ident) => {
-
       data[0] == 1 || (data[0] == 2 && !client.$member)
     };
   }

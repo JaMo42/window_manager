@@ -7,7 +7,6 @@ use x11::xlib::*;
 #[macro_export]
 macro_rules! focused_client {
   () => {
-
     workspaces[active_workspace]
       .clients
       .iter_mut ()

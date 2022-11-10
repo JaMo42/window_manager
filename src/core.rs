@@ -8,14 +8,12 @@ use x11::xlib::*;
 
 macro_rules! c_str {
   ($s:expr) => {
-
     CString::new ($s).unwrap ().as_ptr ()
   };
 }
 
 macro_rules! string_from_ptr {
   ($ptr:expr) => {
-
     std::ffi::CStr::from_ptr ($ptr)
       .to_str ()
       .unwrap ()
@@ -25,7 +23,6 @@ macro_rules! string_from_ptr {
 
 macro_rules! uninitialized {
   () => {
-
     std::mem::MaybeUninit::uninit ().assume_init ()
   };
 }

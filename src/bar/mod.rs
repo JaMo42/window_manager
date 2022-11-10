@@ -95,7 +95,6 @@ impl Bar {
   pub unsafe fn build (&mut self) {
     macro_rules! push {
       ($target:expr, $widget:ident) => {
-
         if let Some (w) = widget::$widget::new () {
           $target.push (Box::new (w));
         } else {

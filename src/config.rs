@@ -11,7 +11,6 @@ use x11::keysym::*;
 #[macro_export]
 macro_rules! clean_mods {
   ($mods:expr) => {
-
     $mods & !(LockMask | unsafe { numlock_mask }) & (MOD_WIN | MOD_ALT | MOD_SHIFT | MOD_CTRL)
   };
 }

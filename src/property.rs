@@ -7,7 +7,6 @@ use x11::xlib::*;
 #[macro_export]
 macro_rules! set_cardinal {
   ($w:expr, $p:expr, $v:expr) => {
-
     let data = $v as c_uint;
     crate::property::set (
       $w,
@@ -154,13 +153,11 @@ pub static mut wm_check_window: Window = X_NONE;
 pub unsafe fn load_atoms () {
   macro_rules! W {
     ($property:ident, $name:expr) => {
-
       wm[WM::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
     };
   }
   macro_rules! N {
     ($property:ident, $name:expr) => {
-
       net[Net::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
     };
   }
@@ -431,7 +428,6 @@ impl Normal_Hints {
     let hints = XAllocSizeHints ();
     macro_rules! get_field {
       ($field_1:ident, $field_2:ident, $flag:ident) => {
-
         if (*hints).flags & $flag == $flag {
           Some (((*hints).$field_1 as u32, (*hints).$field_2 as u32))
         } else {
