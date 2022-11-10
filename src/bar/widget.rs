@@ -335,10 +335,15 @@ impl Widget for Workspaces {
       } else {
         (*config).colors.bar_workspace
       };
-      (*draw).square ((idx as u32 * height) as i32, 0, height)
-        .color (color)
-        .stroke (2, color.scale (0.8))
-        .draw ();
+      if color.pixel == (*config).colors.bar_workspace.pixel {
+        // Don't draw the outline for the background color
+        (*draw).fill_rect ((idx as u32 * height) as i32, 0, height, height, color);
+      } else {
+        (*draw).square ((idx as u32 * height) as i32, 0, height)
+          .color (color)
+          .stroke (2, color.scale (0.8))
+          .draw ();
+      }
       (*draw).text (format! ("{}", idx+1).as_str ())
         .at ((idx as u32 * height) as i32, 0)
         .align_horizontally (Alignment::Centered, height as i32)
