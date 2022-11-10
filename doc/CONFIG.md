@@ -154,6 +154,19 @@ default_notification_timeout <milliseconds>
 Specifies the default time desktop notifications are displayed if no time is specified.
 If not set it defaults to 6 seconds, if set to `0` notifications never expire.
 
+```
+window_icon_size <percentage>
+```
+Set the relative size of window icons, if the percentage is `0%` window icons are disabled.
+The default value is `0%`.
+
+```
+icon_theme <theme>
+```
+Set the icon theme. The given theme must be the name of a folder in `/usr/share/icons` which must have `48x48` subfolder.
+Both the theme folder and the `48x48` folder mat be symbolic links.
+The default value is `Papirus`.
+
 ## Modifiers
 
 - `Win` Windows key

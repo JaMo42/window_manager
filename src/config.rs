@@ -153,7 +153,9 @@ pub struct Config {
   pub right_buttons: Vec<String>,
   pub button_icon_size: u8,
   pub circle_buttons: bool,
-  pub default_notification_timeout: i32
+  pub default_notification_timeout: i32,
+  pub icon_theme: String,
+  pub window_icon_size: u8
 }
 
 impl Config {
@@ -179,7 +181,9 @@ impl Config {
       right_buttons: Vec::new (),
       button_icon_size: 75,
       circle_buttons: false,
-      default_notification_timeout: 6000
+      default_notification_timeout: 6000,
+      icon_theme: "Papirus".to_string (),
+      window_icon_size: 0
     }
   }
 
@@ -314,6 +318,14 @@ impl Config {
         Default_Notification_Timeout (millis) => {
           log::info! ("config: default notification timeout: {}ms", millis);
           self.default_notification_timeout = millis;
+        }
+        Icon_Theme (theme) => {
+          log::info! ("config: icon theme: {}", theme);
+          self.icon_theme = theme;
+        }
+        Window_Icon_Size (percent) => {
+          log::info! ("config: window icon size: {}%", percent);
+          self.window_icon_size = percent;
         }
       }
     }

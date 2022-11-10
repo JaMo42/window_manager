@@ -48,6 +48,10 @@ bind XF86AudioMute mute_volume
 # Define colors
 %include colors/default
 
+# Icon theme
+icon_theme Papirus
+window_icon_size 90%
+
 # Bar
 bar_font sans 18
 bar_opacity 80%

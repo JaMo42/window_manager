@@ -5,6 +5,7 @@ use x11::xlib::*;
 use super::color::Color;
 use super::geometry::Geometry;
 use super::paths;
+use super::desktop_entry::Desktop_Entry;
 
 pub mod resources {
   use super::Svg_Resource;
@@ -456,10 +457,28 @@ pub unsafe fn load_resources () {
 }
 
 
-#[allow(dead_code)]
-pub unsafe fn get_app_icon (app_name: &str) {
-  let _desktop_file_path = format! ("/usr/share/applications/{}.desktop", app_name);
-  let icon_name = "applications-system.svg"; // TODO: read from desktop file
-  let icon_theme = "Papirus"; // TODO: get from config
-  let _icon_path = format! ("/usr/share/icons/{}/48x48/apps/{}", icon_theme, icon_name);
+/// Get the icon for an application. The returned value is boxed as svg
+/// resources need to have static lifetime and this is sufficient.
+pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
+  let desktop_entry = Desktop_Entry::new (app_name)?;
+  let icon_path = format! (
+    "/usr/share/icons/{}/48x48/apps/{}.svg",
+    (*config).icon_theme,
+    desktop_entry.icon?
+  );
+  let loader = librsvg::Loader::new ();
+  let static_path: &'static str = &*(icon_path.as_str () as *const str);
+  let mut svg = Box::new (Svg_Resource::new (static_path));
+  match loader.read_path (svg.file) {
+    Ok (handle) => {
+      svg.handle = Some (handle);
+      let static_handle: &'static SvgHandle = &*(svg.handle.as_ref ().unwrap () as *const SvgHandle);
+      svg.renderer = Some (CairoRenderer::new (static_handle));
+    }
+    Err (error) => {
+      log::error! ("Failed to load {}: {}", svg.file, error);
+      return None;
+    }
+  }
+  Some (svg)
 }

@@ -6,7 +6,7 @@ use std::os::raw::{c_int, c_uint};
 use super::core::*;
 use super::config::Height;
 
-fn read_lines<P: AsRef<Path>> (path: P) -> io::Result<io::Lines<io::BufReader<File>>> {
+pub fn read_lines<P: AsRef<Path>> (path: P) -> io::Result<io::Lines<io::BufReader<File>>> {
   let f = File::open (path)?;
   Ok (io::BufReader::new (f).lines ())
 }
@@ -67,7 +67,9 @@ pub enum Definition_Type {
   Right_Buttons (Vec<String>),
   Button_Icon_Size (u8),
   Circle_Buttons,
-  Default_Notification_Timeout (i32)
+  Default_Notification_Timeout (i32),
+  Icon_Theme (String),
+  Window_Icon_Size (u8)
 }
 
 pub struct Parser<Chars: Iterator<Item=char>> {
@@ -264,6 +266,8 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       "button_icon_size" => Button_Icon_Size (self.parse_percentage ()),
       "circle_buttons" => Circle_Buttons,
       "default_notification_timeout" => Default_Notification_Timeout (self.parse_number ()),
+      "icon_theme" => Icon_Theme (self.next_thing ()),
+      "window_icon_size" => Window_Icon_Size (self.parse_percentage ()),
       _ => {
         self.fail ("Unknown keyword");
       }

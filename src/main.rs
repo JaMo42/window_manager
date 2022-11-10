@@ -28,6 +28,7 @@ mod notifications;
 mod platform;
 mod tooltip;
 mod ewmh;
+mod desktop_entry;
 
 use crate::core::*;
 use client::*;

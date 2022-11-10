@@ -10,6 +10,8 @@ pub static mut border_frame_offset: Geometry = Geometry::new ();
 static mut left_buttons_width: u32 = 0;
 static mut right_buttons_width: u32 = 0;
 static mut title_x: i32 = 0;
+static mut icon_position: i32 = 0;
+static mut icon_size: u32 = 0;
 
 
 unsafe fn create_frame (g: Geometry) -> Window {
@@ -128,11 +130,13 @@ pub struct Client {
   left_buttons: Vec<Button>,
   right_buttons: Vec<Button>,
   title_space: i32,
-  frame_kind: Frame_Kind
+  frame_kind: Frame_Kind,
+  icon: Option<Box<draw::Svg_Resource>>
 }
 
 impl Client {
   pub const TITLE_BAR_GRADIENT_FACTOR: f64 = 1.185;
+  pub const ICON_TITLE_GAP: i32 = 2;
 
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
@@ -161,6 +165,14 @@ impl Client {
     let (reparent_x, reparent_y) = frame_kind.parent_offset ();
     XReparentWindow (display, window, frame, reparent_x, reparent_y);
 
+    let icon = if (*config).window_icon_size > 0
+      && frame_kind.should_draw_decorations () {
+      property::Class_Hints::new (window)
+      .and_then (|h| draw::get_app_icon (&h.name))
+    } else {
+      None
+    };
+
     let mut result = Box::new (Client {
       window,
       frame,
@@ -177,7 +189,8 @@ impl Client {
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
       title_space: 0,
-      frame_kind
+      frame_kind,
+      icon
     });
     let this = result.as_mut () as *mut Client as XPointer;
     XSaveContext (display, window, wm_context, this);
@@ -228,7 +241,8 @@ impl Client {
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
       title_space: 0,
-      frame_kind: Frame_Kind::Decorated
+      frame_kind: Frame_Kind::Decorated,
+      icon: None
     }
   }
 
@@ -256,6 +270,7 @@ impl Client {
     if self.frame_kind.should_draw_decorations () {
       let frame_size = self.frame_geometry ();
       let frame_offset = self.frame_kind.frame_offset ();
+      let mut actual_title_x = title_x;
       (*draw).fill_rect (0, frame_offset.y, frame_size.w, frame_size.h - frame_offset.y as u32, *self.border_color);
       (*draw).rect (0, 0, frame_size.w, frame_offset.y as u32)
         .vertical_gradient (
@@ -264,9 +279,20 @@ impl Client {
         )
         .draw ();
 
+      if let Some (icon) = self.icon.as_mut () {
+        (*draw).draw_svg (
+          icon,
+          title_x - Self::ICON_TITLE_GAP + icon_position,
+          icon_position,
+          icon_size,
+          icon_size
+        );
+        actual_title_x += frame_offset.y;
+      }
+
       (*draw).select_font (&(*config).title_font);
       (*draw).text (&self.title)
-        .at (title_x, 0)
+        .at (actual_title_x, 0)
         .align_vertically (draw::Alignment::Centered, frame_offset.y)
         .align_horizontally((*config).title_alignment, self.title_space)
         .color ((*config).colors.bar_active_workspace_text)
@@ -366,6 +392,9 @@ impl Client {
     }
     self.geometry = self.frame_kind.get_client (Geometry::from_parts (fx, fy, fw, fh));
     self.title_space = (self.client_geometry ().w - left_buttons_width - right_buttons_width) as i32;
+    if self.icon.is_some () {
+      self.title_space -= self.frame_kind.frame_offset ().y + Self::ICON_TITLE_GAP;
+    }
     XMoveResizeWindow (display, self.frame, fx, fy, fw, fh);
     for i in 0..self.left_buttons.len () {
       self.left_buttons[i].move_ (i as i32, true);
@@ -594,4 +623,6 @@ pub unsafe fn set_border_info () {
   right_buttons_width = (*config).right_buttons.len () as u32 * title_height;
   title_x = left_buttons_width as i32 + b;
   buttons::set_size (title_height);
+  icon_size = decorated_frame_offset.y as u32 * (*config).window_icon_size as u32 / 100;
+  icon_position = (decorated_frame_offset.y - icon_size as i32) / 2;
 }
