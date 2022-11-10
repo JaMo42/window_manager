@@ -46,7 +46,7 @@ impl Workspace {
       .position (|c| c.window == client.window)
     {
       let c = self.clients.remove (idx);
-      if let Some (first) = focused_client!() {
+      if let Some (first) = focused_client! () {
         first.focus ();
       } else {
         property::delete (root, property::Net::ActiveWindow);
@@ -129,14 +129,14 @@ impl Workspace {
     XSync (display, X_TRUE);
     // Add the first Tab back to the event queue
     {
-      let mut ev: XEvent = uninitialized!();
+      let mut ev: XEvent = uninitialized! ();
       ev.type_ = KeyPress;
       ev.key.keycode = 0x17;
       XPutBackEvent (display, &mut ev);
     }
     // Run window switcher loop
     let mut switch_idx = 0;
-    let mut event: XEvent = uninitialized!();
+    let mut event: XEvent = uninitialized! ();
     loop {
       XMaskEvent (display, KeyPressMask | KeyReleaseMask, &mut event);
       match event.type_ {
@@ -160,7 +160,7 @@ impl Workspace {
             break;
           }
         }
-        _ => unreachable!(),
+        _ => unreachable! (),
       }
     }
     // Clean up

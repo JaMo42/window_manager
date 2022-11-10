@@ -185,7 +185,7 @@ unsafe fn select_input (mut mask: c_long) {
       | StructureNotifyMask
       | PropertyChangeMask;
   }
-  let mut wa: XSetWindowAttributes = uninitialized!();
+  let mut wa: XSetWindowAttributes = uninitialized! ();
   wa.event_mask = mask;
   XChangeWindowAttributes (display, root, CWEventMask, &mut wa);
   XSelectInput (display, root, wa.event_mask);
@@ -278,7 +278,7 @@ const fn event_name (type_: c_int) -> &'static str {
 }
 
 unsafe fn run () {
-  let mut event: XEvent = uninitialized!();
+  let mut event: XEvent = uninitialized! ();
   running = true;
   XSync (display, X_FALSE);
   while running {

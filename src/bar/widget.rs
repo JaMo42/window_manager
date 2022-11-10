@@ -9,7 +9,7 @@ use crate::{get_window_geometry, set_window_kind, set_window_opacity};
 use x11::xlib::*;
 
 unsafe fn create_window () -> Window {
-  let mut attributes: XSetWindowAttributes = uninitialized!();
+  let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.background_pixel = (*config).colors.bar_background.pixel;
   attributes.event_mask = ButtonPressMask | EnterWindowMask | LeaveWindowMask;
   attributes.backing_store = WhenMapped;

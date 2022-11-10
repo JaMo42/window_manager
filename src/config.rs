@@ -284,7 +284,7 @@ impl Config {
             "left" => Alignment::Left,
             "center" => Alignment::Centered,
             "right" => Alignment::Right,
-            _ => unreachable!(),
+            _ => unreachable! (),
           }
         }
         Left_Buttons (buttons) => {

@@ -13,7 +13,7 @@ static mut icon_position: i32 = 0;
 static mut icon_size: u32 = 0;
 
 unsafe fn create_frame (g: Geometry) -> Window {
-  let mut attributes: XSetWindowAttributes = uninitialized!();
+  let mut attributes: XSetWindowAttributes = uninitialized! ();
   attributes.background_pixmap = X_NONE;
   attributes.cursor = cursor::normal;
   attributes.override_redirect = X_TRUE;
@@ -127,7 +127,7 @@ impl Client {
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
 
-    let mut attributes: XSetWindowAttributes = uninitialized!();
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.event_mask = StructureNotifyMask | PropertyChangeMask;
     attributes.do_not_propagate_mask = ButtonPressMask | ButtonReleaseMask;
     XChangeWindowAttributes (
@@ -225,8 +225,8 @@ impl Client {
       is_dialog: false,
       is_minimized: false,
       border_color: &*(1 as *const color::Color),
-      geometry: uninitialized!(),
-      prev_geometry: uninitialized!(),
+      geometry: uninitialized! (),
+      prev_geometry: uninitialized! (),
       title: String::new (),
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
@@ -477,7 +477,7 @@ impl Client {
   pub unsafe fn update_hints (&mut self) {
     let hints = XGetWMHints (display, self.window);
     if !hints.is_null () {
-      if let Some (focused) = focused_client!() {
+      if let Some (focused) = focused_client! () {
         if *focused == *self && ((*hints).flags & XUrgencyHint) != 0 {
           // It's being made urgent but it's already the active window
           (*hints).flags &= !XUrgencyHint;
@@ -504,7 +504,7 @@ impl Client {
       XFree (protocols as *mut c_void);
     }
     if is_supported {
-      let mut event: XEvent = uninitialized!();
+      let mut event: XEvent = uninitialized! ();
       event.type_ = ClientMessage;
       event.client_message.window = self.window;
       event.client_message.message_type = property::atom (WM::Protocols);
@@ -540,7 +540,7 @@ impl Client {
 
   pub unsafe fn configure (&self) {
     let g = self.client_geometry ();
-    let mut ev: XConfigureEvent = uninitialized!();
+    let mut ev: XConfigureEvent = uninitialized! ();
     ev.type_ = ConfigureNotify;
     ev.display = display;
     ev.event = self.window;

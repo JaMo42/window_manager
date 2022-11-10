@@ -16,8 +16,6 @@ const _NET_WM_MOVERESIZE_SIZE_BOTTOM: c_long = 5;
 const _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT: c_long = 6;
 const _NET_WM_MOVERESIZE_SIZE_LEFT: c_long = 7;
 const _NET_WM_MOVERESIZE_MOVE: c_long = 8;
-const _NET_WM_MOVERESIZE_SIZE_KEYBOARD: c_long = 9;
-const _NET_WM_MOVERESIZE_MOVE_KEYBOARD: c_long = 10;
 
 pub unsafe fn set_window_type (window: Window, type_: Net) {
   property::set (
@@ -77,7 +75,7 @@ unsafe fn net_wm_state (client: &mut Client, event: &XClientMessageEvent) {
     // _NET_WM_STATE_DEMANDS_ATTENTION
     {
       // Don't set if already focused
-      let f = focused_client!();
+      let f = focused_client! ();
       if f.is_some () && *f.unwrap () == *client {
         return;
       }
@@ -152,7 +150,7 @@ pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) 
   } else if event.message_type == atom (Net::ActiveWindow) {
     // This is what DWM uses for urgency
     {
-      let f = focused_client!();
+      let f = focused_client! ();
       if f.is_some () && *f.unwrap () == *client {
         return true;
       }

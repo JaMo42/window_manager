@@ -128,7 +128,7 @@ pub unsafe fn minimize (client: &mut Client) {
   client.is_minimized = true;
   client.unmap ();
   ewmh::set_net_wm_state (client, &[property::atom (Net::WMStateHidden)]);
-  if let Some (f) = focused_client!() {
+  if let Some (f) = focused_client! () {
     workspaces[active_workspace].focus (f.window);
   } else {
     property::delete (root, property::Net::ActiveWindow);
@@ -167,7 +167,7 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
     }
   }
   active_workspace = idx;
-  if let Some (focused) = focused_client!() {
+  if let Some (focused) = focused_client! () {
     focused.focus ();
   } else {
     property::set (

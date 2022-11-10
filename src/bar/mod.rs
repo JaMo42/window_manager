@@ -48,7 +48,7 @@ impl Bar {
 
   pub unsafe fn create () -> Self {
     let screen = XDefaultScreen (display);
-    let mut attributes: XSetWindowAttributes = uninitialized!();
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.override_redirect = X_TRUE;
     attributes.background_pixel = (*config).colors.bar_background.pixel;
     attributes.event_mask = ButtonPressMask | ExposureMask;

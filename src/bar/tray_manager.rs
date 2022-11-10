@@ -73,7 +73,7 @@ impl Tray_Manager {
   pub unsafe fn create (height: u32) -> Self {
     log::trace! ("Creating tray window");
     let screen = XDefaultScreen (display);
-    let mut attributes: XSetWindowAttributes = uninitialized!();
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.override_redirect = X_TRUE;
     attributes.background_pixel = (*config).colors.bar_background.pixel;
     attributes.event_mask =
@@ -262,7 +262,7 @@ impl Tray_Manager {
     //let should_map = client.xembed_info ().is_mapped ();
 
     log::trace! ("tray: update client attributes");
-    let mut attributes: XSetWindowAttributes = uninitialized!();
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.event_mask = StructureNotifyMask | PropertyChangeMask;
     attributes.background_pixel = (*config).colors.bar_background.pixel;
     XChangeWindowAttributes (display, window, CWEventMask | CWBackPixel, &mut attributes);

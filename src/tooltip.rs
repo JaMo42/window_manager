@@ -28,7 +28,7 @@ impl Tooltip {
   }
 
   unsafe fn create (&mut self) {
-    let mut attributes: XSetWindowAttributes = uninitialized!();
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.background_pixel = (*config).colors.bar_background.pixel;
     attributes.event_mask = NoEventMask;
     attributes.override_redirect = X_TRUE;

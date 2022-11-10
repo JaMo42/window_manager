@@ -32,7 +32,7 @@ impl Button {
     action: unsafe fn(&mut Client),
   ) -> Self {
     let button_size = decorated_frame_offset.y as u32;
-    let mut attributes: XSetWindowAttributes = uninitialized!();
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.override_redirect = X_TRUE;
     attributes.event_mask = ButtonPressMask | ButtonReleaseMask | EnterWindowMask | LeaveWindowMask;
     attributes.background_pixmap = X_NONE;

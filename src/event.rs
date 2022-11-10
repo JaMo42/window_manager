@@ -90,7 +90,7 @@ pub unsafe fn motion (event: &XButtonEvent) {
     mouse_held = 0;
   } else {
     // Ignore all subsequent MotionNotify events
-    let mut my_event: XEvent = uninitialized!();
+    let mut my_event: XEvent = uninitialized! ();
     loop {
       XNextEvent (display, &mut my_event);
       if my_event.type_ != MotionNotify {
@@ -141,7 +141,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
   } else {
     return;
   }
-  let mut event: XEvent = uninitialized!();
+  let mut event: XEvent = uninitialized! ();
   let mut last_time: Time = 0;
   let mut mouse_x = start_x;
   let mut mouse_y = start_y;
@@ -210,7 +210,7 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
   } else {
     return;
   }
-  let mut event: XEvent = uninitialized!();
+  let mut event: XEvent = uninitialized! ();
   let mut last_time: Time = 0;
   let mut prev_x = start_x;
   let mut prev_y = start_y;
@@ -261,12 +261,12 @@ pub unsafe fn key_press (event: &XKeyEvent) {
   if let Some (action) = (*config).get (event.keycode, event.state) {
     match action {
       Action::WM (f) => {
-        if let Some (client) = focused_client!() {
+        if let Some (client) = focused_client! () {
           f (client);
         }
       }
       Action::WS (f, workspace_index, requires_window) => {
-        let maybe_client = focused_client!();
+        let maybe_client = focused_client! ();
         if *requires_window && maybe_client.is_none () {
           return;
         }
@@ -305,7 +305,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     log::info! ("New meta window: {} ({})", name, window);
   } else {
     XGrabServer (display);
-    let mut wa: XWindowAttributes = uninitialized!();
+    let mut wa: XWindowAttributes = uninitialized! ();
     if XGetWindowAttributes (display, window, &mut wa) == 0 || wa.override_redirect != X_FALSE {
       log::info! ("ignoring window with override_redirect: {}", window);
       return;
@@ -412,7 +412,7 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
     } else if event.atom == XA_WM_NAME || event.atom == atom (Net::WMName) {
       client.set_title (&window_title (client.window));
     } else if event.atom == atom (Net::WMUserTime)
-      && focused_client!().map_or (true, |f| f.window != event.window)
+      && focused_client! ().map_or (true, |f| f.window != event.window)
     {
       if workspaces[active_workspace].contains (client.window) {
         workspaces[active_workspace].focus (client.window);

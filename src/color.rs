@@ -27,7 +27,7 @@ impl Color {
     let screen = XDefaultScreen (display);
     let visual = XDefaultVisual (display, screen);
     let color_map = XDefaultColormap (display, screen);
-    let mut xcolor: XftColor = uninitialized!();
+    let mut xcolor: XftColor = uninitialized! ();
     XftColorAllocName (display, visual, color_map, c_str! (hex), &mut xcolor);
     Color {
       pixel: xcolor.pixel,
@@ -193,7 +193,7 @@ impl std::ops::IndexMut<usize> for Color_Scheme {
 
 impl Color_Scheme {
   pub unsafe fn new (cfg: &Color_Scheme_Config, defs: &BTreeMap<String, Color>) -> Self {
-    let mut result: Color_Scheme = uninitialized!();
+    let mut result: Color_Scheme = uninitialized! ();
     let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
     let mut links = Vec::<(usize, usize)>::new ();
     for i in 0..COLOR_COUNT {
@@ -242,7 +242,7 @@ impl Color_Scheme {
   }
 
   pub fn new_uninit () -> Self {
-    unsafe { uninitialized!() }
+    unsafe { uninitialized! () }
   }
 }
 

@@ -128,7 +128,7 @@ pub struct Class_Hints {
 
 impl Class_Hints {
   pub unsafe fn new (window: Window) -> Option<Class_Hints> {
-    let mut class_hints: XClassHint = uninitialized!();
+    let mut class_hints: XClassHint = uninitialized! ();
     if XGetClassHint (display, window, &mut class_hints) == 0 {
       None
     } else {
@@ -495,7 +495,7 @@ impl Normal_Hints {
   }
 
   pub fn resize_inc (&self) -> Option<(i32, i32)> {
-    // Storing it as u32 keeps get get_field! macro simpler
+    // Storing it as u32 keeps the get_field! macro simpler
     self.resize_inc.map (|(w, h)| (w as i32, h as i32))
   }
 }

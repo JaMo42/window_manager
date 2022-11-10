@@ -129,9 +129,9 @@ impl Preview {
   const RESIZE_INCREMENT_THRESHHOLD: i32 = 5;
 
   pub unsafe fn create (initial_geometry: Geometry) -> Self {
-    let mut vi: XVisualInfo = uninitialized!();
+    let mut vi: XVisualInfo = uninitialized! ();
     XMatchVisualInfo (display, XDefaultScreen (display), 32, TrueColor, &mut vi);
-    let mut attributes: XSetWindowAttributes = uninitialized!();
+    let mut attributes: XSetWindowAttributes = uninitialized! ();
     attributes.override_redirect = X_TRUE;
     attributes.event_mask = 0;
     attributes.border_pixel = (*config).colors.selected.pixel;

@@ -22,7 +22,7 @@ pub unsafe fn load_cursors () {
   resizing = create_cursor (120); //XC_sizing
   resizing_horizontal = create_cursor (108); //XC_sb_h_double_arrow
   resizing_vertical = create_cursor (116); //XC_sb_v_double_arrow
-  let mut wa: XSetWindowAttributes = uninitialized!();
+  let mut wa: XSetWindowAttributes = uninitialized! ();
   wa.cursor = normal;
   XChangeWindowAttributes (display, root, CWCursor, &mut wa);
 }

@@ -38,7 +38,7 @@ struct Notification {
 impl Notification {
   pub fn new (id: u32, summary: &str, body: &str) -> Self {
     let window = unsafe {
-      let mut attributes: XSetWindowAttributes = uninitialized!();
+      let mut attributes: XSetWindowAttributes = uninitialized! ();
       attributes.background_pixel = (*config).colors.bar_background.pixel;
       attributes.event_mask = ButtonPressMask;
       XCreateWindow (
