@@ -1,27 +1,31 @@
-use x11::xlib::*;
-use crate::core::*;
-use crate::{get_window_geometry, set_window_kind, set_window_opacity};
-use crate::property;
-use crate::draw::{Alignment, Svg_Resource, resources};
 use crate::color::Color;
-use crate::platform;
-use crate::tooltip::tooltip;
+use crate::core::*;
+use crate::draw::{resources, Alignment, Svg_Resource};
 use crate::ewmh;
+use crate::platform;
+use crate::property;
+use crate::tooltip::tooltip;
+use crate::{get_window_geometry, set_window_kind, set_window_opacity};
+use x11::xlib::*;
 
 unsafe fn create_window () -> Window {
-  let mut attributes: XSetWindowAttributes = uninitialized! ();
+  let mut attributes: XSetWindowAttributes = uninitialized!();
   attributes.background_pixel = (*config).colors.bar_background.pixel;
   attributes.event_mask = ButtonPressMask | EnterWindowMask | LeaveWindowMask;
   attributes.backing_store = WhenMapped;
   let window = XCreateWindow (
-    display, root,
-    0, 0, 10, 10,
+    display,
+    root,
+    0,
+    0,
+    10,
+    10,
     0,
     CopyFromParent,
     CopyFromParent as u32,
     CopyFromParent as *mut Visual,
-    CWBackPixel|CWEventMask|CWBackingStore,
-    &mut attributes
+    CWBackPixel | CWEventMask | CWBackingStore,
+    &mut attributes,
   );
   ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
   set_window_opacity (window, (*config).bar_opacity);
@@ -32,11 +36,7 @@ unsafe fn create_window () -> Window {
 
 pub trait Widget {
   unsafe fn resize (&self, x: i32, width: u32, height: u32) {
-    XMoveResizeWindow (
-      display, self.window (),
-      x, 0,
-      width, height
-    );
+    XMoveResizeWindow (display, self.window (), x, 0, width, height);
   }
 
   fn window (&self) -> Window;
@@ -52,13 +52,11 @@ pub trait Widget {
   fn invalidate (&mut self) {}
 }
 
-
-
 unsafe fn draw_icon_and_text (
   string: &str,
   icon: Option<&'static mut Svg_Resource>,
   color: Option<Color>,
-  height: u32
+  height: u32,
 ) -> u32 {
   const ICON_TEXT_GAP: i32 = 3;
   let color = color.unwrap_or ((*config).colors.bar_text);
@@ -67,19 +65,15 @@ unsafe fn draw_icon_and_text (
   if let Some (svg) = icon {
     let size = (height as f64 * 0.9).round () as u32;
     let pos = ((height - size) / 2) as i32;
-    (*draw).draw_colored_svg (
-      svg,
-      color,
-      pos,pos,
-      size, size
-    );
+    (*draw).draw_colored_svg (svg, color, pos, pos, size, size);
     width += height + ICON_TEXT_GAP as u32;
   }
   if string.is_empty () {
     return width;
   }
   // Font is selected by bar
-  width += (*draw).text (string)
+  width += (*draw)
+    .text (string)
     .at (width as i32, 0)
     .align_vertically (Alignment::Centered, height as i32)
     .color (color)
@@ -93,20 +87,18 @@ unsafe fn resize_and_render (window: Window, width: u32, height: u32, gap: u32) 
   (*draw).render (window, 0, 0, width, height);
 }
 
-
-
 pub struct DateTime {
   window: Window,
   last_label: String,
-  width: u32
+  width: u32,
 }
 
 impl DateTime {
   pub fn new () -> Option<Self> {
-   Some (Self {
+    Some (Self {
       window: unsafe { create_window () },
       last_label: String::new (),
-      width: 0
+      width: 0,
     })
   }
 }
@@ -134,27 +126,28 @@ impl Widget for DateTime {
   }
 }
 
-
-
 pub struct Battery {
   window: Window,
   hover_text: String,
   last_capacity: String,
   last_status: String,
-  width: u32
+  width: u32,
 }
 
 impl Battery {
   pub fn new () -> Option<Self> {
-    if std::fs::metadata (
-      format! ("/sys/class/power_supply/{}", unsafe {&*config}.bar_power_supply)
-    ).is_ok () {
+    if std::fs::metadata (format! (
+      "/sys/class/power_supply/{}",
+      unsafe { &*config }.bar_power_supply
+    ))
+    .is_ok ()
+    {
       Some (Self {
         window: unsafe { create_window () },
         hover_text: String::new (),
         last_capacity: String::new (),
         last_status: String::new (),
-        width: 0
+        width: 0,
       })
     } else {
       None
@@ -183,13 +176,17 @@ impl Widget for Battery {
   }
 
   unsafe fn update (&mut self, height: u32, gap: u32) -> u32 {
-    let mut capacity = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/capacity", (*config).bar_power_supply)
-    ).expect("Could not read battery status");
+    let mut capacity = std::fs::read_to_string (format! (
+      "/sys/class/power_supply/{}/capacity",
+      (*config).bar_power_supply
+    ))
+    .expect ("Could not read battery status");
     capacity.pop ();
-    let mut status = std::fs::read_to_string (
-      format! ("/sys/class/power_supply/{}/status", (*config).bar_power_supply)
-    ).expect("Could not read battery status");
+    let mut status = std::fs::read_to_string (format! (
+      "/sys/class/power_supply/{}/status",
+      (*config).bar_power_supply
+    ))
+    .expect ("Could not read battery status");
     status.pop ();
     if capacity == self.last_capacity && status == self.last_status {
       return self.width;
@@ -220,14 +217,12 @@ impl Widget for Battery {
   }
 }
 
-
-
 pub struct Volume {
   window: Window,
   last_level: u32,
   // This is a bool but we need a 3rd state for the initial/invalidated value
   last_mute_state: u8,
-  width: u32
+  width: u32,
 }
 
 impl Volume {
@@ -237,7 +232,7 @@ impl Volume {
         window: unsafe { create_window () },
         last_level: 101,
         last_mute_state: 2,
-        width: 0
+        width: 0,
       })
     } else {
       None
@@ -290,27 +285,27 @@ impl Widget for Volume {
   }
 }
 
-
-
 pub struct Workspaces {
   window: Window,
-  last_workspace: usize
+  last_workspace: usize,
 }
 
 impl Workspaces {
   pub fn new () -> Option<Self> {
     let window = unsafe { create_window () };
-    unsafe { XResizeWindow (
-      display,
-      window,
-      // Note: assumes this is never the rightmost widget, this way we don't
-      // need to resize on every update
-      bar.height * workspaces.len () as u32 + super::Bar::WIDGET_GAP as u32,
-      bar.height
-    )};
+    unsafe {
+      XResizeWindow (
+        display,
+        window,
+        // Note: assumes this is never the rightmost widget, this way we don't
+        // need to resize on every update
+        bar.height * workspaces.len () as u32 + super::Bar::WIDGET_GAP as u32,
+        bar.height,
+      )
+    };
     Some (Self {
       window,
-      last_workspace: unsafe { workspaces.len () }
+      last_workspace: unsafe { workspaces.len () },
     })
   }
 }
@@ -339,25 +334,24 @@ impl Widget for Workspaces {
         // Don't draw the outline for the background color
         (*draw).fill_rect ((idx as u32 * height) as i32, 0, height, height, color);
       } else {
-        (*draw).square ((idx as u32 * height) as i32, 0, height)
+        (*draw)
+          .square ((idx as u32 * height) as i32, 0, height)
           .color (color)
           .stroke (2, color.scale (0.8))
           .draw ();
       }
-      (*draw).text (format! ("{}", idx+1).as_str ())
+      (*draw)
+        .text (format! ("{}", idx + 1).as_str ())
         .at ((idx as u32 * height) as i32, 0)
         .align_horizontally (Alignment::Centered, height as i32)
         .align_vertically (Alignment::Centered, height as i32)
-        .color (
-          if workspace.has_urgent () {
-            (*config).colors.bar_urgent_workspace_text
-          }
-          else if idx == active_workspace {
-            (*config).colors.bar_active_workspace_text
-          } else {
-            (*config).colors.bar_text
-          }
-        )
+        .color (if workspace.has_urgent () {
+          (*config).colors.bar_urgent_workspace_text
+        } else if idx == active_workspace {
+          (*config).colors.bar_active_workspace_text
+        } else {
+          (*config).colors.bar_text
+        })
         .draw ();
     }
     (*draw).render (self.window, 0, 0, width, height);
@@ -369,17 +363,14 @@ impl Widget for Workspaces {
     if event.button == Button1 || event.button == Button2 || event.button == Button3 {
       // Left/Middle/Right click selects workspace under cursor
       select_workspace (event.x as usize / bar.height as usize, None);
-    }
-    else if event.button == Button5 {
+    } else if event.button == Button5 {
       // Scrolling up selects the next workspace
       select_workspace ((active_workspace + 1) % workspaces.len (), None)
-    }
-    else if event.button == Button4 {
+    } else if event.button == Button4 {
       // Scrolling down selects the previous workspace
       if active_workspace == 0 {
         select_workspace (workspaces.len () - 1, None);
-      }
-      else {
+      } else {
         select_workspace (active_workspace - 1, None);
       }
     }

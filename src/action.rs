@@ -1,15 +1,12 @@
-use std::os::raw::*;
-use x11::xlib::*;
+use super::client::*;
 use super::core::*;
 use super::geometry::*;
-use super::client::*;
-use super::*;
 use super::property::WM;
+use super::*;
 
 pub unsafe fn quit () {
   running = false;
 }
-
 
 pub unsafe fn close_client (client: &mut Client) {
   if !client.send_event (property::atom (WM::DeleteWindow)) {
@@ -18,20 +15,21 @@ pub unsafe fn close_client (client: &mut Client) {
   }
 }
 
-
-pub unsafe fn move_snap_flags (x: c_uint, y: c_uint) ->u8 {
+pub unsafe fn move_snap_flags (x: c_uint, y: c_uint) -> u8 {
   let mut snap_flags = 0u8;
-  snap_flags |= if x > screen_size.w / 2 { SNAP_RIGHT } else { SNAP_LEFT };
+  snap_flags |= if x > screen_size.w / 2 {
+    SNAP_RIGHT
+  } else {
+    SNAP_LEFT
+  };
   let v = screen_size.h / 4;
   if y < v {
     snap_flags |= SNAP_TOP;
-  }
-  else if y > screen_size.h - v {
+  } else if y > screen_size.h - v {
     snap_flags |= SNAP_BOTTOM;
   }
   snap_flags
 }
-
 
 pub unsafe fn snap_geometry (flags: u8) -> Geometry {
   let mut target = Geometry::new ();
@@ -39,12 +37,10 @@ pub unsafe fn snap_geometry (flags: u8) -> Geometry {
   if (flags & SNAP_TOP) != 0 {
     target.y = window_area.y;
     target.h = window_area.h / 2;
-  }
-  else if (flags & SNAP_BOTTOM) != 0 {
+  } else if (flags & SNAP_BOTTOM) != 0 {
     target.y = window_area.y + (window_area.h / 2) as c_int;
     target.h = window_area.h / 2;
-  }
-  else {
+  } else {
     target.y = window_area.y;
     target.h = window_area.h;
   }
@@ -52,8 +48,7 @@ pub unsafe fn snap_geometry (flags: u8) -> Geometry {
   if (flags & SNAP_LEFT) != 0 {
     target.x = window_area.x;
     target.w = window_area.w / 2;
-  }
-  else if (flags & SNAP_RIGHT) != 0 {
+  } else if (flags & SNAP_RIGHT) != 0 {
     target.x = window_area.x + (window_area.w / 2) as c_int;
     target.w = window_area.w / 2;
   }
@@ -67,17 +62,19 @@ pub unsafe fn snap_geometry (flags: u8) -> Geometry {
   target
 }
 
-
 pub unsafe fn snap (client: &mut Client, flags: u8) {
   if !client.may_resize () {
     return;
   }
   client.snap_state = flags;
   if flags == SNAP_MAXIMIZED {
-    ewmh::set_net_wm_state (client, &[
-      property::atom (Net::WMStateMaximizedHorz),
-      property::atom (Net::WMStateMaximizedVert)
-    ]);
+    ewmh::set_net_wm_state (
+      client,
+      &[
+        property::atom (Net::WMStateMaximizedHorz),
+        property::atom (Net::WMStateMaximizedVert),
+      ],
+    );
   }
   client.move_and_resize (Client_Geometry::Snap (snap_geometry (flags)));
 }
@@ -86,14 +83,20 @@ pub unsafe fn snap_left (client: &mut Client) {
   if (client.snap_state & SNAP_LEFT) == SNAP_LEFT {
     client.snap_state &= !(SNAP_TOP | SNAP_BOTTOM);
   }
-  snap (client, SNAP_LEFT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)));
+  snap (
+    client,
+    SNAP_LEFT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)),
+  );
 }
 
 pub unsafe fn snap_right (client: &mut Client) {
   if (client.snap_state & SNAP_RIGHT) == SNAP_RIGHT {
     client.snap_state &= !(SNAP_TOP | SNAP_BOTTOM);
   }
-  snap (client, SNAP_RIGHT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)));
+  snap (
+    client,
+    SNAP_RIGHT | (client.snap_state & (SNAP_TOP | SNAP_BOTTOM)),
+  );
 }
 
 pub unsafe fn snap_down (client: &mut Client) {
@@ -118,7 +121,6 @@ pub unsafe fn center (client: &mut Client) {
   client.unsnap ();
 }
 
-
 pub unsafe fn minimize (client: &mut Client) {
   if client.is_fullscreen {
     return;
@@ -126,14 +128,13 @@ pub unsafe fn minimize (client: &mut Client) {
   client.is_minimized = true;
   client.unmap ();
   ewmh::set_net_wm_state (client, &[property::atom (Net::WMStateHidden)]);
-  if let Some (f) = focused_client! () {
+  if let Some (f) = focused_client!() {
     workspaces[active_workspace].focus (f.window);
   } else {
     property::delete (root, property::Net::ActiveWindow);
     XSetInputFocus (display, root, RevertToParent, CurrentTime);
   }
 }
-
 
 pub unsafe fn raise_all () {
   for c in workspaces[active_workspace].iter_mut () {
@@ -144,7 +145,6 @@ pub unsafe fn raise_all () {
   workspaces[active_workspace].focus_client (0);
 }
 
-
 pub unsafe fn toggle_maximized (client: &mut Client) {
   if client.snap_state & SNAP_MAXIMIZED == SNAP_MAXIMIZED {
     client.unsnap ();
@@ -152,7 +152,6 @@ pub unsafe fn toggle_maximized (client: &mut Client) {
     snap (client, SNAP_MAXIMIZED);
   }
 }
-
 
 pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
   if idx == active_workspace {
@@ -168,18 +167,21 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
     }
   }
   active_workspace = idx;
-  if let Some (focused) = focused_client! () {
+  if let Some (focused) = focused_client!() {
     focused.focus ();
-  }
-  else {
+  } else {
     property::set (
-      root, Net::ActiveWindow, XA_WINDOW, 32, std::ptr::null_mut::<c_uchar> (), 0
+      root,
+      Net::ActiveWindow,
+      XA_WINDOW,
+      32,
+      std::ptr::null_mut::<c_uchar> (),
+      0,
     );
   }
   set_cardinal! (root, property::atom (Net::CurrentDesktop), active_workspace);
   bar.draw ();
 }
-
 
 pub unsafe fn move_to_workspace (idx: usize, client_: Option<&mut Client>) {
   let client = client_.unwrap ();
@@ -188,7 +190,6 @@ pub unsafe fn move_to_workspace (idx: usize, client_: Option<&mut Client>) {
   boxed.unmap ();
   workspaces[idx].push (boxed);
 }
-
 
 pub unsafe fn switch_window () {
   workspaces[active_workspace].switch_window ();

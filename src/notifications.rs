@@ -1,12 +1,12 @@
-use std::thread;
-use zbus::{Connection, Result, SignalContext, dbus_interface};
-use zbus::zvariant;
-use futures::executor;
-use x11::xlib::*;
 use super::core::*;
-use super::set_window_kind;
-use super::property::Net;
 use super::ewmh;
+use super::property::Net;
+use super::set_window_kind;
+use futures::executor;
+use std::thread;
+use x11::xlib::*;
+use zbus::zvariant;
+use zbus::{dbus_interface, Connection, Result, SignalContext};
 
 /// The notification expired
 const CLOSE_REASON_EXPIRED: u32 = 1;
@@ -26,32 +26,34 @@ fn manager () -> &'static mut Manager {
   unsafe { &mut _manager }
 }
 
-
-
 struct Notification {
   id: u32,
   window: Window,
   width: u32,
   height: u32,
   summary: String,
-  body: String
+  body: String,
 }
 
 impl Notification {
   pub fn new (id: u32, summary: &str, body: &str) -> Self {
     let window = unsafe {
-      let mut attributes: XSetWindowAttributes = uninitialized! ();
+      let mut attributes: XSetWindowAttributes = uninitialized!();
       attributes.background_pixel = (*config).colors.bar_background.pixel;
       attributes.event_mask = ButtonPressMask;
       XCreateWindow (
-        display, root,
-        0, 0, 10, 10,
+        display,
+        root,
+        0,
+        0,
+        10,
+        10,
         0,
         CopyFromParent,
         CopyFromParent as u32,
         CopyFromParent as *mut Visual,
-        CWBackPixel|CWEventMask,
-        &mut attributes
+        CWBackPixel | CWEventMask,
+        &mut attributes,
       )
     };
     unsafe {
@@ -64,10 +66,12 @@ impl Notification {
       width: 0,
       height: 0,
       summary: String::new (),
-      body: String::new ()
+      body: String::new (),
     };
     this.replace (summary, body);
-    unsafe { XMapWindow (display, window); }
+    unsafe {
+      XMapWindow (display, window);
+    }
     this
   }
 
@@ -84,7 +88,7 @@ impl Notification {
     let height;
     let background = (*config).colors.notification_background;
     let foreground = (*config).colors.notification_text;
-    (*draw).select_font(&(*config).bar_font);
+    (*draw).select_font (&(*config).bar_font);
     // Determine width needed for the text
     {
       let longer_text = if self.summary.len () > self.body.len () {
@@ -93,17 +97,19 @@ impl Notification {
         self.body.as_str ()
       };
       let text = (*draw).text (longer_text);
-      width = text.get_width () + 2*BORDER;
+      width = text.get_width () + 2 * BORDER;
     }
     // Summary
     {
       let mut summary_text = (*draw).text (&self.summary);
-      body_y = summary_text.get_height () + 2*BORDER;
+      body_y = summary_text.get_height () + 2 * BORDER;
       // fill_rect can't use scaled colors
-      (*draw).rect (0, 0, width, body_y)
+      (*draw)
+        .rect (0, 0, width, body_y)
         .color (background.scale (0.9))
         .draw ();
-      summary_text.at (BORDER as i32, BORDER as i32)
+      summary_text
+        .at (BORDER as i32, BORDER as i32)
         .color (foreground)
         .draw ();
     }
@@ -111,18 +117,22 @@ impl Notification {
       // Body
       {
         let mut body_text = (*draw).text (&self.body);
-        height = body_y + body_text.get_height () + 2*BORDER;
+        height = body_y + body_text.get_height () + 2 * BORDER;
         (*draw).fill_rect (
-          0, body_y as i32,
-          width + 2*BORDER, height - body_y,
-          background
+          0,
+          body_y as i32,
+          width + 2 * BORDER,
+          height - body_y,
+          background,
         );
-        body_text.at (BORDER as i32, (body_y + BORDER) as i32)
+        body_text
+          .at (BORDER as i32, (body_y + BORDER) as i32)
           .color (foreground)
           .draw ();
       }
       // Separator
-      (*draw).rect (0, body_y as i32 - 1, width, 2)
+      (*draw)
+        .rect (0, body_y as i32 - 1, width, 2)
         .color (background.scale (1.1))
         .draw ();
     } else {
@@ -143,12 +153,10 @@ impl Notification {
   }
 }
 
-
-
 struct Manager {
   notifications: Vec<Notification>,
   next_id: u32,
-  timeout_threads: Vec<thread::JoinHandle<()>>
+  timeout_threads: Vec<thread::JoinHandle<()>>,
 }
 
 impl Manager {
@@ -156,7 +164,7 @@ impl Manager {
     Self {
       notifications: Vec::new (),
       next_id: 1,
-      timeout_threads: Vec::new ()
+      timeout_threads: Vec::new (),
     }
   }
 
@@ -179,7 +187,9 @@ impl Manager {
     if let Some (idx) = self.find (id) {
       self.notifications[idx].replace (summary, body);
     } else {
-      self.notifications.push (Notification::new (id, summary, body));
+      self
+        .notifications
+        .push (Notification::new (id, summary, body));
     }
     self.update ();
     self.arrange ();
@@ -195,14 +205,16 @@ impl Manager {
   /// Repositions all notifications
   fn arrange (&mut self) {
     let mut y = unsafe { window_area.y };
-    let x_right = unsafe { window_area.x + window_area.w as i32};
+    let x_right = unsafe { window_area.x + window_area.w as i32 };
     for n in self.notifications.iter () {
       unsafe {
         XMoveWindow (display, n.window, x_right - n.width as i32, y);
       }
       y += n.height as i32 + 10;
     }
-    unsafe { XSync (display, X_FALSE); }
+    unsafe {
+      XSync (display, X_FALSE);
+    }
   }
 
   /// Redraws all notifications
@@ -241,30 +253,25 @@ impl Manager {
   }
 }
 
-
-
 struct Server {
-  manager: &'static mut Manager
+  manager: &'static mut Manager,
 }
 
-#[dbus_interface (name="org.freedesktop.Notifications")]
+#[dbus_interface(name = "org.freedesktop.Notifications")]
 impl Server {
   /// `org.freedesktop.Notifications.GetServerInformation`
   async fn get_server_information (&self) -> (&str, &str, &str, &str) {
     (
-      "window_manager_notification_server",  // name
-      "window_manager",  // vendor
-      "1.0",  // server version
-      "1.2"  // spec version
+      "window_manager_notification_server", // name
+      "window_manager",                     // vendor
+      "1.0",                                // server version
+      "1.2",                                // spec version
     )
   }
 
   /// `org.freedesktop.Notifications.GetCapabilities`
   async fn get_capabilities (&self) -> Vec<&str> {
-    vec![
-      "body",
-      "persistence"
-    ]
+    vec! ["body", "persistence"]
   }
 
   /// `org.freedesktop.Notifications.Notify`
@@ -278,12 +285,12 @@ impl Server {
     body: &str,
     _actions: Vec<&str>,
     _hints: std::collections::HashMap<&str, zvariant::Value<'_>>,
-    expire_timeout: i32
+    expire_timeout: i32,
   ) -> u32 {
     let id = self.manager.get_id (replaces_id);
     self.manager.new_notification (id, summary, body);
-    if expire_timeout < 0 && unsafe {&*config}.default_notification_timeout != 0{
-      manager ().close_after (id, unsafe {&*config}.default_notification_timeout);
+    if expire_timeout < 0 && unsafe { &*config }.default_notification_timeout != 0 {
+      manager ().close_after (id, unsafe { &*config }.default_notification_timeout);
     } else if expire_timeout > 0 {
       manager ().close_after (id, expire_timeout);
     }
@@ -297,32 +304,42 @@ impl Server {
   }
 
   /// `org.freedesktop.Notifications.NotificationClosed`
-  #[dbus_interface (signal)]
-  async fn notification_closed (&self, ctxt: &SignalContext<'_>, id: u32, reason: u32) -> Result<()>;
+  #[dbus_interface(signal)]
+  async fn notification_closed (
+    &self,
+    ctxt: &SignalContext<'_>,
+    id: u32,
+    reason: u32,
+  ) -> Result<()>;
 }
-
-
 
 /// Sends a `org.freedesktop.Notifications.NotificationClosed` signal
 async fn signal_close (id: u32, reason: u32) {
   let iface_ref = dbus_connection ()
     .object_server ()
-    .interface::<_, Server> ("/org/freedesktop/Notifications").await.unwrap ();
+    .interface::<_, Server> ("/org/freedesktop/Notifications")
+    .await
+    .unwrap ();
   let iface = iface_ref.get_mut ().await;
-  iface.notification_closed (iface_ref.signal_context (), id, reason).await.unwrap ();
+  iface
+    .notification_closed (iface_ref.signal_context (), id, reason)
+    .await
+    .unwrap ();
 }
 
 /// async implementation for `init`
 async unsafe fn do_init () -> Result<()> {
   let connection = Connection::session ().await?;
   let server = Server {
-    manager: manager ()
+    manager: manager (),
   };
   connection
     .object_server ()
-    .at ("/org/freedesktop/Notifications", server).await?;
+    .at ("/org/freedesktop/Notifications", server)
+    .await?;
   connection
-    .request_name ("org.freedesktop.Notifications").await?;
+    .request_name ("org.freedesktop.Notifications")
+    .await?;
   _dbus_connection = Some (connection);
   Ok (())
 }
@@ -332,9 +349,11 @@ async fn do_quit () -> Result<()> {
   manager ().join_finished_timeout_threads ();
   dbus_connection ()
     .object_server ()
-    .remove::<Server, _> ("/org/freedesktop/Notifications").await?;
+    .remove::<Server, _> ("/org/freedesktop/Notifications")
+    .await?;
   dbus_connection ()
-    .release_name ("org.freedesktop.Notifications").await?;
+    .release_name ("org.freedesktop.Notifications")
+    .await?;
   Ok (())
 }
 
@@ -366,8 +385,8 @@ pub fn maybe_close (window: Window) -> bool {
 pub fn notify (summary: &str, body: &str, timeout: i32) {
   let id = manager ().get_id (0);
   manager ().new_notification (id, summary, body);
-  if timeout < 0 && unsafe {&*config}.default_notification_timeout != 0{
-    manager ().close_after (id, unsafe {&*config}.default_notification_timeout);
+  if timeout < 0 && unsafe { &*config }.default_notification_timeout != 0 {
+    manager ().close_after (id, unsafe { &*config }.default_notification_timeout);
   } else if timeout > 0 {
     manager ().close_after (id, timeout);
   }

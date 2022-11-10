@@ -1,22 +1,19 @@
-use std::os::raw::*;
-use std::collections::{HashMap, BTreeMap};
-use std::ffi::CString;
-use x11::xlib::*;
-use x11::keysym::*;
-use super::*;
-use super::config_parser;
-use super::color::*;
-use super::paths;
 use super::color;
+use super::color::*;
+use super::config_parser;
 use super::draw::Alignment;
+use super::paths;
+use super::*;
+use std::collections::{BTreeMap, HashMap};
+use std::ffi::CString;
+use x11::keysym::*;
 
 #[macro_export]
 macro_rules! clean_mods {
   ($mods:expr) => {
-    $mods
-      & !(LockMask | unsafe { numlock_mask })
-      & (MOD_WIN | MOD_ALT | MOD_SHIFT | MOD_CTRL)
-  }
+
+    $mods & !(LockMask | unsafe { numlock_mask }) & (MOD_WIN | MOD_ALT | MOD_SHIFT | MOD_CTRL)
+  };
 }
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
@@ -29,103 +26,89 @@ impl Key {
   pub fn from_str (key: *const c_char, modifiers: c_uint) -> Self {
     Key {
       modifiers,
-      code: unsafe {
-        XKeysymToKeycode (display, XStringToKeysym (key)) as c_uint
-      }
+      code: unsafe { XKeysymToKeycode (display, XStringToKeysym (key)) as c_uint },
     }
   }
 
   pub fn from_sym (sym: c_uint, modifiers: c_uint) -> Self {
     Key {
       modifiers,
-      code: unsafe {
-        XKeysymToKeycode (display, sym as c_ulong) as c_uint
-      }
+      code: unsafe { XKeysymToKeycode (display, sym as c_ulong) as c_uint },
     }
   }
 }
 
-
 pub enum Action {
-  WM (unsafe fn (&mut Client)),
-  WS (unsafe fn (usize, Option<&mut Client>), usize, bool),
+  WM (unsafe fn(&mut Client)),
+  WS (unsafe fn(usize, Option<&mut Client>), usize, bool),
   Launch (String),
-  Generic (unsafe fn ())
+  Generic (unsafe fn()),
 }
 
 impl Action {
   pub fn from_str (s: &str) -> Self {
-    use Action::*;
     use super::platform::actions::*;
+    use Action::*;
     match s {
       "close_window" => WM (action::close_client),
       "quit" => Generic (action::quit),
-      "snap_maximized" => WM (
-        |c| unsafe {
-          action::snap (c, SNAP_MAXIMIZED)
-        }
-      ),
+      "snap_maximized" => WM (|c| unsafe { action::snap (c, SNAP_MAXIMIZED) }),
       "snap_left" => WM (action::snap_left),
       "snap_right" => WM (action::snap_right),
-      "unsnap_or_center" => WM (
-        |c| unsafe {
-          if c.is_snapped () {
-            c.unsnap ();
-          } else {
-            action::center (c);
-          }
+      "unsnap_or_center" => WM (|c| unsafe {
+        if c.is_snapped () {
+          c.unsnap ();
+        } else {
+          action::center (c);
         }
-      ),
+      }),
       "snap_up" => WM (action::snap_up),
       "snap_down" => WM (action::snap_down),
       "minimize" => WM (action::minimize),
-      "unsnap_or_minimize" => WM (
-        |c| unsafe {
-          if c.is_snapped () {
-            c.unsnap ();
-          } else {
-            action::minimize (c);
-          }
+      "unsnap_or_minimize" => WM (|c| unsafe {
+        if c.is_snapped () {
+          c.unsnap ();
+        } else {
+          action::minimize (c);
         }
-      ),
+      }),
       "raise_all" => Generic (action::raise_all),
       "mute_volume" => Generic (mute_volume),
       "increase_volume" => Generic (increase_volume),
       "decrease_volume" => Generic (decrease_volume),
-      _ => my_panic! ("action::from_str: unknown action: {}", s)
+      _ => my_panic! ("action::from_str: unknown action: {}", s),
     }
   }
 }
 
-
 pub enum Height {
   FontPlus (u32),
-  Absolute (u32)
+  Absolute (u32),
 }
 
 impl Height {
   pub unsafe fn get (&self, font: Option<&str>) -> u32 {
     match *self {
       Height::FontPlus (n) => n + (*draw).font_height (font),
-      Height::Absolute (n) => n
+      Height::Absolute (n) => n,
     }
   }
 }
 
 impl std::fmt::Display for Height {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+  fn fmt (&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
     match *self {
-      Height::FontPlus(n) => if n == 0 {
-        write! (f, "same as font height")
+      Height::FontPlus (n) => {
+        if n == 0 {
+          write! (f, "same as font height")
+        } else {
+          write! (f, "font height + {}", n)
+        }
       }
-      else {
-        write! (f, "font height + {}", n)
-      },
-      Height::Absolute(n) => write! (f, "{}", n)
+      Height::Absolute (n) => write! (f, "{}", n),
     }
   }
 }
-
 
 pub struct Config {
   pub modifier: c_uint,
@@ -155,7 +138,7 @@ pub struct Config {
   pub circle_buttons: bool,
   pub default_notification_timeout: i32,
   pub icon_theme: String,
-  pub window_icon_size: u8
+  pub window_icon_size: u8,
 }
 
 impl Config {
@@ -183,7 +166,7 @@ impl Config {
       circle_buttons: false,
       default_notification_timeout: 6000,
       icon_theme: "Papirus".to_string (),
-      window_icon_size: 0
+      window_icon_size: 0,
     }
   }
 
@@ -192,7 +175,10 @@ impl Config {
   }
 
   pub fn get (&self, key_code: c_uint, modifiers: c_uint) -> Option<&Action> {
-    self.key_binds.get (&Key { modifiers: clean_mods! (modifiers), code: key_code })
+    self.key_binds.get (&Key {
+      modifiers: clean_mods! (modifiers),
+      code: key_code,
+    })
   }
 
   pub fn load (&mut self) {
@@ -213,7 +199,7 @@ impl Config {
           self.gap = size;
         }
         Padding (t, b, l, r) => {
-          log::info! ("config: padding: {} {} {} {}", t, b, l ,r);
+          log::info! ("config: padding: {} {} {} {}", t, b, l, r);
           self.padding = (t, b, l, r);
         }
         Border (width) => {
@@ -234,14 +220,19 @@ impl Config {
           log::info! ("config: bind: {}+{} -> {}", modifier, key_str, action_str);
           self.add (
             Key::from_str (c_str! (key_str.as_str ()), modifier),
-            Action::from_str (&action_str)
+            Action::from_str (&action_str),
           );
         }
         Bind_Command (modifier, key_str, command) => {
-          log::info! ("config: bind: {}+{} -> launch: '{}'", modifier, key_str, command);
+          log::info! (
+            "config: bind: {}+{} -> launch: '{}'",
+            modifier,
+            key_str,
+            command
+          );
           self.add (
             Key::from_str (c_str! (key_str.as_str ()), modifier),
-            Action::Launch (command)
+            Action::Launch (command),
           );
         }
         Color (element, color_hex) => {
@@ -252,15 +243,12 @@ impl Config {
               Color_Config::Hex (color_hex)
             } else {
               Color_Config::Link (color_hex)
-            }
+            },
           );
         }
         Def_Color (name, color_hex) => {
           log::info! ("config: color definition: {} -> {}", name, color_hex);
-          color_defs.insert (
-            name,
-            unsafe { color::Color::alloc_from_hex (&color_hex) }
-          );
+          color_defs.insert (name, unsafe { color::Color::alloc_from_hex (&color_hex) });
         }
         Bar_Font (description) => {
           log::info! ("config: bar font: {}", description);
@@ -296,7 +284,7 @@ impl Config {
             "left" => Alignment::Left,
             "center" => Alignment::Centered,
             "right" => Alignment::Right,
-            _ => unreachable! ()
+            _ => unreachable!(),
           }
         }
         Left_Buttons (buttons) => {
@@ -336,16 +324,16 @@ impl Config {
       let sym = XK_1 + ws_idx as u32;
       self.add (
         Key::from_sym (sym, self.modifier),
-        Action::WS (action::select_workspace, ws_idx, false)
+        Action::WS (action::select_workspace, ws_idx, false),
       );
       self.add (
         Key::from_sym (sym, self.modifier | MOD_SHIFT),
-        Action::WS (action::move_to_workspace, ws_idx, true)
+        Action::WS (action::move_to_workspace, ws_idx, true),
       );
     }
     self.add (
       Key::from_sym (XK_Tab, MOD_ALT),
-      Action::Generic (action::switch_window)
+      Action::Generic (action::switch_window),
     );
     // Set window area
     unsafe {
@@ -353,7 +341,7 @@ impl Config {
         screen_size.x + self.padding.2,
         screen_size.y + self.padding.0,
         screen_size.w - (self.padding.2 + self.padding.3) as u32,
-        screen_size.h - (self.padding.0 + self.padding.1) as u32
+        screen_size.h - (self.padding.0 + self.padding.1) as u32,
       );
     }
   }

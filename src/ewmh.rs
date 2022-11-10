@@ -1,10 +1,10 @@
+use super::action;
+use super::client::Client;
+use super::core::*;
+use super::event::{mouse_move, mouse_resize};
+use super::property::{self, atom, Net, WM};
 use libc::c_long;
 use x11::xlib::*;
-use super::core::*;
-use super::property::{self, Net, WM, atom};
-use super::client::Client;
-use super::action;
-use super::event::{mouse_move, mouse_resize};
 
 // https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm46435610090352
 const _NET_WM_MOVERESIZE_SIZE_TOPLEFT: c_long = 0;
@@ -26,7 +26,7 @@ pub unsafe fn set_window_type (window: Window, type_: Net) {
     XA_ATOM,
     32,
     &property::atom (type_),
-    1
+    1,
   );
 }
 
@@ -53,26 +53,31 @@ pub unsafe fn set_net_wm_state (client: &mut Client, atoms: &[Atom]) {
     XA_ATOM,
     32,
     atoms.as_ptr (),
-    atoms.len () as i32
+    atoms.len () as i32,
   );
 }
 
 unsafe fn net_wm_state (client: &mut Client, event: &XClientMessageEvent) {
   let data = event.data.as_longs ();
   macro_rules! new_state {
-    ($member:ident) => { data[0] == 1 || (data[0] == 2 && !client.$member) }
+    ($member:ident) => {
+
+      data[0] == 1 || (data[0] == 2 && !client.$member)
+    };
   }
   if data[1] as Atom == atom (Net::WMStateFullscreen)
-    || data[2] as Atom == atom (Net::WMStateFullscreen) {
+    || data[2] as Atom == atom (Net::WMStateFullscreen)
+  {
     // _NET_WM_STATE_FULLSCREEN
     client.set_fullscreen (new_state! (is_fullscreen));
   }
   if data[1] as Atom == atom (Net::WMStateDemandsAttention)
-    || data[2] as Atom == atom (Net::WMStateDemandsAttention) {
+    || data[2] as Atom == atom (Net::WMStateDemandsAttention)
+  {
     // _NET_WM_STATE_DEMANDS_ATTENTION
     {
       // Don't set if already focused
-      let f = focused_client! ();
+      let f = focused_client!();
       if f.is_some () && *f.unwrap () == *client {
         return;
       }
@@ -84,15 +89,16 @@ unsafe fn net_wm_state (client: &mut Client, event: &XClientMessageEvent) {
   if data[1] as Atom == atom (Net::WMStateMaximizedHorz)
     || data[2] as Atom == atom (Net::WMStateMaximizedHorz)
     || data[1] as Atom == atom (Net::WMStateMaximizedVert)
-    || data[2] as Atom == atom (Net::WMStateMaximizedVert) {
+    || data[2] as Atom == atom (Net::WMStateMaximizedVert)
+  {
     if data[0] == 1 || (data[0] == 2 && (client.snap_state & SNAP_MAXIMIZED) != SNAP_MAXIMIZED) {
       action::snap (client, SNAP_MAXIMIZED);
       set_net_wm_state (
         client,
         &[
           atom (Net::WMStateMaximizedHorz),
-          atom (Net::WMStateMaximizedVert)
-        ]
+          atom (Net::WMStateMaximizedVert),
+        ],
       );
     } else {
       client.unsnap ();
@@ -113,24 +119,24 @@ unsafe fn net_wm_moveresize (client: &mut Client, event: &XClientMessageEvent) {
   //       bottom and/or right direction, we could just ignore them but it's
   //       probably nicer to have them anyways.
 
-  if direction == _NET_WM_MOVERESIZE_MOVE  && client.may_move (){
+  if direction == _NET_WM_MOVERESIZE_MOVE && client.may_move () {
     mouse_move (client);
-  }
-  else if (direction == _NET_WM_MOVERESIZE_SIZE_LEFT
-        || direction == _NET_WM_MOVERESIZE_SIZE_RIGHT)
-        && client.may_resize () {
+  } else if (direction == _NET_WM_MOVERESIZE_SIZE_LEFT
+    || direction == _NET_WM_MOVERESIZE_SIZE_RIGHT)
+    && client.may_resize ()
+  {
     mouse_resize (client, false, true);
-  }
-  else if (direction == _NET_WM_MOVERESIZE_SIZE_TOP
-        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOM)
-        && client.may_resize () {
+  } else if (direction == _NET_WM_MOVERESIZE_SIZE_TOP
+    || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOM)
+    && client.may_resize ()
+  {
     mouse_resize (client, true, false);
-  }
-  else if (direction == _NET_WM_MOVERESIZE_SIZE_TOPLEFT
-        || direction == _NET_WM_MOVERESIZE_SIZE_TOPRIGHT
-        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMRIGHT
-        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT)
-        && client.may_resize () {
+  } else if (direction == _NET_WM_MOVERESIZE_SIZE_TOPLEFT
+    || direction == _NET_WM_MOVERESIZE_SIZE_TOPRIGHT
+    || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMRIGHT
+    || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT)
+    && client.may_resize ()
+  {
     mouse_resize (client, false, false);
   }
   // _NET_WM_MOVERESIZE_SIZE_KEYBOARD and _NET_WM_MOVERESIZE_MOVE_KEYBOARD are
@@ -143,11 +149,10 @@ pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) 
   if event.message_type == atom (Net::WMState) {
     // _NET_WM_STATE
     net_wm_state (client, event);
-  }
-  else if event.message_type == atom (Net::ActiveWindow) {
+  } else if event.message_type == atom (Net::ActiveWindow) {
     // This is what DWM uses for urgency
     {
-      let f = focused_client! ();
+      let f = focused_client!();
       if f.is_some () && *f.unwrap () == *client {
         return true;
       }
@@ -157,14 +162,11 @@ pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) 
     } else {
       client.set_urgency (true);
     }
-  }
-  else if event.message_type == atom (WM::ChangeState) {
+  } else if event.message_type == atom (WM::ChangeState) {
     wm_change_state (client, event.data.get_long (0));
-  }
-  else if event.message_type == atom (Net::WMMoveresize) {
+  } else if event.message_type == atom (Net::WMMoveresize) {
     net_wm_moveresize (client, event);
-  }
-  else {
+  } else {
     return false;
   }
   true
@@ -182,7 +184,7 @@ pub unsafe fn root_message (event: &XClientMessageEvent) -> bool {
 }
 
 pub unsafe fn set_allowed_actions (window: Window, may_resize: bool) {
-  let mut actions = vec![
+  let mut actions = vec! [
     atom (Net::WMActionMove),
     atom (Net::WMActionClose),
     atom (Net::WMActionChangeDesktop)
@@ -199,6 +201,6 @@ pub unsafe fn set_allowed_actions (window: Window, may_resize: bool) {
     XA_ATOM,
     32,
     actions.as_ptr (),
-    actions.len () as i32
+    actions.len () as i32,
   );
 }

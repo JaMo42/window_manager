@@ -1,9 +1,8 @@
-use x11::xlib::*;
+use super::buttons::Button;
 use super::core::*;
 use super::geometry::*;
+use super::property::{Motif_Hints, MWM_HINTS_DECORATIONS, WM};
 use super::*;
-use super::property::{WM, Motif_Hints, MWM_HINTS_DECORATIONS};
-use super::buttons::Button;
 
 pub static mut decorated_frame_offset: Geometry = Geometry::new ();
 pub static mut border_frame_offset: Geometry = Geometry::new ();
@@ -13,9 +12,8 @@ static mut title_x: i32 = 0;
 static mut icon_position: i32 = 0;
 static mut icon_size: u32 = 0;
 
-
 unsafe fn create_frame (g: Geometry) -> Window {
-  let mut attributes: XSetWindowAttributes = uninitialized! ();
+  let mut attributes: XSetWindowAttributes = uninitialized!();
   attributes.background_pixmap = X_NONE;
   attributes.cursor = cursor::normal;
   attributes.override_redirect = X_TRUE;
@@ -23,18 +21,20 @@ unsafe fn create_frame (g: Geometry) -> Window {
   let screen = XDefaultScreen (display);
 
   XCreateWindow (
-    display, root,
-    g.x, g.y,
-    g.w, g.h,
+    display,
+    root,
+    g.x,
+    g.y,
+    g.w,
+    g.h,
     0,
     XDefaultDepth (display, screen),
     InputOutput as u32,
     XDefaultVisual (display, screen),
-    CWBackPixmap|CWEventMask|CWCursor,
-    &mut attributes
+    CWBackPixmap | CWEventMask | CWCursor,
+    &mut attributes,
   )
 }
-
 
 /// Specifies how to change the frame and client geometry when resizing a client
 pub enum Client_Geometry {
@@ -46,42 +46,29 @@ pub enum Client_Geometry {
   Client (Geometry),
 }
 
-
 pub enum Frame_Kind {
   // Frame with title bar and buttons, used for normal clients
   Decorated,
   // Frame with only a border, used for popups
   Border,
   // No visible frame, used for windows with a custom title bar
-  None
+  None,
 }
 
 impl Frame_Kind {
   fn get_frame (&self, mut client_geometry: Geometry) -> Geometry {
     match self {
-      Frame_Kind::Decorated => unsafe {
-        client_geometry.get_frame ()
-      }
-      Frame_Kind::Border => {
-        *client_geometry.expand (unsafe {border_frame_offset.x})
-      }
-      Frame_Kind::None => {
-        client_geometry
-      }
+      Frame_Kind::Decorated => unsafe { client_geometry.get_frame () },
+      Frame_Kind::Border => *client_geometry.expand (unsafe { border_frame_offset.x }),
+      Frame_Kind::None => client_geometry,
     }
   }
 
   fn get_client (&self, mut frame_geometry: Geometry) -> Geometry {
     match self {
-      Frame_Kind::Decorated => unsafe {
-        frame_geometry.get_client ()
-      }
-      Frame_Kind::Border => {
-        *frame_geometry.expand (0 - unsafe {border_frame_offset.x})
-      }
-      Frame_Kind::None => {
-        frame_geometry
-      }
+      Frame_Kind::Decorated => unsafe { frame_geometry.get_client () },
+      Frame_Kind::Border => *frame_geometry.expand (0 - unsafe { border_frame_offset.x }),
+      Frame_Kind::None => frame_geometry,
     }
   }
 
@@ -97,22 +84,21 @@ impl Frame_Kind {
 
   fn parent_offset (&self) -> (i32, i32) {
     match self {
-      Frame_Kind::Decorated => unsafe {(decorated_frame_offset.x, decorated_frame_offset.y)}
-      Frame_Kind::Border => unsafe {(border_frame_offset.x, border_frame_offset.y)}
-      Frame_Kind::None => (0, 0)
+      Frame_Kind::Decorated => unsafe { (decorated_frame_offset.x, decorated_frame_offset.y) },
+      Frame_Kind::Border => unsafe { (border_frame_offset.x, border_frame_offset.y) },
+      Frame_Kind::None => (0, 0),
     }
   }
 
   fn frame_offset (&self) -> &'static Geometry {
     static no_offset: Geometry = Geometry::new ();
     match self {
-      Frame_Kind::Decorated => unsafe {&decorated_frame_offset}
-      Frame_Kind::Border => unsafe {&border_frame_offset}
-      Frame_Kind::None => &no_offset
+      Frame_Kind::Decorated => unsafe { &decorated_frame_offset },
+      Frame_Kind::Border => unsafe { &border_frame_offset },
+      Frame_Kind::None => &no_offset,
     }
   }
 }
-
 
 pub struct Client {
   pub window: Window,
@@ -131,7 +117,7 @@ pub struct Client {
   right_buttons: Vec<Button>,
   title_space: i32,
   frame_kind: Frame_Kind,
-  icon: Option<Box<draw::Svg_Resource>>
+  icon: Option<Box<draw::Svg_Resource>>,
 }
 
 impl Client {
@@ -141,10 +127,15 @@ impl Client {
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
 
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
+    let mut attributes: XSetWindowAttributes = uninitialized!();
     attributes.event_mask = StructureNotifyMask | PropertyChangeMask;
     attributes.do_not_propagate_mask = ButtonPressMask | ButtonReleaseMask;
-    XChangeWindowAttributes (display, window, CWEventMask|CWDontPropagate, &mut attributes);
+    XChangeWindowAttributes (
+      display,
+      window,
+      CWEventMask | CWDontPropagate,
+      &mut attributes,
+    );
     XSetWindowBorderWidth (display, window, 0);
 
     let mut frame_kind = Frame_Kind::Decorated;
@@ -155,8 +146,9 @@ impl Client {
       if motif_hints.flags & MWM_HINTS_DECORATIONS == MWM_HINTS_DECORATIONS {
         frame_kind = Frame_Kind::None;
       }
-    }
-    else if property::get_atom (window, Net::WMWindowType) == property::atom (Net::WMWindowTypeDialog) {
+    } else if property::get_atom (window, Net::WMWindowType)
+      == property::atom (Net::WMWindowTypeDialog)
+    {
       is_dialog = true;
       frame_kind = Frame_Kind::Border;
     }
@@ -165,10 +157,8 @@ impl Client {
     let (reparent_x, reparent_y) = frame_kind.parent_offset ();
     XReparentWindow (display, window, frame, reparent_x, reparent_y);
 
-    let icon = if (*config).window_icon_size > 0
-      && frame_kind.should_draw_decorations () {
-      property::Class_Hints::new (window)
-      .and_then (|h| draw::get_app_icon (&h.name))
+    let icon = if (*config).window_icon_size > 0 && frame_kind.should_draw_decorations () {
+      property::Class_Hints::new (window).and_then (|h| draw::get_app_icon (&h.name))
     } else {
       None
     };
@@ -190,7 +180,7 @@ impl Client {
       right_buttons: Vec::new (),
       title_space: 0,
       frame_kind,
-      icon
+      icon,
     });
     let this = result.as_mut () as *mut Client as XPointer;
     XSaveContext (display, window, wm_context, this);
@@ -235,14 +225,14 @@ impl Client {
       is_dialog: false,
       is_minimized: false,
       border_color: &*(1 as *const color::Color),
-      geometry: uninitialized! (),
-      prev_geometry: uninitialized! (),
+      geometry: uninitialized!(),
+      prev_geometry: uninitialized!(),
       title: String::new (),
       left_buttons: Vec::new (),
       right_buttons: Vec::new (),
       title_space: 0,
       frame_kind: Frame_Kind::Decorated,
-      icon: None
+      icon: None,
     }
   }
 
@@ -271,11 +261,18 @@ impl Client {
       let frame_size = self.frame_geometry ();
       let frame_offset = self.frame_kind.frame_offset ();
       let mut actual_title_x = title_x;
-      (*draw).fill_rect (0, frame_offset.y, frame_size.w, frame_size.h - frame_offset.y as u32, *self.border_color);
-      (*draw).rect (0, 0, frame_size.w, frame_offset.y as u32)
+      (*draw).fill_rect (
+        0,
+        frame_offset.y,
+        frame_size.w,
+        frame_size.h - frame_offset.y as u32,
+        *self.border_color,
+      );
+      (*draw)
+        .rect (0, 0, frame_size.w, frame_offset.y as u32)
         .vertical_gradient (
           self.border_color.scale (Self::TITLE_BAR_GRADIENT_FACTOR),
-          *self.border_color
+          *self.border_color,
         )
         .draw ();
 
@@ -285,16 +282,17 @@ impl Client {
           title_x - Self::ICON_TITLE_GAP + icon_position,
           icon_position,
           icon_size,
-          icon_size
+          icon_size,
         );
         actual_title_x += frame_offset.y;
       }
 
       (*draw).select_font (&(*config).title_font);
-      (*draw).text (&self.title)
+      (*draw)
+        .text (&self.title)
         .at (actual_title_x, 0)
         .align_vertically (draw::Alignment::Centered, frame_offset.y)
-        .align_horizontally((*config).title_alignment, self.title_space)
+        .align_horizontally ((*config).title_alignment, self.title_space)
         .color ((*config).colors.bar_active_workspace_text)
         .width (self.title_space)
         .draw ();
@@ -305,8 +303,7 @@ impl Client {
       for b in self.buttons_mut () {
         b.draw (false);
       }
-    }
-    else if self.frame_kind.should_draw_border () {
+    } else if self.frame_kind.should_draw_border () {
       let g = self.frame_geometry ();
       (*draw).fill_rect (0, 0, g.w, g.h, *self.border_color);
       (*draw).render (self.frame, 0, 0, g.w, g.h);
@@ -352,7 +349,7 @@ impl Client {
   }
 
   /// Modify the saved frame geometry using a callback
-  pub fn modify_saved_geometry (&mut self, f: fn (&mut Geometry)) {
+  pub fn modify_saved_geometry (&mut self, f: fn(&mut Geometry)) {
     f (&mut self.prev_geometry);
   }
 
@@ -390,8 +387,11 @@ impl Client {
         ch = fh - frame_offset.h;
       }
     }
-    self.geometry = self.frame_kind.get_client (Geometry::from_parts (fx, fy, fw, fh));
-    self.title_space = (self.client_geometry ().w - left_buttons_width - right_buttons_width) as i32;
+    self.geometry = self
+      .frame_kind
+      .get_client (Geometry::from_parts (fx, fy, fw, fh));
+    self.title_space =
+      (self.client_geometry ().w - left_buttons_width - right_buttons_width) as i32;
     if self.icon.is_some () {
       self.title_space -= self.frame_kind.frame_offset ().y + Self::ICON_TITLE_GAP;
     }
@@ -447,8 +447,7 @@ impl Client {
   pub unsafe fn raise (&self) {
     if self.is_fullscreen {
       XRaiseWindow (display, self.window);
-    }
-    else {
+    } else {
       XRaiseWindow (display, self.frame);
     }
   }
@@ -478,14 +477,13 @@ impl Client {
   pub unsafe fn update_hints (&mut self) {
     let hints = XGetWMHints (display, self.window);
     if !hints.is_null () {
-      if let Some (focused) = focused_client! () {
+      if let Some (focused) = focused_client!() {
         if *focused == *self && ((*hints).flags & XUrgencyHint) != 0 {
           // It's being made urgent but it's already the active window
           (*hints).flags &= !XUrgencyHint;
           XSetWMHints (display, self.window, hints);
         }
-      }
-      else {
+      } else {
         self.is_urgent = ((*hints).flags & XUrgencyHint) != 0;
       }
       XFree (hints as *mut c_void);
@@ -506,7 +504,7 @@ impl Client {
       XFree (protocols as *mut c_void);
     }
     if is_supported {
-      let mut event: XEvent = uninitialized! ();
+      let mut event: XEvent = uninitialized!();
       event.type_ = ClientMessage;
       event.client_message.window = self.window;
       event.client_message.message_type = property::atom (WM::Protocols);
@@ -514,8 +512,7 @@ impl Client {
       event.client_message.data.set_long (0, protocol as i64);
       event.client_message.data.set_long (1, CurrentTime as i64);
       XSendEvent (display, self.window, X_FALSE, NoEventMask, &mut event) != 0
-    }
-    else {
+    } else {
       false
     }
   }
@@ -532,8 +529,7 @@ impl Client {
       XRaiseWindow (display, self.window);
       XSetInputFocus (display, self.window, RevertToNone, CurrentTime);
       ewmh::set_net_wm_state (self, &[property::atom (Net::WMStateFullscreen)]);
-    }
-    else {
+    } else {
       let (reparent_x, reparent_y) = self.frame_kind.parent_offset ();
       XReparentWindow (display, self.window, self.frame, reparent_x, reparent_y);
       self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
@@ -544,7 +540,7 @@ impl Client {
 
   pub unsafe fn configure (&self) {
     let g = self.client_geometry ();
-    let mut ev: XConfigureEvent = uninitialized! ();
+    let mut ev: XConfigureEvent = uninitialized!();
     ev.type_ = ConfigureNotify;
     ev.display = display;
     ev.event = self.window;
@@ -561,7 +557,7 @@ impl Client {
       self.window,
       X_FALSE,
       StructureNotifyMask,
-      &mut ev as *mut XConfigureEvent as *mut XEvent
+      &mut ev as *mut XConfigureEvent as *mut XEvent,
     );
   }
 
@@ -574,12 +570,19 @@ impl Client {
     }
   }
 
-  pub fn buttons (&self) -> std::iter::Chain<std::slice::Iter<'_, Button>, std::slice::Iter<'_, Button>> {
+  pub fn buttons (
+    &self,
+  ) -> std::iter::Chain<std::slice::Iter<'_, Button>, std::slice::Iter<'_, Button>> {
     self.left_buttons.iter ().chain (self.right_buttons.iter ())
   }
 
-  pub fn buttons_mut (&mut self) -> std::iter::Chain<std::slice::IterMut<'_, Button>, std::slice::IterMut<'_, Button>> {
-    self.left_buttons.iter_mut ().chain (self.right_buttons.iter_mut ())
+  pub fn buttons_mut (
+    &mut self,
+  ) -> std::iter::Chain<std::slice::IterMut<'_, Button>, std::slice::IterMut<'_, Button>> {
+    self
+      .left_buttons
+      .iter_mut ()
+      .chain (self.right_buttons.iter_mut ())
   }
 
   pub unsafe fn destroy (&self) {
@@ -593,21 +596,18 @@ impl Client {
   }
 }
 
-
 impl PartialEq for Client {
   fn eq (&self, other: &Self) -> bool {
     self.window == other.window
   }
 }
 
-
 impl std::fmt::Display for Client {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+  fn fmt (&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
     let title = unsafe { window_title (self.window) };
     write! (f, "'{}' ({})", title, self.window)
   }
 }
-
 
 pub unsafe fn set_border_info () {
   let title_height = (*config).title_height.get (Some (&(*config).title_font));
@@ -616,9 +616,9 @@ pub unsafe fn set_border_info () {
     b,
     title_height as i32,
     2 * b as u32,
-    title_height + b as u32
+    title_height + b as u32,
   );
-  border_frame_offset = Geometry::from_parts (b, b, 2*b as u32, 2*b as u32);
+  border_frame_offset = Geometry::from_parts (b, b, 2 * b as u32, 2 * b as u32);
   left_buttons_width = (*config).left_buttons.len () as u32 * title_height;
   right_buttons_width = (*config).right_buttons.len () as u32 * title_height;
   title_x = left_buttons_width as i32 + b;

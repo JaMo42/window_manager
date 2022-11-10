@@ -1,7 +1,7 @@
-use libc::c_long;
-use x11::xlib::*;
 use crate::core::*;
 use crate::property::{self, XEmbed};
+use libc::c_long;
+use x11::xlib::*;
 
 const VERSION: u32 = 5;
 
@@ -11,14 +11,14 @@ const FLAG_MAPPED: u32 = 1 << 0;
 
 pub struct Info {
   version: u32,
-  flags: u32
+  flags: u32,
 }
 
 impl Info {
   pub const fn new () -> Self {
     Self {
       version: 0,
-      flags: 0
+      flags: 0,
     }
   }
 
@@ -29,7 +29,7 @@ impl Info {
       XEmbed::Info,
       property::atom (XEmbed::Info),
       2,
-      0
+      0,
     ) {
       self.version = data.value_at (0);
       self.flags = data.value_at (0);
@@ -48,8 +48,7 @@ impl Info {
   }
 }
 
-pub unsafe fn send_message (recipient: Window,
-  msg: c_long, d1: c_long, d2: c_long, d3: c_long) {
+pub unsafe fn send_message (recipient: Window, msg: c_long, d1: c_long, d2: c_long, d3: c_long) {
   let mut event: XEvent = std::mem::zeroed ();
   let message = &mut event.client_message;
   message.window = recipient;
@@ -70,6 +69,6 @@ pub unsafe fn embed (window: Window, parent: Window, version: u32) {
     EMBEDDED_NOTIFY,
     0,
     parent as c_long,
-    u32::min (version, VERSION) as i64
+    u32::min (version, VERSION) as i64,
   );
 }

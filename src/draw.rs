@@ -1,11 +1,11 @@
-use super::core::*;
-use cairo::ffi::*;
-use librsvg::{SvgHandle, CairoRenderer};
-use x11::xlib::*;
 use super::color::Color;
+use super::core::*;
+use super::desktop_entry::Desktop_Entry;
 use super::geometry::Geometry;
 use super::paths;
-use super::desktop_entry::Desktop_Entry;
+use cairo::ffi::*;
+use librsvg::{CairoRenderer, SvgHandle};
+use x11::xlib::*;
 
 pub mod resources {
   use super::Svg_Resource;
@@ -24,10 +24,9 @@ pub mod resources {
     Svg_Resource::new ("battery_3_bar.svg"),
     Svg_Resource::new ("battery_4_bar.svg"),
     Svg_Resource::new ("battery_5_bar.svg"),
-    Svg_Resource::new ("battery_6_bar.svg")
+    Svg_Resource::new ("battery_6_bar.svg"),
   ];
 }
-
 
 pub struct Svg_Resource {
   file: &'static str,
@@ -35,7 +34,7 @@ pub struct Svg_Resource {
   renderer: Option<CairoRenderer<'static>>,
   // The pattern used to draw a colored SVG, it is assumed that the size the
   // SVG is drawn in is always the same and it's always drawn to (0, 0).
-  pattern: Option<cairo::Pattern>
+  pattern: Option<cairo::Pattern>,
 }
 
 impl Svg_Resource {
@@ -44,7 +43,7 @@ impl Svg_Resource {
       file,
       handle: None,
       renderer: None,
-      pattern: None
+      pattern: None,
     }
   }
 
@@ -53,13 +52,12 @@ impl Svg_Resource {
   }
 }
 
-
 pub struct Drawing_Context {
   drawable: Drawable,
   gc: GC,
   cairo_surface: cairo::Surface,
   cairo_context: cairo::Context,
-  pango_layout: pango::Layout
+  pango_layout: pango::Layout,
 }
 
 impl Drawing_Context {
@@ -81,12 +79,12 @@ impl Drawing_Context {
       height as i32,
     );
     cairo_xlib_surface_set_size (cairo_surface_raw, width as i32, height as i32);
-    let cairo_surface = cairo::Surface::from_raw_full (cairo_surface_raw)
-      .expect ("Failed to create cairo surface");
-    let cairo_context = cairo::Context::new (&cairo_surface)
-      .expect ("Failed to create cairo context");
-    let pango_layout = pangocairo::create_layout (&cairo_context)
-      .expect ("Failed to create pango layout");
+    let cairo_surface =
+      cairo::Surface::from_raw_full (cairo_surface_raw).expect ("Failed to create cairo surface");
+    let cairo_context =
+      cairo::Context::new (&cairo_surface).expect ("Failed to create cairo context");
+    let pango_layout =
+      pangocairo::create_layout (&cairo_context).expect ("Failed to create pango layout");
     Self {
       drawable,
       gc: XCreateGC (display, root, 0, std::ptr::null_mut ()),
@@ -105,7 +103,7 @@ impl Drawing_Context {
     Shape_Builder::new (
       &mut self.cairo_context,
       Shape::Rectangle,
-      Geometry::from_parts (x, y, w, h)
+      Geometry::from_parts (x, y, w, h),
     )
   }
 
@@ -121,9 +119,9 @@ impl Drawing_Context {
       Geometry::from_parts (
         center_x - radius as i32,
         center_y - radius as i32,
-        2*radius,
-        2*radius
-      )
+        2 * radius,
+        2 * radius,
+      ),
     )
   }
 
@@ -132,18 +130,31 @@ impl Drawing_Context {
   }
 
   pub unsafe fn draw_svg (&mut self, svg: &Svg_Resource, x: i32, y: i32, w: u32, h: u32) {
-    svg.renderer.as_ref ().unwrap ().render_document (
-      &self.cairo_context,
-      &cairo::Rectangle {
-        x: x as f64,
-        y: y as f64,
-        width: w as f64,
-        height: h as f64
-      }
-    ).unwrap ();
+    svg
+      .renderer
+      .as_ref ()
+      .unwrap ()
+      .render_document (
+        &self.cairo_context,
+        &cairo::Rectangle {
+          x: x as f64,
+          y: y as f64,
+          width: w as f64,
+          height: h as f64,
+        },
+      )
+      .unwrap ();
   }
 
-  pub unsafe fn draw_colored_svg (&mut self, svg: &mut Svg_Resource, color: Color, x: i32, y: i32, w: u32, h: u32) {
+  pub unsafe fn draw_colored_svg (
+    &mut self,
+    svg: &mut Svg_Resource,
+    color: Color,
+    x: i32,
+    y: i32,
+    w: u32,
+    h: u32,
+  ) {
     // Create a mask from the alpha of the SVG and use that to fill the given color
     if svg.pattern.is_none () {
       self.cairo_context.save ().unwrap ();
@@ -153,11 +164,16 @@ impl Drawing_Context {
       self.cairo_context.restore ().unwrap ();
     }
     self.text_color (color);
-    self.cairo_context.mask (svg.pattern.as_ref ().unwrap ()).unwrap ();
+    self
+      .cairo_context
+      .mask (svg.pattern.as_ref ().unwrap ())
+      .unwrap ();
   }
 
   pub unsafe fn select_font (&mut self, description: &str) {
-    self.pango_layout.set_font_description (Some (&pango::FontDescription::from_string (description)));
+    self
+      .pango_layout
+      .set_font_description (Some (&pango::FontDescription::from_string (description)));
   }
 
   pub unsafe fn font_height (&mut self, description: Option<&str>) -> u32 {
@@ -169,7 +185,9 @@ impl Drawing_Context {
   }
 
   pub fn text_color (&mut self, color: Color) {
-    self.cairo_context.set_source_rgb (color.red, color.green, color.blue);
+    self
+      .cairo_context
+      .set_source_rgb (color.red, color.green, color.blue);
   }
 
   pub unsafe fn text (&mut self, text: &str) -> Rendered_Text {
@@ -195,13 +213,14 @@ impl Drawing_Context {
   }
 }
 
-
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum Alignment {
-  Left, Top,
+  Left,
+  Top,
   Centered,
-  Right, Bottom
+  Right,
+  Bottom,
 }
 
 pub struct Rendered_Text<'a> {
@@ -210,7 +229,7 @@ pub struct Rendered_Text<'a> {
   width: i32,
   height: i32,
   x: i32,
-  y: i32
+  y: i32,
 }
 
 impl<'a> Rendered_Text<'a> {
@@ -222,7 +241,7 @@ impl<'a> Rendered_Text<'a> {
       width: width / pango::SCALE,
       height: height / pango::SCALE,
       x: 0,
-      y: 0
+      y: 0,
     }
   }
 
@@ -250,10 +269,10 @@ impl<'a> Rendered_Text<'a> {
   pub fn align_horizontally (&mut self, alignment: Alignment, width: i32) -> &mut Self {
     if self.width < width {
       match alignment {
-        Alignment::Left => {},
+        Alignment::Left => {}
         Alignment::Centered => self.x += (width - self.width) / 2,
         Alignment::Right => self.x += width - self.width,
-        _ => my_panic! ("Invalid value for horizontal alignment")
+        _ => my_panic! ("Invalid value for horizontal alignment"),
       }
     }
     self
@@ -262,17 +281,19 @@ impl<'a> Rendered_Text<'a> {
   pub fn align_vertically (&mut self, alignment: Alignment, height: i32) -> &mut Self {
     if self.height < height {
       match alignment {
-        Alignment::Top => {},
+        Alignment::Top => {}
         Alignment::Centered => self.y += (height - self.height) / 2,
         Alignment::Bottom => self.y += height - self.height,
-        _ => my_panic! ("Invalid value for horizontal alignment")
+        _ => my_panic! ("Invalid value for horizontal alignment"),
       }
     }
     self
   }
 
   pub fn color (&mut self, color: Color) -> &mut Self {
-    self.context.set_source_rgb (color.red, color.green, color.blue);
+    self
+      .context
+      .set_source_rgb (color.red, color.green, color.blue);
     self
   }
 
@@ -291,7 +312,6 @@ impl<'a> Rendered_Text<'a> {
     Geometry::from_parts (self.x, self.y, self.width as u32, self.height as u32)
   }
 }
-
 
 #[derive(Copy, Clone)]
 pub enum Shape {
@@ -373,10 +393,34 @@ impl<'a> Shape_Builder<'a> {
         if let Some (crp) = self.corner_radius_percent {
           let r = f64::min (w, h) * crp;
           self.context.new_sub_path ();
-          self.context.arc (x + w - r, y + r, r, -90.0f64.to_radians (), 0.0f64.to_radians ());
-          self.context.arc (x + w - r, y + h - r, r, 0.0f64.to_radians (), 90.0f64.to_radians ());
-          self.context.arc (x + r, y + h - r, r, 90.0f64.to_radians (), 180.0f64.to_radians ());
-          self.context.arc (x + r, y + r, r, 180.0f64.to_radians (), 270.0f64.to_radians ());
+          self.context.arc (
+            x + w - r,
+            y + r,
+            r,
+            -90.0f64.to_radians (),
+            0.0f64.to_radians (),
+          );
+          self.context.arc (
+            x + w - r,
+            y + h - r,
+            r,
+            0.0f64.to_radians (),
+            90.0f64.to_radians (),
+          );
+          self.context.arc (
+            x + r,
+            y + h - r,
+            r,
+            90.0f64.to_radians (),
+            180.0f64.to_radians (),
+          );
+          self.context.arc (
+            x + r,
+            y + r,
+            r,
+            180.0f64.to_radians (),
+            270.0f64.to_radians (),
+          );
           self.context.close_path ();
         } else {
           self.context.rectangle (x, y, w, h);
@@ -389,7 +433,9 @@ impl<'a> Shape_Builder<'a> {
         self.context.save ().unwrap ();
         self.context.translate (x, y);
         self.context.scale (w / 2.0, h / 2.0);
-        self.context.arc (1.0, 1.0, 1.0, 0.0, 360.0f64.to_radians ());
+        self
+          .context
+          .arc (1.0, 1.0, 1.0, 0.0, 360.0f64.to_radians ());
         self.context.restore ().unwrap ();
       }
     }
@@ -402,7 +448,7 @@ impl<'a> Shape_Builder<'a> {
         p1.0,
         p1.1,
         p2.0 * self.bounding_box.w as f64,
-        p2.1 * self.bounding_box.h as f64
+        p2.1 * self.bounding_box.h as f64,
       );
       gradient.add_color_stop_rgb (0.0, c1.red, c1.green, c1.blue);
       gradient.add_color_stop_rgb (1.0, c2.red, c2.green, c2.blue);
@@ -424,16 +470,13 @@ impl<'a> Shape_Builder<'a> {
   }
 }
 
-
 pub unsafe fn load_resources () {
   unsafe fn load_svg (res: &'static mut Svg_Resource) {
     let loader = librsvg::Loader::new ();
     match loader.read_path (format! ("{}/{}", paths::resource_dir, res.file)) {
       Ok (handle) => {
         res.handle = Some (handle);
-        res.renderer = Some (CairoRenderer::new (
-          res.handle.as_ref ().unwrap ()
-        ));
+        res.renderer = Some (CairoRenderer::new (res.handle.as_ref ().unwrap ()));
       }
       Err (error) => {
         log::error! ("Failed to load {}: {}", res.file, error);
@@ -456,7 +499,6 @@ pub unsafe fn load_resources () {
   }
 }
 
-
 /// Get the icon for an application. The returned value is boxed as svg
 /// resources need to have static lifetime and this is sufficient.
 pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
@@ -472,7 +514,8 @@ pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
   match loader.read_path (svg.file) {
     Ok (handle) => {
       svg.handle = Some (handle);
-      let static_handle: &'static SvgHandle = &*(svg.handle.as_ref ().unwrap () as *const SvgHandle);
+      let static_handle: &'static SvgHandle =
+        &*(svg.handle.as_ref ().unwrap () as *const SvgHandle);
       svg.renderer = Some (CairoRenderer::new (static_handle));
     }
     Err (error) => {

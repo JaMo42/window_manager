@@ -13,31 +13,31 @@ mod geometry;
 #[macro_use]
 mod config;
 mod action;
-mod event;
-mod config_parser;
 mod color;
+mod config_parser;
+mod event;
 #[macro_use]
 mod workspace;
 #[macro_use]
 mod property;
-mod cursor;
-mod draw;
 mod bar;
 mod buttons;
+mod cursor;
+mod desktop_entry;
+mod draw;
+mod ewmh;
 mod notifications;
 mod platform;
 mod tooltip;
-mod ewmh;
-mod desktop_entry;
 
 use crate::core::*;
-use client::*;
-use geometry::*;
-use config::*;
-use workspace::*;
-use property::Net;
-use draw::Drawing_Context;
 use bar::Bar;
+use client::*;
+use config::*;
+use draw::Drawing_Context;
+use geometry::*;
+use property::Net;
+use workspace::*;
 
 mod paths {
   pub static mut config: String = String::new ();
@@ -48,9 +48,11 @@ mod paths {
   pub unsafe fn load () {
     let config_dir = if let Ok (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME") {
       format! ("{}/window_manager", xdg_config_home)
-    }
-    else {
-      format! ("{}/.config/window_manager", std::env::var ("HOME").unwrap ())
+    } else {
+      format! (
+        "{}/.config/window_manager",
+        std::env::var ("HOME").unwrap ()
+      )
     };
     if std::fs::create_dir_all (&config_dir).is_err () {
       my_panic! ("Could not create configuration directory: {}", config_dir);
@@ -62,20 +64,24 @@ mod paths {
   }
 }
 
-
 unsafe extern "C" fn x_error (my_display: *mut Display, event: *mut XErrorEvent) -> c_int {
   const ERROR_TEXT_SIZE: usize = 1024;
   let mut error_text_buf: [c_char; ERROR_TEXT_SIZE] = [0; ERROR_TEXT_SIZE];
   let error_text = &mut error_text_buf as *mut c_char;
   XGetErrorText (
-    my_display, (*event).error_code as i32, error_text, ERROR_TEXT_SIZE as i32
+    my_display,
+    (*event).error_code as i32,
+    error_text,
+    ERROR_TEXT_SIZE as i32,
   );
-  let error_msg = std::ffi::CStr::from_ptr (error_text).to_str ().unwrap ().to_string ();
+  let error_msg = std::ffi::CStr::from_ptr (error_text)
+    .to_str ()
+    .unwrap ()
+    .to_string ();
   eprintln! ("window_manager|x-error: {}", error_msg);
   log::error! ("\x1b[31mX Error: {}\x1b[0m", error_msg);
   0
 }
-
 
 unsafe fn connect () {
   display = XOpenDisplay (std::ptr::null ());
@@ -86,18 +92,21 @@ unsafe fn connect () {
   root = XDefaultRootWindow (display);
   let scn = XDefaultScreen (display);
   screen_size = Geometry::from_parts (
-    0, 0,
-    XDisplayWidth (display, scn) as u32, XDisplayHeight (display, scn) as u32
+    0,
+    0,
+    XDisplayWidth (display, scn) as u32,
+    XDisplayHeight (display, scn) as u32,
   );
 }
-
 
 unsafe fn update_numlock_mask () {
   let modmap = XGetModifierMapping (display);
   numlock_mask = 0;
   for i in 0..8 {
     for j in 0..(*modmap).max_keypermod {
-      let check = *(*modmap).modifiermap.add ((i * (*modmap).max_keypermod + j) as usize);
+      let check = *(*modmap)
+        .modifiermap
+        .add ((i * (*modmap).max_keypermod + j) as usize);
       if check == XKeysymToKeycode (display, x11::keysym::XK_Num_Lock as u64) {
         numlock_mask = 1 << i;
       }
@@ -106,12 +115,11 @@ unsafe fn update_numlock_mask () {
   XFreeModifiermap (modmap);
 }
 
-
 unsafe fn grab_keys () {
   update_numlock_mask ();
   XUngrabKey (display, AnyKey as i32, AnyModifier, root);
   for key in (*config).key_binds.keys () {
-    for extra in [0, LockMask, numlock_mask, LockMask|numlock_mask] {
+    for extra in [0, LockMask, numlock_mask, LockMask | numlock_mask] {
       XGrabKey (
         display,
         key.code as c_int,
@@ -119,12 +127,11 @@ unsafe fn grab_keys () {
         root,
         X_TRUE,
         GrabModeAsync,
-        GrabModeAsync
+        GrabModeAsync,
       );
     }
   }
 }
-
 
 unsafe fn grab_buttons () {
   XUngrabButton (display, AnyButton as u32, AnyModifier, root);
@@ -134,11 +141,11 @@ unsafe fn grab_buttons () {
     (*config).modifier,
     root,
     X_TRUE,
-    (ButtonPressMask|ButtonReleaseMask|PointerMotionMask) as u32,
+    (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
     GrabModeAsync,
     GrabModeAsync,
     X_NONE,
-    X_NONE
+    X_NONE,
   );
   XGrabButton (
     display,
@@ -146,11 +153,11 @@ unsafe fn grab_buttons () {
     (*config).modifier | MOD_SHIFT,
     root,
     X_TRUE,
-    (ButtonPressMask|ButtonReleaseMask|PointerMotionMask) as u32,
+    (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
     GrabModeAsync,
     GrabModeAsync,
     X_NONE,
-    X_NONE
+    X_NONE,
   );
   XGrabButton (
     display,
@@ -158,27 +165,31 @@ unsafe fn grab_buttons () {
     (*config).modifier,
     root,
     X_TRUE,
-    (ButtonPressMask|ButtonReleaseMask|PointerMotionMask) as u32,
+    (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
     GrabModeAsync,
     GrabModeAsync,
     X_NONE,
-    X_NONE
+    X_NONE,
   );
 }
 
-
 unsafe fn select_input (mut mask: c_long) {
   if mask == 0 {
-    mask = SubstructureRedirectMask | SubstructureNotifyMask | ButtonPressMask
-      | ButtonReleaseMask | PointerMotionMask | EnterWindowMask
-      | LeaveWindowMask | StructureNotifyMask | PropertyChangeMask;
+    mask = SubstructureRedirectMask
+      | SubstructureNotifyMask
+      | ButtonPressMask
+      | ButtonReleaseMask
+      | PointerMotionMask
+      | EnterWindowMask
+      | LeaveWindowMask
+      | StructureNotifyMask
+      | PropertyChangeMask;
   }
-  let mut wa: XSetWindowAttributes = uninitialized! ();
+  let mut wa: XSetWindowAttributes = uninitialized!();
   wa.event_mask = mask;
   XChangeWindowAttributes (display, root, CWEventMask, &mut wa);
   XSelectInput (display, root, wa.event_mask);
 }
-
 
 fn run_autostartrc () {
   use std::process::{Command, Stdio};
@@ -190,13 +201,11 @@ fn run_autostartrc () {
       .stderr (Stdio::null ())
       .spawn ()
       .expect ("failed to run autostartrc");
-  }
-  else {
+  } else {
     log::info! ("No autostartrc found");
   }
   log::info! ("Ran autostartrc");
 }
-
 
 unsafe fn init () {
   wm_context = XUniqueContext ();
@@ -225,7 +234,6 @@ unsafe fn init () {
   client::set_border_info ();
   notifications::init ();
 }
-
 
 const fn event_name (type_: c_int) -> &'static str {
   const EVENT_NAMES: [&str; 36] = [
@@ -264,25 +272,31 @@ const fn event_name (type_: c_int) -> &'static str {
     "ColormapNotify",
     "ClientMessage",
     "MappingNotify",
-    "GenericEvent"
+    "GenericEvent",
   ];
   EVENT_NAMES[type_ as usize]
 }
 
-
 unsafe fn run () {
-  let mut event: XEvent = uninitialized! ();
+  let mut event: XEvent = uninitialized!();
   running = true;
   XSync (display, X_FALSE);
   while running {
     XNextEvent (display, &mut event);
     if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
       if event.type_ as usize > 35 {
-        log::warn! ("\x1b[2mEvent: \x1b[33m{:>2} Greater than LastEvent: {}\x1b[0m", event.type_, LASTEvent);
-      }
-      else {
-        log::trace! ("\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{} \x1b[39mby \x1b[36m{}\x1b[0m",
-          event.type_, event_name (event.type_), event.any.window);
+        log::warn! (
+          "\x1b[2mEvent: \x1b[33m{:>2} Greater than LastEvent: {}\x1b[0m",
+          event.type_,
+          LASTEvent
+        );
+      } else {
+        log::trace! (
+          "\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{} \x1b[39mby \x1b[36m{}\x1b[0m",
+          event.type_,
+          event_name (event.type_),
+          event.any.window
+        );
       }
     }
     match event.type_ {
@@ -310,7 +324,6 @@ unsafe fn run () {
   }
 }
 
-
 unsafe fn cleanup () {
   // Close all open clients
   for ws in workspaces.iter () {
@@ -326,31 +339,11 @@ unsafe fn cleanup () {
   cursor::free_cursors ();
   // Un-grab keys and buttons
   for key in (*config).key_binds.keys () {
-    XUngrabKey (
-      display,
-      key.code as c_int,
-      key.modifiers,
-      root
-    );
+    XUngrabKey (display, key.code as c_int, key.modifiers, root);
   }
-  XUngrabButton (
-    display,
-    1,
-    (*config).modifier,
-    root
-  );
-  XUngrabButton (
-    display,
-    1,
-    (*config).modifier | MOD_SHIFT,
-    root
-  );
-  XUngrabButton (
-    display,
-    3,
-    (*config).modifier,
-    root
-  );
+  XUngrabButton (display, 1, (*config).modifier, root);
+  XUngrabButton (display, 1, (*config).modifier | MOD_SHIFT, root);
+  XUngrabButton (display, 3, (*config).modifier, root);
   // Properties
   XDestroyWindow (display, property::wm_check_window);
   property::delete (root, Net::ActiveWindow);
@@ -358,7 +351,6 @@ unsafe fn cleanup () {
   // Notifications
   notifications::quit ();
 }
-
 
 fn get_window_geometry (window: Window) -> Geometry {
   let mut x: c_int = 0;
@@ -371,16 +363,20 @@ fn get_window_geometry (window: Window) -> Geometry {
 
   unsafe {
     XGetGeometry (
-      display, window, &mut _root,
-      &mut x, &mut y,
-      &mut w, &mut h,
-      &mut _border_width, &mut _depth
+      display,
+      window,
+      &mut _root,
+      &mut x,
+      &mut y,
+      &mut w,
+      &mut h,
+      &mut _border_width,
+      &mut _depth,
     );
   }
 
   Geometry { x, y, w, h }
 }
-
 
 unsafe fn window_title (window: Window) -> String {
   // _NET_WM_NAME
@@ -397,15 +393,13 @@ unsafe fn window_title (window: Window) -> String {
     XFetchName (display, window, &mut title_c_str);
     if title_c_str.is_null () {
       "?".to_string ()
-    }
-    else {
+    } else {
       let title = string_from_ptr! (title_c_str);
       XFree (title_c_str as *mut c_void);
       title
     }
   }
 }
-
 
 unsafe fn update_client_list () {
   // We can't delete a window from the client list property so we have to
@@ -418,13 +412,11 @@ unsafe fn update_client_list () {
   }
 }
 
-
 unsafe fn get_window_kind (window: Window) -> Option<Window_Kind> {
   let mut data: XPointer = std::ptr::null_mut ();
   if window == root {
     Some (Window_Kind::Root)
-  } else if window == X_NONE
-    || XFindContext (display, window, wm_winkind_context, &mut data) != 0 {
+  } else if window == X_NONE || XFindContext (display, window, wm_winkind_context, &mut data) != 0 {
     None
   } else if !data.is_null () {
     // Can't do conversions in the match
@@ -444,7 +436,7 @@ unsafe fn get_window_kind (window: Window) -> Option<Window_Kind> {
       kind_status_bar => Window_Kind::Status_Bar,
       kind_notification => Window_Kind::Notification,
       kind_meta_or_unmanaged => Window_Kind::Meta_Or_Unmanaged,
-      kind_tray_client  => Window_Kind::Tray_Client,
+      kind_tray_client => Window_Kind::Tray_Client,
       _ => {
         my_panic! ("Invalid Window_Kind value on {}: {}", window, data as usize);
       }
@@ -454,11 +446,14 @@ unsafe fn get_window_kind (window: Window) -> Option<Window_Kind> {
   }
 }
 
-
 unsafe fn set_window_kind (window: Window, kind: Window_Kind) {
-  XSaveContext (display, window, wm_winkind_context, kind as usize as *const i8);
+  XSaveContext (
+    display,
+    window,
+    wm_winkind_context,
+    kind as usize as *const i8,
+  );
 }
-
 
 unsafe fn is_kind (window: Window, kind: Window_Kind) -> bool {
   if let Some (window_kind) = get_window_kind (window) {
@@ -468,24 +463,15 @@ unsafe fn is_kind (window: Window, kind: Window_Kind) -> bool {
   }
 }
 
-
 /// Sets the `_NET_WM_WINDOW_OPACITY` property. This has no effect on the
 /// window manager but a compositor may use this to set the opacity of the
 /// entire window.
 unsafe fn set_window_opacity (window: Window, percent: u8) {
   if percent != 100 {
     let value = 42949672u32 * percent as u32;
-    property::set (
-      window,
-      Net::WMWindowOpacity,
-      XA_CARDINAL,
-      32,
-      &value,
-      1
-    );
+    property::set (window, Net::WMWindowOpacity, XA_CARDINAL, 32, &value, 1);
   }
 }
-
 
 fn run_process (command_line: &str) {
   use std::process::{Command, Stdio};
@@ -497,46 +483,41 @@ fn run_process (command_line: &str) {
     .stdout (Stdio::null ())
     .stderr (Stdio::null ())
     .spawn ()
-    .is_ok () {
+    .is_ok ()
+  {
     log::trace! ("Launched process: {}", command_line);
-  }
-  else {
+  } else {
     log::error! ("Failed to run process: {}", command_line);
   }
 }
 
-
 unsafe fn configure_logging () {
+  use log::LevelFilter;
   use log4rs::{
     append::file::FileAppender,
+    config::{Appender, Config, Logger, Root},
     encode::pattern::PatternEncoder,
-    config::{Appender, Config, Root, Logger}
   };
-  use log::LevelFilter;
   let log_file = FileAppender::builder ()
     .encoder (Box::new (PatternEncoder::new ("{l:<5}| {m}\n")))
     .build (paths::logfile.as_str ())
     .unwrap ();
   let log_config = Config::builder ()
-    .appender (Appender::builder ()
-      .build ("log_file", Box::new (log_file)))
+    .appender (Appender::builder ().build ("log_file", Box::new (log_file)))
     // Enable logging for this crate
-    .logger (Logger::builder ()
-      .appender ("log_file")
-      .build (
-        "window_manager",
-        if cfg! (debug_assertions) {
-          LevelFilter::Trace
-        } else {
-          LevelFilter::Info
-        }
-      ))
+    .logger (Logger::builder ().appender ("log_file").build (
+      "window_manager",
+      if cfg! (debug_assertions) {
+        LevelFilter::Trace
+      } else {
+        LevelFilter::Info
+      },
+    ))
     // librsvg and zbus use the root logger so turn that off
     .build (Root::builder ().build (LevelFilter::Off))
     .unwrap ();
   log4rs::init_config (log_config).unwrap ();
 }
-
 
 fn main () {
   unsafe {

@@ -1,5 +1,5 @@
-use super::notifications;
 use super::bar;
+use super::notifications;
 
 pub mod actions {
   pub unsafe fn increase_volume () {
@@ -18,14 +18,17 @@ pub mod actions {
 
 /// Executes `amixer get Master` and extracts whether it is muted and the volume level
 pub fn get_volume_info () -> Option<(bool, u32)> {
-  unsafe { libc::signal (libc::SIGCHLD, libc::SIG_DFL); }
+  unsafe {
+    libc::signal (libc::SIGCHLD, libc::SIG_DFL);
+  }
   let result = match std::process::Command::new ("amixer")
-      .args (["get", "Master"])
-      .output () {
+    .args (["get", "Master"])
+    .output ()
+  {
     Ok (raw_output) => {
       let output = String::from_utf8 (raw_output.stdout).unwrap ();
       // <level>%] [<on/off>]
-      let info = &output[output.find ('[').unwrap () + 1 ..];
+      let info = &output[output.find ('[').unwrap () + 1..];
       let level = info.split ('%').next ().unwrap ().parse ().unwrap ();
       let muted = info.split ('[').nth (1).unwrap ().starts_with ("off]");
       Some ((muted, level))
@@ -35,7 +38,9 @@ pub fn get_volume_info () -> Option<(bool, u32)> {
       None
     }
   };
-  unsafe { libc::signal (libc::SIGCHLD, libc::SIG_IGN); }
+  unsafe {
+    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
+  }
   result
 }
 
@@ -45,7 +50,11 @@ pub fn get_volume_info () -> Option<(bool, u32)> {
 fn notify_volume (mute_notification: bool) {
   if let Some ((is_muted, level)) = get_volume_info () {
     let summary = if mute_notification {
-      if is_muted {"Volume muted"} else {"Volume unmuted"}
+      if is_muted {
+        "Volume muted"
+      } else {
+        "Volume unmuted"
+      }
     } else {
       "Volume level changed"
     };
@@ -62,25 +71,35 @@ fn notify_volume (mute_notification: bool) {
 
 /// Executes `amixer -q sset Master toggle`
 fn mute_volume () {
-  unsafe { libc::signal (libc::SIGCHLD, libc::SIG_DFL); }
+  unsafe {
+    libc::signal (libc::SIGCHLD, libc::SIG_DFL);
+  }
   if let Ok (mut process) = std::process::Command::new ("amixer")
     .args (["-q", "sset", "Master", "toggle"])
-    .spawn () {
+    .spawn ()
+  {
     process.wait ().ok ();
   }
-  unsafe { libc::signal (libc::SIGCHLD, libc::SIG_IGN); }
+  unsafe {
+    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
+  }
   bar::update ();
 }
 
 /// Executes `amixer -q sset Master [value]%[+/-] unmute`
 fn change_volume (by: i32) {
-  unsafe { libc::signal (libc::SIGCHLD, libc::SIG_IGN); }
-  let arg = format! ("{}%{}", by.abs (), if by < 0 {'-'} else {'+'});
+  unsafe {
+    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
+  }
+  let arg = format! ("{}%{}", by.abs (), if by < 0 { '-' } else { '+' });
   if let Ok (mut process) = std::process::Command::new ("amixer")
     .args (["-q", "sset", "Master", &arg, "unmute"])
-    .spawn () {
+    .spawn ()
+  {
     process.wait ().ok ();
   }
-  unsafe { libc::signal (libc::SIGCHLD, libc::SIG_IGN); }
+  unsafe {
+    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
+  }
   bar::update ();
 }

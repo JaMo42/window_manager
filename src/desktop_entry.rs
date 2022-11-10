@@ -3,7 +3,7 @@ use std::io::{self, BufRead};
 
 #[derive(Default)]
 pub struct Desktop_Entry {
-  pub icon: Option<String>
+  pub icon: Option<String>,
 }
 
 impl Desktop_Entry {
@@ -35,8 +35,7 @@ impl Desktop_Entry {
   }
 
   pub fn new (application_name: &str) -> Option<Desktop_Entry> {
-    Self::find_file (application_name)
-    .and_then (|pathname| {
+    Self::find_file (application_name).and_then (|pathname| {
       match Self::read_file (&pathname) {
         Ok (desktop_entry) => Some (desktop_entry),
         Err (e) => {

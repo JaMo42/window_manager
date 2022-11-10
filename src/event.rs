@@ -1,26 +1,23 @@
-use x11::xlib::*;
-use super::core::*;
 use super::config::*;
-use super::property::{Net, atom, get_atom, Normal_Hints};
+use super::core::*;
+use super::property::{atom, get_atom, Net, Normal_Hints};
 use super::*;
 
-pub const MOUSE_MASK: i64 = ButtonPressMask|ButtonReleaseMask|PointerMotionMask;
-
+pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 
 pub unsafe fn win2client (window: Window) -> Option<&'static mut Client> {
   let mut data: XPointer = std::ptr::null_mut ();
-  if window == X_NONE || window == root
-    || XFindContext (display, window, wm_context, &mut data) != 0 {
+  if window == X_NONE
+    || window == root
+    || XFindContext (display, window, wm_context, &mut data) != 0
+  {
     None
-  }
-  else if !data.is_null () {
+  } else if !data.is_null () {
     Some (&mut *(data as *mut Client))
-  }
-  else {
+  } else {
     None
   }
 }
-
 
 pub unsafe fn button_press (event: &XButtonEvent) {
   if is_kind (event.subwindow, Window_Kind::Meta_Or_Unmanaged) {
@@ -41,7 +38,7 @@ pub unsafe fn button_press (event: &XButtonEvent) {
           if let Some (client) = win2client (event.window) {
             client.click (event.window);
           }
-        },
+        }
         Window_Kind::Notification => {
           notifications::maybe_close (event.window);
         }
@@ -52,7 +49,8 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   }
   if let Some (client) = win2client (event.subwindow) {
     if event.button == Button1 && !client.may_move ()
-      || event.button == Button3 && !client.may_resize () {
+      || event.button == Button3 && !client.may_resize ()
+    {
       return;
     }
   }
@@ -60,11 +58,9 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   workspaces[active_workspace].focus (event.subwindow);
 }
 
-
 pub unsafe fn button_relase () {
   mouse_held = 0;
 }
-
 
 pub unsafe fn motion (event: &XButtonEvent) {
   if mouse_held != 0 {
@@ -92,10 +88,9 @@ pub unsafe fn motion (event: &XButtonEvent) {
       }
     }
     mouse_held = 0;
-  }
-  else {
+  } else {
     // Ignore all subsequent MotionNotify events
-    let mut my_event: XEvent = uninitialized! ();
+    let mut my_event: XEvent = uninitialized!();
     loop {
       XNextEvent (display, &mut my_event);
       if my_event.type_ != MotionNotify {
@@ -106,7 +101,6 @@ pub unsafe fn motion (event: &XButtonEvent) {
   }
 }
 
-
 unsafe fn pointer_position () -> Option<(c_int, c_int)> {
   let mut x: c_int = 0;
   let mut y: c_int = 0;
@@ -115,15 +109,14 @@ unsafe fn pointer_position () -> Option<(c_int, c_int)> {
   let mut u: c_uint = 0;
   let mut w: Window = X_NONE;
   if XQueryPointer (
-    display, root, &mut w, &mut w, &mut x, &mut y, &mut i, &mut i, &mut u
-  ) == X_TRUE {
+    display, root, &mut w, &mut w, &mut x, &mut y, &mut i, &mut i, &mut u,
+  ) == X_TRUE
+  {
     Some ((x, y))
-  }
-  else {
+  } else {
     None
   }
 }
-
 
 pub unsafe fn mouse_move (client: &mut Client) {
   if XGrabPointer (
@@ -135,8 +128,9 @@ pub unsafe fn mouse_move (client: &mut Client) {
     GrabModeAsync,
     X_NONE,
     cursor::moving,
-    CurrentTime
-  ) != GrabSuccess {
+    CurrentTime,
+  ) != GrabSuccess
+  {
     return;
   }
   let start_x: c_int;
@@ -144,24 +138,21 @@ pub unsafe fn mouse_move (client: &mut Client) {
   if let Some ((x, y)) = pointer_position () {
     start_x = x;
     start_y = y;
-  }
-  else {
+  } else {
     return;
   }
-  let mut event: XEvent = uninitialized! ();
+  let mut event: XEvent = uninitialized!();
   let mut last_time: Time = 0;
   let mut mouse_x = start_x;
   let mut mouse_y = start_y;
   let mut state = 0;
-  let mut preview = geometry::Preview::create (
-    if client.is_snapped () {
-      client.saved_geometry ()
-    } else {
-      client.frame_geometry ()
-    }
-  );
+  let mut preview = geometry::Preview::create (if client.is_snapped () {
+    client.saved_geometry ()
+  } else {
+    client.frame_geometry ()
+  });
   loop {
-    XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
+    XMaskEvent (display, MOUSE_MASK | SubstructureRedirectMask, &mut event);
     match event.type_ {
       ConfigureRequest => configure_request (&event.configure_request),
       MapRequest => map_request (&event.map_request),
@@ -173,8 +164,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
         last_time = motion.time;
         if state & MOD_SHIFT == MOD_SHIFT {
           preview.snap (motion.x, motion.y);
-        }
-        else {
+        } else {
           preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
         }
         preview.update ();
@@ -189,7 +179,6 @@ pub unsafe fn mouse_move (client: &mut Client) {
   XUngrabPointer (display, CurrentTime);
   preview.finish (client, state & MOD_SHIFT == MOD_SHIFT);
 }
-
 
 pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool) {
   let cursor = if lock_height {
@@ -208,8 +197,9 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
     GrabModeAsync,
     X_NONE,
     cursor,
-    CurrentTime
-  ) != GrabSuccess {
+    CurrentTime,
+  ) != GrabSuccess
+  {
     return;
   }
   let start_x: c_int;
@@ -217,11 +207,10 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
   if let Some ((x, y)) = pointer_position () {
     start_x = x;
     start_y = y;
-  }
-  else {
+  } else {
     return;
   }
-  let mut event: XEvent = uninitialized! ();
+  let mut event: XEvent = uninitialized!();
   let mut last_time: Time = 0;
   let mut prev_x = start_x;
   let mut prev_y = start_y;
@@ -229,16 +218,14 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
   let mut dy = 0;
   let width_mul = !lock_width as i32;
   let height_mul = !lock_height as i32;
-  let mut preview = geometry::Preview::create (
-    if client.is_snapped () {
-      client.saved_geometry ()
-    } else {
-      client.frame_geometry ()
-    }
-  );
+  let mut preview = geometry::Preview::create (if client.is_snapped () {
+    client.saved_geometry ()
+  } else {
+    client.frame_geometry ()
+  });
   let normal_hints = Normal_Hints::get (client.window);
   loop {
-    XMaskEvent (display, MOUSE_MASK|SubstructureRedirectMask, &mut event);
+    XMaskEvent (display, MOUSE_MASK | SubstructureRedirectMask, &mut event);
     match event.type_ {
       ConfigureRequest => configure_request (&event.configure_request),
       MapRequest => map_request (&event.map_request),
@@ -270,32 +257,30 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
   preview.finish (client, false);
 }
 
-
 pub unsafe fn key_press (event: &XKeyEvent) {
   if let Some (action) = (*config).get (event.keycode, event.state) {
     match action {
       Action::WM (f) => {
-        if let Some (client) = focused_client! () {
+        if let Some (client) = focused_client!() {
           f (client);
         }
-      },
+      }
       Action::WS (f, workspace_index, requires_window) => {
-        let maybe_client = focused_client! ();
+        let maybe_client = focused_client!();
         if *requires_window && maybe_client.is_none () {
           return;
         }
         f (*workspace_index, maybe_client);
-      },
+      }
       Action::Launch (cmd) => {
         run_process (cmd);
-      },
+      }
       Action::Generic (f) => {
         f ();
       }
     }
   }
 }
-
 
 pub unsafe fn map_request (event: &XMapRequestEvent) {
   // TODO: should only check active workspace?
@@ -312,17 +297,16 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   let name = window_title (window);
   let maybe_class_hints = property::Class_Hints::new (window);
   if maybe_class_hints.is_some () && maybe_class_hints.as_ref ().unwrap ().is_meta ()
-    || name == "window_manager_bar" {
+    || name == "window_manager_bar"
+  {
     meta_windows.push (window);
     set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
     XMapWindow (display, window);
     log::info! ("New meta window: {} ({})", name, window);
-  }
-  else {
+  } else {
     XGrabServer (display);
-    let mut wa: XWindowAttributes = uninitialized !();
-    if XGetWindowAttributes (display, window, &mut wa) == 0
-      || wa.override_redirect != X_FALSE {
+    let mut wa: XWindowAttributes = uninitialized!();
+    if XGetWindowAttributes (display, window, &mut wa) == 0 || wa.override_redirect != X_FALSE {
       log::info! ("ignoring window with override_redirect: {}", window);
       return;
     }
@@ -360,7 +344,11 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
     log::info! ("Mapped new client: '{}' ({})", name, window);
     if trans_win != X_NONE {
-      log::info! ("    Transient for: '{}' ({})", window_title (trans_win), trans_win);
+      log::info! (
+        "    Transient for: '{}' ({})",
+        window_title (trans_win),
+        trans_win
+      );
     }
     if let Some (class_hints) = maybe_class_hints {
       log::info! ("            Class: {}", class_hints.class);
@@ -369,7 +357,6 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     XUngrabServer (display);
   }
 }
-
 
 pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
   if let Some (client) = win2client (event.window) {
@@ -390,17 +377,19 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
       g.h = event.height as u32;
     }
     client.move_and_resize (Client_Geometry::Client (g));
-    if !client.is_snapped() {
+    if !client.is_snapped () {
       client.save_geometry ();
     }
-    if (event.value_mask & (CWX|CWY) as u64 != 0)
-      && (event.value_mask & (CWWidth|CWHeight) as u64 == 0) {
+    if (event.value_mask & (CWX | CWY) as u64 != 0)
+      && (event.value_mask & (CWWidth | CWHeight) as u64 == 0)
+    {
       client.configure ();
     }
-  }
-  else {
+  } else {
     XConfigureWindow (
-      display, event.window, event.value_mask as u32,
+      display,
+      event.window,
+      event.value_mask as u32,
       &mut XWindowChanges {
         x: event.x,
         y: event.y,
@@ -408,8 +397,8 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
         height: event.height,
         border_width: 0,
         sibling: event.above,
-        stack_mode: event.detail
-      }
+        stack_mode: event.detail,
+      },
     );
   }
   XSync (display, X_FALSE);
@@ -417,21 +406,17 @@ pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
 
 pub unsafe fn property_notify (event: &XPropertyEvent) {
   if event.state == PropertyDelete {
-  }
-  else if let Some (client) = win2client (event.window) {
+  } else if let Some (client) = win2client (event.window) {
     if event.atom == XA_WM_HINTS {
       client.update_hints ();
-    }
-    else if event.atom == XA_WM_NAME || event.atom == atom (Net::WMName) {
+    } else if event.atom == XA_WM_NAME || event.atom == atom (Net::WMName) {
       client.set_title (&window_title (client.window));
-    }
-    else if event.atom == atom (Net::WMUserTime)
-      && focused_client! ().map_or (true, |f| f.window != event.window)
+    } else if event.atom == atom (Net::WMUserTime)
+      && focused_client!().map_or (true, |f| f.window != event.window)
     {
       if workspaces[active_workspace].contains (client.window) {
         workspaces[active_workspace].focus (client.window);
-      }
-      else {
+      } else {
         client.set_urgency (true);
       }
     }
@@ -443,14 +428,11 @@ pub unsafe fn property_notify (event: &XPropertyEvent) {
 pub unsafe fn client_message (event: &XClientMessageEvent) {
   if event.window == root {
     ewmh::root_message (event);
-  }
-  else if let Some (client) = win2client (event.window) {
+  } else if let Some (client) = win2client (event.window) {
     ewmh::client_message (client, event);
-  }
-  else if event.message_type == property::atom (Net::SystemTrayOpcode) {
+  } else if event.message_type == property::atom (Net::SystemTrayOpcode) {
     bar::tray.client_message (event);
-  }
-  else {
+  } else {
     log::debug! ("Unhandeled client message event: {}", event.message_type);
     log::debug! ("  Recipient: {}", event.window);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
@@ -473,8 +455,7 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
   }
   for workspace in &mut workspaces {
     if workspace.contains (window) {
-      workspace.remove (&Client::dummy (window))
-        .destroy ();
+      workspace.remove (&Client::dummy (window)).destroy ();
       update_client_list ();
       break;
     }

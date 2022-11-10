@@ -1,10 +1,10 @@
-use std::iter::Peekable;
-use std::path::Path;
-use std::io::{self, BufRead};
-use std::fs::File;
-use std::os::raw::{c_int, c_uint};
-use super::core::*;
 use super::config::Height;
+use super::core::*;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::iter::Peekable;
+use std::os::raw::{c_int, c_uint};
+use std::path::Path;
 
 pub fn read_lines<P: AsRef<Path>> (path: P) -> io::Result<io::Lines<io::BufReader<File>>> {
   let f = File::open (path)?;
@@ -12,7 +12,9 @@ pub fn read_lines<P: AsRef<Path>> (path: P) -> io::Result<io::Lines<io::BufReade
 }
 
 fn append_lines (
-  str: &mut String, file_content: io::Lines<io::BufReader<File>>, directory: &Path
+  str: &mut String,
+  file_content: io::Lines<io::BufReader<File>>,
+  directory: &Path,
 ) -> io::Result<()> {
   for maybe_line in file_content {
     match maybe_line {
@@ -69,20 +71,20 @@ pub enum Definition_Type {
   Circle_Buttons,
   Default_Notification_Timeout (i32),
   Icon_Theme (String),
-  Window_Icon_Size (u8)
+  Window_Icon_Size (u8),
 }
 
-pub struct Parser<Chars: Iterator<Item=char>> {
+pub struct Parser<Chars: Iterator<Item = char>> {
   chars: Peekable<Chars>,
   line: usize,
   column: usize,
   exhausted: bool,
   user_mod: c_uint,
   thing: String,
-  thing_col: usize
+  thing_col: usize,
 }
 
-impl<Chars: Iterator<Item=char>> Parser<Chars> {
+impl<Chars: Iterator<Item = char>> Parser<Chars> {
   pub fn new (chars: Chars) -> Self {
     Self {
       chars: chars.peekable (),
@@ -91,13 +93,12 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       exhausted: false,
       user_mod: MOD_WIN,
       thing: String::new (),
-      thing_col: 0
+      thing_col: 0,
     }
   }
 
   fn drop_line (&mut self) {
-    while self.chars.next_if(|x| *x != '\n').is_some() {
-    }
+    while self.chars.next_if (|x| *x != '\n').is_some () {}
     self.chars.next ();
     self.line += 1;
     self.column = 0;
@@ -107,7 +108,11 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
   }
 
   fn trim_whitespace (&mut self) {
-    while self.chars.next_if (|x| x.is_whitespace () && *x != '\n').is_some () {
+    while self
+      .chars
+      .next_if (|x| x.is_whitespace () && *x != '\n')
+      .is_some ()
+    {
       self.column += 1;
     }
   }
@@ -139,8 +144,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
   fn parse_number<T: std::str::FromStr> (&mut self) -> T {
     if let Ok (n) = self.next_thing ().parse::<T> () {
       n
-    }
-    else {
+    } else {
       self.fail ("Expected a number");
     }
   }
@@ -149,8 +153,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
     while let Some (c) = self.chars.next_if (|x| *x == '#' || *x == '\n') {
       if c == '#' {
         self.drop_line ();
-      }
-      else {
+      } else {
         self.line += 1;
       }
     }
@@ -163,19 +166,16 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       let mut it = thing.chars ();
       it.next ();
       it.as_str ()
-    }
-    else {
+    } else {
       thing.as_str ()
     };
     if let Ok (n) = num_str.parse::<u32> () {
       if is_plus || n == 0 {
         Height::FontPlus (n)
-      }
-      else {
+      } else {
         Height::Absolute (n)
       }
-    }
-    else {
+    } else {
       self.fail ("Expected a number");
     }
   }
@@ -222,7 +222,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
         self.parse_number (),
         self.parse_number (),
         self.parse_number (),
-        self.parse_number ()
+        self.parse_number (),
       ),
       "border" => Border (self.parse_number ()),
       "meta" => Meta (self.next_thing ()),
@@ -236,8 +236,7 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
         let next_thing = self.next_thing ();
         if next_thing == "$" {
           Bind_Command (mods, key, self.rest_of_line ())
-        }
-        else {
+        } else {
           Bind_Key (mods, key, next_thing)
         }
       }
@@ -252,16 +251,18 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
       "window_title_height" => Title_Height (self.parse_height ()),
       "window_title_position" => Title_Position (self.parse_choice (&["left", "center", "right"])),
       "left_buttons" => Left_Buttons (
-        self.rest_of_line ()
+        self
+          .rest_of_line ()
           .split (' ')
           .map (|s| s.to_string ())
-          .collect ()
+          .collect (),
       ),
       "right_buttons" => Right_Buttons (
-        self.rest_of_line ()
+        self
+          .rest_of_line ()
           .split (' ')
           .map (|s| s.to_string ())
-          .collect ()
+          .collect (),
       ),
       "button_icon_size" => Button_Icon_Size (self.parse_percentage ()),
       "circle_buttons" => Circle_Buttons,
@@ -275,28 +276,37 @@ impl<Chars: Iterator<Item=char>> Parser<Chars> {
   }
 
   fn fail (&mut self, description: &str) -> ! {
-    eprintln! ("config:{}:{} at {}: {}", self.line, self.thing_col, self.thing, description);
-    log::error! ("config:{}:{} at {}: {}", self.line, self.thing_col, self.thing, description);
+    eprintln! (
+      "config:{}:{} at {}: {}",
+      self.line,
+      self.thing_col,
+      self.thing,
+      description
+    );
+    log::error! (
+      "config:{}:{} at {}: {}",
+      self.line,
+      self.thing_col,
+      self.thing,
+      description
+    );
     std::process::exit (1);
   }
 }
 
-
-impl<Chars: Iterator<Item=char>> Iterator for Parser<Chars> {
+impl<Chars: Iterator<Item = char>> Iterator for Parser<Chars> {
   type Item = Definition_Type;
 
   fn next (&mut self) -> Option<Self::Item> {
     let def = self.parse_line ();
     if self.exhausted {
       None
-    }
-    else {
+    } else {
       self.drop_line ();
       Some (def)
     }
   }
 }
-
 
 fn str2mod (s: &str, m: c_uint) -> c_uint {
   match s {
@@ -305,10 +315,9 @@ fn str2mod (s: &str, m: c_uint) -> c_uint {
     "Alt" => MOD_ALT,
     "Ctrl" => MOD_CTRL,
     "Mod" => m,
-    _ => 0
+    _ => 0,
   }
 }
-
 
 fn modifiers_from_string (s: String) -> c_uint {
   let mut mods = 0;
@@ -325,8 +334,7 @@ fn mods_and_key_from_string (s: String, user_mod: c_uint) -> (c_uint, String) {
   while let Some (i) = it.next () {
     if it.peek ().is_some () {
       mods |= str2mod (i, user_mod);
-    }
-    else {
+    } else {
       key = i.to_string ();
     }
   }

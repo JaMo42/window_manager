@@ -1,14 +1,19 @@
+use super::client::Client;
+use super::core::*;
+use super::property;
 use std::ops::{Deref, DerefMut};
 use x11::xlib::*;
-use super::core::*;
-use super::client::Client;
-use super::property;
 
 #[macro_export]
 macro_rules! focused_client {
   () => {
-    workspaces[active_workspace].clients.iter_mut ().find (|c| !c.is_minimized).map (|c| &mut **c)
-  }
+
+    workspaces[active_workspace]
+      .clients
+      .iter_mut ()
+      .find (|c| !c.is_minimized)
+      .map (|c| &mut **c)
+  };
 }
 
 pub struct Workspace {
@@ -16,13 +21,13 @@ pub struct Workspace {
   // lifetime since we store the address of the client as context in its
   // associated windows.
   #[allow(clippy::vec_box)]
-  pub clients: Vec<Box<Client>>
+  pub clients: Vec<Box<Client>>,
 }
 
 impl Workspace {
   pub fn new () -> Workspace {
     Workspace {
-      clients: Vec::new ()
+      clients: Vec::new (),
     }
   }
 
@@ -35,14 +40,22 @@ impl Workspace {
   }
 
   pub unsafe fn remove (&mut self, client: &Client) -> Box<Client> {
-    if let Some (idx) = self.clients.iter ().position (|c| c.window == client.window) {
+    if let Some (idx) = self
+      .clients
+      .iter ()
+      .position (|c| c.window == client.window)
+    {
       let c = self.clients.remove (idx);
-      if let Some (first) = focused_client! () {
+      if let Some (first) = focused_client!() {
         first.focus ();
-      }
-      else {
+      } else {
         property::delete (root, property::Net::ActiveWindow);
-        XSetInputFocus (display, PointerRoot as u64, RevertToPointerRoot, CurrentTime);
+        XSetInputFocus (
+          display,
+          PointerRoot as u64,
+          RevertToPointerRoot,
+          CurrentTime,
+        );
       }
       return c;
     }
@@ -67,14 +80,17 @@ impl Workspace {
 
   pub unsafe fn focus (&mut self, window: Window) {
     if window == X_NONE || window == root {
-      log::warn! ("Tried to focus {}", if window == X_NONE { "None" } else { "Root" });
-    }
-    else if let Some (idx) = self.clients.iter ().position (
-      |c| c.window == window || c.frame == window)
+      log::warn! (
+        "Tried to focus {}",
+        if window == X_NONE { "None" } else { "Root" }
+      );
+    } else if let Some (idx) = self
+      .clients
+      .iter ()
+      .position (|c| c.window == window || c.frame == window)
     {
       self.focus_client (idx);
-    }
-    else {
+    } else {
       my_panic! ("Trying to focus window on a different workspace");
     }
   }
@@ -89,29 +105,40 @@ impl Workspace {
     // Create dummy window to handle window switch loop input
     let s = XDefaultScreen (display);
     let w = XCreateSimpleWindow (
-      display, root,
-      0, 0,
-      1, 1,
+      display,
+      root,
       0,
-      XBlackPixel (display, s), XBlackPixel (display, s)
+      0,
+      1,
+      1,
+      0,
+      XBlackPixel (display, s),
+      XBlackPixel (display, s),
     );
     XMapWindow (display, w);
     XSelectInput (display, w, KeyPressMask | KeyReleaseMask);
     XSetInputFocus (display, w, RevertToParent, CurrentTime);
-    XGrabKeyboard (display, w, X_FALSE, GrabModeAsync, GrabModeAsync, CurrentTime);
+    XGrabKeyboard (
+      display,
+      w,
+      X_FALSE,
+      GrabModeAsync,
+      GrabModeAsync,
+      CurrentTime,
+    );
     XSync (display, X_TRUE);
     // Add the first Tab back to the event queue
     {
-      let mut ev: XEvent = uninitialized! ();
+      let mut ev: XEvent = uninitialized!();
       ev.type_ = KeyPress;
       ev.key.keycode = 0x17;
       XPutBackEvent (display, &mut ev);
     }
     // Run window switcher loop
     let mut switch_idx = 0;
-    let mut event: XEvent = uninitialized! ();
+    let mut event: XEvent = uninitialized!();
     loop {
-      XMaskEvent (display, KeyPressMask|KeyReleaseMask, &mut event);
+      XMaskEvent (display, KeyPressMask | KeyReleaseMask, &mut event);
       match event.type_ {
         KeyPress => {
           if event.key.keycode == 0x17 {
@@ -133,7 +160,7 @@ impl Workspace {
             break;
           }
         }
-        _ => unreachable! ()
+        _ => unreachable!(),
       }
     }
     // Clean up

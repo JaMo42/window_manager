@@ -1,14 +1,14 @@
-use x11::xlib::*;
 use super::core::*;
-use super::set_window_kind;
+use super::ewmh;
 use super::geometry::Geometry;
 use super::property::Net;
-use super::ewmh;
+use super::set_window_kind;
+use x11::xlib::*;
 
 pub struct Tooltip {
   window: Window,
   geometry: Geometry,
-  active: bool
+  active: bool,
 }
 
 // As this is intended to be shown under the mouse cursor it only really makes
@@ -23,24 +23,28 @@ impl Tooltip {
     Self {
       window: X_NONE,
       geometry: Geometry::new (),
-      active: false
+      active: false,
     }
   }
 
   unsafe fn create (&mut self) {
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
+    let mut attributes: XSetWindowAttributes = uninitialized!();
     attributes.background_pixel = (*config).colors.bar_background.pixel;
     attributes.event_mask = NoEventMask;
     attributes.override_redirect = X_TRUE;
     self.window = XCreateWindow (
-      display, root,
-      0, 0, 10, 10,
+      display,
+      root,
+      0,
+      0,
+      10,
+      10,
       0,
       CopyFromParent,
       CopyFromParent as u32,
       CopyFromParent as *mut Visual,
-      CWBackPixel|CWEventMask|CWOverrideRedirect,
-      &mut attributes
+      CWBackPixel | CWEventMask | CWOverrideRedirect,
+      &mut attributes,
     );
     ewmh::set_window_type (self.window, Net::WMWindowTypeTooltip);
     set_window_kind (self.window, Window_Kind::Meta_Or_Unmanaged);
@@ -50,9 +54,12 @@ impl Tooltip {
     self.geometry = Geometry::from_parts (x - w as i32 / 2, y, w, h);
     self.geometry.clamp (&screen_size);
     XMoveResizeWindow (
-      display, self.window,
-      self.geometry.x, self.geometry.y,
-      self.geometry.w, self.geometry.h
+      display,
+      self.window,
+      self.geometry.x,
+      self.geometry.y,
+      self.geometry.w,
+      self.geometry.h,
     );
   }
 
@@ -72,7 +79,8 @@ impl Tooltip {
     self.move_and_resize (x, y, width, height);
     (*draw).fill_rect (0, 0, width, height, (*config).colors.bar_background);
     text = (*draw).text (string);
-    text.at (Self::BORDER as i32, Self::BORDER as i32)
+    text
+      .at (Self::BORDER as i32, Self::BORDER as i32)
       .color ((*config).colors.bar_text)
       .draw ();
     XMapRaised (display, self.window);
@@ -92,7 +100,9 @@ impl Drop for Tooltip {
   fn drop (&mut self) {
     if self.window != X_NONE {
       // TODO: Isn't this called after main when the display is already closed?
-      unsafe { XDestroyWindow (display, self.window); }
+      unsafe {
+        XDestroyWindow (display, self.window);
+      }
     }
   }
 }

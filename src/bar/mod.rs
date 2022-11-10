@@ -1,16 +1,16 @@
-mod xembed;
 mod tray_client;
 pub mod tray_manager;
 mod widget;
+mod xembed;
 
-use x11::xlib::*;
-use std::ffi::CString;
 use crate::core::*;
-use crate::{set_window_kind, set_window_opacity};
 use crate::cursor;
-use crate::property;
 use crate::ewmh;
+use crate::property;
+use crate::{set_window_kind, set_window_opacity};
+use std::ffi::CString;
 use tray_manager::Tray_Manager;
+use x11::xlib::*;
 
 use self::widget::Widget;
 
@@ -25,7 +25,7 @@ pub struct Bar {
   right_widgets: Vec<Box<dyn Widget>>,
   // The widget under the mouse, gets set on enter/leave events we don't need
   // to resolve it for clicks
-  mouse_widget: *mut dyn Widget
+  mouse_widget: *mut dyn Widget,
 }
 
 impl Bar {
@@ -42,20 +42,20 @@ impl Bar {
       last_scroll_time: 0,
       left_widgets: Vec::new (),
       right_widgets: Vec::new (),
-      mouse_widget: widget::null_ptr ()
+      mouse_widget: widget::null_ptr (),
     }
   }
 
   pub unsafe fn create () -> Self {
     let screen = XDefaultScreen (display);
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
+    let mut attributes: XSetWindowAttributes = uninitialized!();
     attributes.override_redirect = X_TRUE;
     attributes.background_pixel = (*config).colors.bar_background.pixel;
-    attributes.event_mask = ButtonPressMask|ExposureMask;
+    attributes.event_mask = ButtonPressMask | ExposureMask;
     attributes.cursor = cursor::normal;
     let mut class_hint = XClassHint {
       res_name: c_str! ("window_manager_bar") as *mut libc::c_char,
-      res_class: c_str! ("window_manager_bar") as *mut libc::c_char
+      res_class: c_str! ("window_manager_bar") as *mut libc::c_char,
     };
     let width = screen_size.w as u32;
     let height = (*config).bar_height.get (Some (&(*config).bar_font));
@@ -69,9 +69,9 @@ impl Bar {
       0,
       XDefaultDepth (display, screen),
       CopyFromParent as u32,
-      XDefaultVisual(display, screen),
-      CWOverrideRedirect|CWBackPixel|CWEventMask|CWCursor,
-      &mut attributes
+      XDefaultVisual (display, screen),
+      CWOverrideRedirect | CWBackPixel | CWEventMask | CWCursor,
+      &mut attributes,
     );
     XSetClassHint (display, window, &mut class_hint);
     ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
@@ -87,7 +87,7 @@ impl Bar {
       last_scroll_time: 0,
       left_widgets: Vec::new (),
       right_widgets: Vec::new (),
-      mouse_widget: widget::null_ptr ()
+      mouse_widget: widget::null_ptr (),
     }
   }
 
@@ -95,12 +95,13 @@ impl Bar {
   pub unsafe fn build (&mut self) {
     macro_rules! push {
       ($target:expr, $widget:ident) => {
+
         if let Some (w) = widget::$widget::new () {
           $target.push (Box::new (w));
         } else {
           log::warn! ("Could not create widget: {}", stringify! ($widget));
         }
-      }
+      };
     }
     push! (self.left_widgets, Workspaces);
     push! (self.right_widgets, DateTime);
@@ -109,8 +110,10 @@ impl Bar {
   }
 
   pub unsafe fn draw (&mut self) {
-    if !cfg! (feature="bar") { return; }
-    (*draw).select_font((*config).bar_font.as_str ());
+    if !cfg! (feature = "bar") {
+      return;
+    }
+    (*draw).select_font ((*config).bar_font.as_str ());
 
     // Left
     let mut x = 0;
@@ -146,7 +149,11 @@ impl Bar {
   }
 
   pub fn invalidate_widgets (&mut self) {
-    for w in self.left_widgets.iter_mut ().chain (self.right_widgets.iter_mut ()) {
+    for w in self
+      .left_widgets
+      .iter_mut ()
+      .chain (self.right_widgets.iter_mut ())
+    {
       w.invalidate ();
     }
   }
@@ -175,7 +182,11 @@ impl Bar {
   }
 
   pub unsafe fn enter (&mut self, window: Window) {
-    for w in self.left_widgets.iter_mut ().chain (self.right_widgets.iter_mut ()) {
+    for w in self
+      .left_widgets
+      .iter_mut ()
+      .chain (self.right_widgets.iter_mut ())
+    {
       if w.window () == window {
         self.mouse_widget = w.as_mut ();
         w.enter ();
@@ -194,10 +205,14 @@ impl Drop for Bar {
   fn drop (&mut self) {
     // TODO: same issue as with tooltip, display should already be closed here
     for w in self.left_widgets.iter () {
-      unsafe { XDestroyWindow (display, w.window ()); }
+      unsafe {
+        XDestroyWindow (display, w.window ());
+      }
     }
     for w in self.right_widgets.iter () {
-      unsafe { XDestroyWindow (display, w.window ()); }
+      unsafe {
+        XDestroyWindow (display, w.window ());
+      }
     }
   }
 }
@@ -205,5 +220,7 @@ impl Drop for Bar {
 /// Redraws the bar if the "bar" feature is enabled
 pub fn update () {
   // Note: bar.draw already does the feature check, this is mostly just a safe wrapper
-  unsafe { bar.draw (); }
+  unsafe {
+    bar.draw ();
+  }
 }

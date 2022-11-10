@@ -1,16 +1,16 @@
+use super::core::display;
+use std::collections::BTreeMap;
 use std::ffi::CString;
 use std::mem::size_of;
-use std::collections::BTreeMap;
-use x11::xlib::*;
 use x11::xft::{XftColor, XftColorAllocName};
-use super::core::display;
+use x11::xlib::*;
 
 #[derive(Copy, Clone)]
 pub struct Color {
   pub pixel: u64,
   pub red: f64,
   pub green: f64,
-  pub blue: f64
+  pub blue: f64,
 }
 
 impl Color {
@@ -19,7 +19,7 @@ impl Color {
       pixel: 0,
       red,
       green,
-      blue
+      blue,
     }
   }
 
@@ -27,13 +27,13 @@ impl Color {
     let screen = XDefaultScreen (display);
     let visual = XDefaultVisual (display, screen);
     let color_map = XDefaultColormap (display, screen);
-    let mut xcolor: XftColor = uninitialized! ();
+    let mut xcolor: XftColor = uninitialized!();
     XftColorAllocName (display, visual, color_map, c_str! (hex), &mut xcolor);
     Color {
       pixel: xcolor.pixel,
       red: xcolor.color.red as f64 / 0xffff as f64,
       green: xcolor.color.green as f64 / 0xffff as f64,
-      blue: xcolor.color.blue as f64 / 0xffff as f64
+      blue: xcolor.color.blue as f64 / 0xffff as f64,
     }
   }
 
@@ -41,39 +41,38 @@ impl Color {
     Self::from_rgb (
       (self.red * factor).clamp (0.0, 1.0),
       (self.green * factor).clamp (0.0, 1.0),
-      (self.blue * factor).clamp (0.0, 1.0)
+      (self.blue * factor).clamp (0.0, 1.0),
     )
   }
 }
 
-
 pub enum Color_Config {
   Default,
   Hex (String),
-  Link (String)
+  Link (String),
 }
 
 impl std::default::Default for Color_Config {
-  fn default() -> Self {
+  fn default () -> Self {
     Color_Config::Default
   }
 }
 
-
 pub struct Color_Scheme_Config {
-  pub cfg: [Color_Config; COLOR_COUNT]
+  pub cfg: [Color_Config; COLOR_COUNT],
 }
 
 impl Color_Scheme_Config {
   pub fn new () -> Self {
-    Color_Scheme_Config { cfg: Default::default () }
+    Color_Scheme_Config {
+      cfg: Default::default (),
+    }
   }
 
   pub fn set (&mut self, elem: &str, cfg: Color_Config) {
     self.cfg[unsafe { color_index (elem) }] = cfg;
   }
 }
-
 
 #[repr(C)]
 pub struct Color_Scheme {
@@ -101,7 +100,7 @@ pub struct Color_Scheme {
   pub bar_urgent_workspace: Color,
   pub bar_urgent_workspace_text: Color,
   pub notification_background: Color,
-  pub notification_text: Color
+  pub notification_text: Color,
 }
 const COLOR_COUNT: usize = size_of::<Color_Scheme> () / size_of::<Color> ();
 const COLOR_NAMES: [&str; COLOR_COUNT] = [
@@ -129,54 +128,51 @@ const COLOR_NAMES: [&str; COLOR_COUNT] = [
   "Bar::UrgentWorkspace",
   "Bar::UrgentWorkspaceText",
   "NotificationBackground",
-  "NotificationText"
+  "NotificationText",
 ];
 const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   // Window borders
-    // Focused
-    "#005577",
-    "#000000",
-    // Normal
-    "#444444",
-    "#eeeeee",
-    // Selected
-    "#007755",
-    "#000000",
-    // Urgent
-    "#770000",
-    "#000000",
-    // Buttons
-      // Close
-      "#000000",
-      "#cc0000",
-      // Maximize
-      "CloseButton",
-      "#00cc00",
-      // Minimize
-      "CloseButton",
-      "#cccc00",
-
+  // Focused
+  "#005577",
+  "#000000",
+  // Normal
+  "#444444",
+  "#eeeeee",
+  // Selected
+  "#007755",
+  "#000000",
+  // Urgent
+  "#770000",
+  "#000000",
+  // Buttons
+  // Close
+  "#000000",
+  "#cc0000",
+  // Maximize
+  "CloseButton",
+  "#00cc00",
+  // Minimize
+  "CloseButton",
+  "#cccc00",
   // Background
   "#000000",
-
   // Bar
-    // Background
-    "#111111",
-    // Text
-    "#eeeeee",
-    // Workspaces
-    "Bar::Background",
-    "Bar::Text",
-    // Active workspace
-    "Focused",
-    "FocusedText",
-    // Workspace with urgent client
-    "Urgent",
-    "UrgentText",
-
-    // Notifications
-    "Bar::Background",
-    "Bar::Text"
+  // Background
+  "#111111",
+  // Text
+  "#eeeeee",
+  // Workspaces
+  "Bar::Background",
+  "Bar::Text",
+  // Active workspace
+  "Focused",
+  "FocusedText",
+  // Workspace with urgent client
+  "Urgent",
+  "UrgentText",
+  // Notifications
+  "Bar::Background",
+  "Bar::Text",
 ];
 
 impl std::ops::Index<usize> for Color_Scheme {
@@ -184,24 +180,20 @@ impl std::ops::Index<usize> for Color_Scheme {
 
   fn index (&self, index: usize) -> &Color {
     let p = self as *const Color_Scheme as *const Color;
-    unsafe {
-      &*p.add (index)
-    }
+    unsafe { &*p.add (index) }
   }
 }
 
 impl std::ops::IndexMut<usize> for Color_Scheme {
   fn index_mut (&mut self, index: usize) -> &mut Color {
     let p = self as *mut Color_Scheme as *mut Color;
-    unsafe {
-      &mut *p.add (index)
-    }
+    unsafe { &mut *p.add (index) }
   }
 }
 
 impl Color_Scheme {
   pub unsafe fn new (cfg: &Color_Scheme_Config, defs: &BTreeMap<String, Color>) -> Self {
-    let mut result: Color_Scheme = uninitialized! ();
+    let mut result: Color_Scheme = uninitialized!();
     let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
     let mut links = Vec::<(usize, usize)>::new ();
     for i in 0..COLOR_COUNT {
@@ -213,11 +205,11 @@ impl Color_Scheme {
           } else {
             links.push ((i, color_index (DEFAULT_CONFIG[i])));
           }
-        },
+        }
         Color_Config::Hex (string) => {
           result[i] = Color::alloc_from_hex (string.as_str ());
           set[i] = true;
-        },
+        }
         Color_Config::Link (target) => {
           if let Some (def) = defs.get (target) {
             result[i] = *def;
@@ -230,7 +222,7 @@ impl Color_Scheme {
     }
 
     let mut did_change = true;
-    while did_change && !links.is_empty() {
+    while did_change && !links.is_empty () {
       did_change = false;
       for i in (0..links.len ()).rev () {
         if set[links[i].1] {
@@ -250,9 +242,7 @@ impl Color_Scheme {
   }
 
   pub fn new_uninit () -> Self {
-    unsafe {
-      uninitialized! ()
-    }
+    unsafe { uninitialized!() }
   }
 }
 

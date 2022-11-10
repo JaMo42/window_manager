@@ -1,15 +1,23 @@
-use std::os::raw::*;
-use std::ffi::CString;
-use x11::xlib::*;
 use super::core::*;
 use super::geometry::Geometry;
+use std::ffi::CString;
+use std::os::raw::*;
+use x11::xlib::*;
 
 #[macro_export]
 macro_rules! set_cardinal {
   ($w:expr, $p:expr, $v:expr) => {
+
     let data = $v as c_uint;
-    crate::property::set ($w, $p, XA_CARDINAL, 32, &data as *const c_uint as *const c_uchar, 1);
-  }
+    crate::property::set (
+      $w,
+      $p,
+      XA_CARDINAL,
+      32,
+      &data as *const c_uint as *const c_uchar,
+      1,
+    );
+  };
 }
 
 #[derive(Copy, Clone)]
@@ -48,7 +56,7 @@ pub enum Net {
   WMWindowTypeDock,
   WMWindowTypeNotification,
   WMWindowTypeTooltip,
-  Last
+  Last,
 }
 
 #[derive(Copy, Clone)]
@@ -59,7 +67,7 @@ pub enum WM {
   DeleteWindow,
   Protocols,
   TakeFocus,
-  Last
+  Last,
 }
 
 #[derive(Copy, Clone)]
@@ -68,7 +76,7 @@ pub enum WM {
 pub enum XEmbed {
   XEmbed,
   Info,
-  Last
+  Last,
 }
 
 #[derive(Copy, Clone)]
@@ -76,7 +84,7 @@ pub enum XEmbed {
 pub enum Other {
   Manager,
   MotfifWMHints,
-  Last
+  Last,
 }
 
 pub trait Into_Atom {
@@ -115,19 +123,18 @@ impl Into_Atom for Atom {
 
 pub struct Class_Hints {
   pub class: String,
-  pub name: String
+  pub name: String,
 }
 
 impl Class_Hints {
   pub unsafe fn new (window: Window) -> Option<Class_Hints> {
-    let mut class_hints: XClassHint = uninitialized! ();
+    let mut class_hints: XClassHint = uninitialized!();
     if XGetClassHint (display, window, &mut class_hints) == 0 {
       None
-    }
-    else {
+    } else {
       Some (Class_Hints {
         class: string_from_ptr! (class_hints.res_class),
-        name: string_from_ptr! (class_hints.res_name)
+        name: string_from_ptr! (class_hints.res_name),
       })
     }
   }
@@ -144,17 +151,18 @@ pub static mut other: [Atom; Other::Last as usize] = [X_NONE; Other::Last as usi
 
 pub static mut wm_check_window: Window = X_NONE;
 
-
 pub unsafe fn load_atoms () {
   macro_rules! W {
     ($property:ident, $name:expr) => {
+
       wm[WM::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
-    }
+    };
   }
   macro_rules! N {
     ($property:ident, $name:expr) => {
+
       net[Net::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
-    }
+    };
   }
 
   W! (ChangeState, "WM_CHANGE_STATE");
@@ -210,10 +218,31 @@ pub unsafe fn init_set_root_properties () {
   let utf8_string = XInternAtom (display, c_str! ("UTF8_STRING"), X_FALSE);
 
   wm_check_window = XCreateSimpleWindow (display, root, 0, 0, 1, 1, 0, 0, 0);
-  set (wm_check_window, Net::SupportingWMCheck, XA_WINDOW, 32, &wm_check_window, 1);
-  set (wm_check_window, Net::WMName, utf8_string, 8, c_str! (wm_name), wm_name.len () as i32);
+  set (
+    wm_check_window,
+    Net::SupportingWMCheck,
+    XA_WINDOW,
+    32,
+    &wm_check_window,
+    1,
+  );
+  set (
+    wm_check_window,
+    Net::WMName,
+    utf8_string,
+    8,
+    c_str! (wm_name),
+    wm_name.len () as i32,
+  );
 
-  set (root, Net::SupportingWMCheck, XA_WINDOW, 32, &wm_check_window, 1);
+  set (
+    root,
+    Net::SupportingWMCheck,
+    XA_WINDOW,
+    32,
+    &wm_check_window,
+    1,
+  );
   set (root, Net::Supported, XA_ATOM, 32, &net, Net::Last as i32);
   delete (root, Net::ActiveWindow);
   delete (root, Net::ClientList);
@@ -231,7 +260,12 @@ pub unsafe fn delete<P: Into_Atom> (window: Window, property: P) {
 }
 
 pub unsafe fn set<P: Into_Atom, T> (
-  window: Window, property: P, type_: Atom, format: c_int, data: *const T, n: c_int
+  window: Window,
+  property: P,
+  type_: Atom,
+  format: c_int,
+  data: *const T,
+  n: c_int,
 ) {
   XChangeProperty (
     display,
@@ -241,12 +275,17 @@ pub unsafe fn set<P: Into_Atom, T> (
     format,
     PropModeReplace,
     data as *const c_uchar,
-    n
+    n,
   );
 }
 
 pub unsafe fn append<P: Into_Atom, T> (
-  window: Window, property: P, type_: Atom, format: c_int, data: *const T, n: c_int
+  window: Window,
+  property: P,
+  type_: Atom,
+  format: c_int,
+  data: *const T,
+  n: c_int,
 ) {
   XChangeProperty (
     display,
@@ -256,7 +295,7 @@ pub unsafe fn append<P: Into_Atom, T> (
     format,
     PropModeAppend,
     data as *const c_uchar,
-    n
+    n,
   );
 }
 
@@ -266,7 +305,7 @@ pub struct Property_Data {
   format: c_int,
   nitems: c_ulong,
   bytes_after: c_ulong,
-  data: *mut c_uchar
+  data: *mut c_uchar,
 }
 
 #[allow(dead_code)]
@@ -300,7 +339,11 @@ impl Drop for Property_Data {
 }
 
 pub unsafe fn get<P: Into_Atom> (
-  window: Window, property: P, offset: usize, length: usize, type_: Atom
+  window: Window,
+  property: P,
+  offset: usize,
+  length: usize,
+  type_: Atom,
 ) -> Option<Property_Data> {
   let mut actual_type: Atom = X_NONE;
   let mut format: c_int = 0;
@@ -319,7 +362,7 @@ pub unsafe fn get<P: Into_Atom> (
     &mut format,
     &mut nitems,
     &mut bytes_after,
-    &mut data
+    &mut data,
   );
   if status == Success as i32 && !data.is_null () {
     Some (Property_Data {
@@ -327,7 +370,7 @@ pub unsafe fn get<P: Into_Atom> (
       format,
       nitems,
       bytes_after,
-      data
+      data,
     })
   } else {
     None
@@ -335,7 +378,10 @@ pub unsafe fn get<P: Into_Atom> (
 }
 
 pub unsafe fn get_data_for_scalar<T, P: Into_Atom> (
-  window: Window, property: P, type_: Atom, offset: usize
+  window: Window,
+  property: P,
+  type_: Atom,
+  offset: usize,
 ) -> Option<Property_Data> {
   let long_length = std::mem::size_of::<T> () / 4;
   let long_offset = (offset * std::mem::size_of::<T> ()) / 4;
@@ -343,7 +389,11 @@ pub unsafe fn get_data_for_scalar<T, P: Into_Atom> (
 }
 
 pub unsafe fn get_data_for_array<T, P: Into_Atom> (
-  window: Window, property: P, type_: Atom, length: usize, offset: usize
+  window: Window,
+  property: P,
+  type_: Atom,
+  length: usize,
+  offset: usize,
 ) -> Option<Property_Data> {
   let long_length = (length * std::mem::size_of::<T> ()) / 4;
   let long_offset = (offset * std::mem::size_of::<T> ()) / 4;
@@ -355,22 +405,17 @@ pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<S
   get_data_for_array::<c_char, _> (
     window,
     property,
-    AnyPropertyType as Atom,  // Could be XA_STRING or _XA_UTF8_STRING
+    AnyPropertyType as Atom, // Could be XA_STRING or _XA_UTF8_STRING
     MAX_LENGTH,
-    0
+    0,
   )
   .map (|d| d.as_string ())
 }
 
 pub unsafe fn get_atom<P: Into_Atom> (window: Window, property: P) -> Atom {
-  get_data_for_scalar::<Atom, _> (
-    window,
-    property,
-    XA_ATOM,
-    0
-  )
-  .map (|data| data.value ())
-  .unwrap_or (X_NONE)
+  get_data_for_scalar::<Atom, _> (window, property, XA_ATOM, 0)
+    .map (|data| data.value ())
+    .unwrap_or (X_NONE)
 }
 
 #[derive(Copy, Clone)]
@@ -386,12 +431,13 @@ impl Normal_Hints {
     let hints = XAllocSizeHints ();
     macro_rules! get_field {
       ($field_1:ident, $field_2:ident, $flag:ident) => {
+
         if (*hints).flags & $flag == $flag {
           Some (((*hints).$field_1 as u32, (*hints).$field_2 as u32))
         } else {
           None
         }
-      }
+      };
     }
     let mut _ignored = 0;
     if XGetWMNormalHints (display, window, hints, &mut _ignored) == 0 {
@@ -407,7 +453,7 @@ impl Normal_Hints {
     if (*hints).flags & PAspect == PAspect {
       result.aspect_ratio = Some ((
         (*hints).min_aspect.x as f64 / (*hints).min_aspect.y as f64,
-        (*hints).max_aspect.x as f64 / (*hints).max_aspect.y as f64
+        (*hints).max_aspect.x as f64 / (*hints).max_aspect.y as f64,
       ));
     }
     XFree (hints as *mut c_void);
@@ -464,13 +510,12 @@ pub struct Motif_Hints {
   pub functions: c_ulong,
   pub decorations: c_ulong,
   pub input_mode: c_long,
-  pub status: c_ulong
+  pub status: c_ulong,
 }
 
 impl Motif_Hints {
   pub unsafe fn get (window: Window) -> Option<Self> {
     let atom = atom (Other::MotfifWMHints);
-    get_data_for_scalar::<Motif_Hints, _> (window, atom, atom, 0)
-      .map (|data| data.value ())
+    get_data_for_scalar::<Motif_Hints, _> (window, atom, atom, 0).map (|data| data.value ())
   }
 }

@@ -1,23 +1,28 @@
-use std::os::raw::*;
-use rand::{prelude::ThreadRng, Rng};
-use x11::xlib::*;
 use crate::action::{move_snap_flags, snap_geometry};
+use crate::client::{decorated_frame_offset, Client, Client_Geometry};
 use crate::core::*;
-use crate::property;
-use crate::client::{Client, Client_Geometry, decorated_frame_offset};
 use crate::ewmh;
+use crate::property;
+use rand::{prelude::ThreadRng, Rng};
+use std::os::raw::*;
+use x11::xlib::*;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Geometry {
   pub x: c_int,
   pub y: c_int,
   pub w: c_uint,
-  pub h: c_uint
+  pub h: c_uint,
 }
 
 impl Geometry {
   pub const fn new () -> Self {
-    Geometry { x: 0, y: 0, w: 0, h: 0 }
+    Geometry {
+      x: 0,
+      y: 0,
+      w: 0,
+      h: 0,
+    }
   }
 
   pub const fn from_parts (x: c_int, y: c_int, w: c_uint, h: c_uint) -> Self {
@@ -31,8 +36,7 @@ impl Geometry {
     if by >= 0 {
       self.w += by2 as u32;
       self.h += by2 as u32;
-    }
-    else {
+    } else {
       self.w -= -by2 as u32;
       self.h -= -by2 as u32;
     }
@@ -60,7 +64,7 @@ impl Geometry {
     self
   }
 
-  pub fn center_inside (&mut self, parent: &Geometry) -> &mut Self{
+  pub fn center_inside (&mut self, parent: &Geometry) -> &mut Self {
     self.center (parent);
     self.clamp (parent);
     self
@@ -70,16 +74,14 @@ impl Geometry {
     if self.w >= parent.w {
       self.w = parent.w;
       self.x = parent.x;
-    }
-    else {
+    } else {
       let max_x = (parent.w - self.w) as c_int + parent.x;
       self.x = rng.gen_range (parent.x..=max_x);
     }
     if self.h >= parent.h {
       self.h = parent.h;
       self.y = parent.y;
-    }
-    else {
+    } else {
       let max_y = (parent.h - self.h) as c_int + parent.y;
       self.y = rng.gen_range (parent.y..=max_y);
     }
@@ -92,7 +94,7 @@ impl Geometry {
       self.x - decorated_frame_offset.x,
       self.y - decorated_frame_offset.y,
       self.w + decorated_frame_offset.w,
-      self.h + decorated_frame_offset.h
+      self.h + decorated_frame_offset.h,
     )
   }
 
@@ -102,7 +104,7 @@ impl Geometry {
       self.x + decorated_frame_offset.x,
       self.y + decorated_frame_offset.y,
       self.w - decorated_frame_offset.w,
-      self.h - decorated_frame_offset.h
+      self.h - decorated_frame_offset.h,
     )
   }
 }
@@ -113,7 +115,7 @@ pub struct Preview {
   geometry: Geometry,
   snap_geometry: Geometry,
   final_geometry: Geometry,
-  is_snapped: bool
+  is_snapped: bool,
 }
 
 impl Preview {
@@ -127,9 +129,9 @@ impl Preview {
   const RESIZE_INCREMENT_THRESHHOLD: i32 = 5;
 
   pub unsafe fn create (initial_geometry: Geometry) -> Self {
-    let mut vi: XVisualInfo = uninitialized! ();
-    XMatchVisualInfo(display, XDefaultScreen (display), 32, TrueColor, &mut vi);
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
+    let mut vi: XVisualInfo = uninitialized!();
+    XMatchVisualInfo (display, XDefaultScreen (display), 32, TrueColor, &mut vi);
+    let mut attributes: XSetWindowAttributes = uninitialized!();
     attributes.override_redirect = X_TRUE;
     attributes.event_mask = 0;
     attributes.border_pixel = (*config).colors.selected.pixel;
@@ -146,8 +148,8 @@ impl Preview {
       vi.depth,
       InputOutput as c_uint,
       vi.visual,
-      CWEventMask|CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap,
-      &mut attributes
+      CWEventMask | CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap,
+      &mut attributes,
     );
     ewmh::set_window_type (window, property::Net::WMWindowTypeDesktop);
     XClearWindow (display, window);
@@ -158,7 +160,7 @@ impl Preview {
       geometry: initial_geometry,
       snap_geometry: Geometry::new (),
       final_geometry: initial_geometry,
-      is_snapped: false
+      is_snapped: false,
     }
   }
 
@@ -175,8 +177,7 @@ impl Preview {
       if self.geometry.w > ww && self.geometry.w - ww >= Self::MIN_WIDTH {
         self.geometry.w -= ww as u32;
       }
-    }
-    else {
+    } else {
       self.geometry.w += w as u32;
     }
     if h < 0 {
@@ -184,8 +185,7 @@ impl Preview {
       if self.geometry.h > hh && self.geometry.h - hh >= Self::MIN_HEIGHT {
         self.geometry.h -= hh;
       }
-    }
-    else {
+    } else {
       self.geometry.h += h as u32;
     }
     self.final_geometry = self.geometry;
@@ -201,8 +201,8 @@ impl Preview {
     let g;
     // Apply resize increment
     if let Some ((winc, hinc)) = hints.resize_inc () {
-      let mut dw = self.geometry.w  as i32 - self.original_geometry.w as i32;
-      let mut dh = self.geometry.h  as i32 - self.original_geometry.h as i32;
+      let mut dw = self.geometry.w as i32 - self.original_geometry.w as i32;
+      let mut dh = self.geometry.h as i32 - self.original_geometry.h as i32;
       if dw < -Self::RESIZE_INCREMENT_THRESHHOLD {
         dw = (dw - winc + 1) / winc * winc;
       } else if dw > Self::RESIZE_INCREMENT_THRESHHOLD {
@@ -221,7 +221,7 @@ impl Preview {
         self.geometry.x,
         self.geometry.y,
         (self.original_geometry.w as i32 + dw) as u32,
-        (self.original_geometry.h as i32 + dh) as u32
+        (self.original_geometry.h as i32 + dh) as u32,
       );
     } else {
       g = self.geometry;
@@ -251,9 +251,7 @@ impl Preview {
     XDestroyWindow (display, self.window);
     if snap {
       client.save_geometry ();
-      client.snap_state = move_snap_flags (
-        self.geometry.x as u32, self.geometry.y as u32
-      );
+      client.snap_state = move_snap_flags (self.geometry.x as u32, self.geometry.y as u32);
       client.move_and_resize (Client_Geometry::Snap (self.snap_geometry));
     } else {
       client.snap_state = SNAP_NONE;
