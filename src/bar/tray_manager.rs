@@ -94,15 +94,8 @@ impl Tray_Manager {
       &mut attributes,
     );
     meta_windows.push (window);
-    let window_type_dock = property::atom (property::Net::WMWindowTypeDock);
-    property::set (
-      window,
-      property::Net::WMWindowType,
-      XA_ATOM,
-      32,
-      &window_type_dock,
-      1,
-    );
+    crate::ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
+    crate::set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
     if (*config).bar_opacity != 100 {
       let atom = XInternAtom (display, c_str! ("_NET_WM_WINDOW_OPACITY"), X_FALSE);
       let value = 42949672u32 * (*config).bar_opacity as u32;
