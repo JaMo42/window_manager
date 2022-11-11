@@ -91,13 +91,9 @@ impl Notification {
     (*draw).select_font (&(*config).bar_font);
     // Determine width needed for the text
     {
-      let longer_text = if self.summary.len () > self.body.len () {
-        self.summary.as_str ()
-      } else {
-        self.body.as_str ()
-      };
-      let text = (*draw).text (longer_text);
-      width = text.get_width () + 2 * BORDER;
+      let title_width = (*draw).text (&self.summary).get_width ();
+      let body_width = (*draw).text (&self.body).get_width ();
+      width = u32::max (title_width, body_width) + 2 * BORDER;
     }
     // Summary
     {

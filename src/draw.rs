@@ -300,9 +300,7 @@ impl<'a> Rendered_Text<'a> {
   pub fn width (&mut self, width: i32) -> &mut Self {
     self.layout.set_width (width * pango::SCALE);
     self.layout.set_ellipsize (pango::EllipsizeMode::Middle);
-    let (width, height) = self.layout.size ();
-    self.width = width;
-    self.height = height;
+    (self.width, self.height) = self.layout.size ();
     self
   }
 

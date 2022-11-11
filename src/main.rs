@@ -25,6 +25,7 @@ mod buttons;
 mod cursor;
 mod desktop_entry;
 mod draw;
+mod error;
 mod ewmh;
 mod notifications;
 mod platform;

@@ -1,5 +1,6 @@
 use super::config::Height;
 use super::core::*;
+use super::error::fatal_error;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::iter::Peekable;
@@ -276,21 +277,18 @@ impl<Chars: Iterator<Item = char>> Parser<Chars> {
   }
 
   fn fail (&mut self, description: &str) -> ! {
-    eprintln! (
+    // TODO: as long as the quit action is bound we can probably start the
+    // window manager anyways and just show errors in a window.
+    let message = format! (
       "config:{}:{} at {}: {}",
       self.line,
       self.thing_col,
       self.thing,
       description
     );
-    log::error! (
-      "config:{}:{} at {}: {}",
-      self.line,
-      self.thing_col,
-      self.thing,
-      description
-    );
-    std::process::exit (1);
+    eprintln! ("{}", &message);
+    log::error! ("{}", &message);
+    unsafe { fatal_error (&message) };
   }
 }
 
