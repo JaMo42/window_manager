@@ -1,6 +1,6 @@
 use super::config::*;
 use super::core::*;
-use super::property::{atom, get_atom, Net, Normal_Hints};
+use super::property::{atom, Net, Normal_Hints};
 use super::*;
 
 pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
@@ -312,10 +312,6 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     }
     let mut c = Client::new (window);
     let mut g = c.client_geometry ();
-    // Window type
-    if get_atom (window, Net::WMWindowType) == atom (Net::WMWindowTypeDialog) {
-      c.is_dialog = true;
-    }
     // Transient for
     let mut target_workspace = active_workspace;
     let mut trans_win: Window = X_NONE;
@@ -329,8 +325,12 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       }
     }
     if !has_trans_client {
-      let mut rng = rand::thread_rng ();
-      g.random_inside (&window_area.get_client (), &mut rng);
+      if c.is_dialog {
+        g.center_inside (&window_area);
+      } else {
+        let mut rng = rand::thread_rng ();
+        g.random_inside (&window_area.get_client (), &mut rng);
+      }
     }
     // Set size
     c.move_and_resize (Client_Geometry::Client (g));
