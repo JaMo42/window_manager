@@ -88,15 +88,20 @@ impl Notification {
     let height;
     let background = (*config).colors.notification_background;
     let foreground = (*config).colors.notification_text;
-    (*draw).select_font (&(*config).bar_font);
+    let mut summary_font = (*config).bar_font.clone ();
+    summary_font.set_weight (pango::Weight::Semibold);
+    let body_font = &(*config).bar_font;
     // Determine width needed for the text
     {
+      (*draw).select_font (&summary_font);
       let title_width = (*draw).text (&self.summary).get_width ();
+      (*draw).select_font (body_font);
       let body_width = (*draw).text (&self.body).get_width ();
       width = u32::max (title_width, body_width) + 2 * BORDER;
     }
     // Summary
     {
+      (*draw).select_font (&summary_font);
       let mut summary_text = (*draw).text (&self.summary);
       body_y = summary_text.get_height () + 2 * BORDER;
       // fill_rect can't use scaled colors
@@ -112,6 +117,7 @@ impl Notification {
     if !self.body.is_empty () {
       // Body
       {
+        (*draw).select_font (body_font);
         let mut body_text = (*draw).text (&self.body);
         height = body_y + body_text.get_height () + 2 * BORDER;
         (*draw).fill_rect (

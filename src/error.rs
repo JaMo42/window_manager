@@ -1,11 +1,12 @@
 use crate::color::Color;
 use crate::core::*;
 use crate::draw::{Alignment, Drawing_Context};
+use pango::FontDescription;
 use x11::xlib::*;
 
 /// Shows the given text and quits after any key is pressed.
 pub unsafe fn fatal_error (text: &str) -> ! {
-  let font = "sans 24";
+  let font = FontDescription::from_string ("sans 24");
   let background_color = Color::from_rgb (0.12, 0.12, 0.12);
   let text_color = Color::from_rgb (0.91, 0.92, 0.92);
   let border = 50;
@@ -34,7 +35,7 @@ pub unsafe fn fatal_error (text: &str) -> ! {
     .rect (0, 0, screen_size.w, screen_size.h)
     .color (background_color)
     .draw ();
-  my_draw.select_font (font);
+  my_draw.select_font (&font);
   my_draw.text_color (text_color);
   my_draw.text (text).at (border, border).draw ();
   my_draw

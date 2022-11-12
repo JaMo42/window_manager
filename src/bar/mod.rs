@@ -112,7 +112,7 @@ impl Bar {
     if !cfg! (feature = "bar") {
       return;
     }
-    (*draw).select_font ((*config).bar_font.as_str ());
+    (*draw).select_font (&(*config).bar_font);
 
     // Left
     let mut x = 0;

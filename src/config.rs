@@ -7,6 +7,7 @@ use super::*;
 use std::collections::{BTreeMap, HashMap};
 use std::ffi::CString;
 use x11::keysym::*;
+use pango::FontDescription;
 
 #[macro_export]
 macro_rules! clean_mods {
@@ -86,7 +87,7 @@ pub enum Height {
 }
 
 impl Height {
-  pub unsafe fn get (&self, font: Option<&str>) -> u32 {
+  pub unsafe fn get (&self, font: Option<&FontDescription>) -> u32 {
     match *self {
       Height::FontPlus (n) => n + (*draw).font_height (font),
       Height::Absolute (n) => n,
@@ -123,12 +124,12 @@ pub struct Config {
   pub workspace_count: usize,
   pub meta_window_classes: Vec<String>,
   pub colors: Color_Scheme,
-  pub bar_font: String,
+  pub bar_font: FontDescription,
   pub bar_opacity: u8,
   pub bar_time_format: String,
   pub bar_power_supply: String,
   pub bar_height: Height,
-  pub title_font: String,
+  pub title_font: FontDescription,
   pub title_height: Height,
   pub title_alignment: Alignment,
   pub left_buttons: Vec<String>,
@@ -151,12 +152,12 @@ impl Config {
       workspace_count: 1,
       meta_window_classes: Vec::new (),
       colors: Color_Scheme::new_uninit (),
-      bar_font: "sans".to_string (),
+      bar_font: FontDescription::from_string ("sans 14"),
       bar_opacity: 100,
       bar_time_format: "%a %b %e %H:%M %Y".to_string (),
       bar_power_supply: "BAT0".to_string (),
       bar_height: Height::FontPlus (5),
-      title_font: "sans".to_string (),
+      title_font: FontDescription::from_string ("sans 14"),
       title_height: Height::FontPlus (1),
       title_alignment: Alignment::Left,
       left_buttons: Vec::new (),
@@ -251,7 +252,7 @@ impl Config {
         }
         Bar_Font (description) => {
           log::info! ("config: bar font: {}", description);
-          self.bar_font = description
+          self.bar_font = FontDescription::from_string (&description);
         }
         Bar_Opacity (percent) => {
           log::info! ("config: bar opacity: {}%", percent);
@@ -271,7 +272,7 @@ impl Config {
         }
         Title_Font (description) => {
           log::info! ("config: title bar font: {}", description);
-          self.title_font = description;
+          self.title_font = FontDescription::from_string (&description);
         }
         Title_Height (height) => {
           log::info! ("config: title bar height: {}", height);

@@ -5,6 +5,7 @@ use super::geometry::Geometry;
 use super::paths;
 use cairo::ffi::*;
 use librsvg::{CairoRenderer, SvgHandle};
+use pango::FontDescription;
 use x11::xlib::*;
 
 pub mod resources {
@@ -170,13 +171,13 @@ impl Drawing_Context {
       .unwrap ();
   }
 
-  pub unsafe fn select_font (&mut self, description: &str) {
+  pub unsafe fn select_font (&mut self, description: &FontDescription) {
     self
       .pango_layout
-      .set_font_description (Some (&pango::FontDescription::from_string (description)));
+      .set_font_description (Some (&description));
   }
 
-  pub unsafe fn font_height (&mut self, description: Option<&str>) -> u32 {
+  pub unsafe fn font_height (&mut self, description: Option<&FontDescription>) -> u32 {
     if let Some (d) = description {
       self.select_font (d);
     }
