@@ -185,6 +185,8 @@ The default value is `Papirus`.
 
 - `quit` Quits the window manager.
 
+- `quit_dialog` Opens the quit dialog, this lets you choose between logging out, sleeping, rebooting, and shutting down.
+
 - `snap_maximized` Snaps the focused window into the maximized position (not fullscreen).
 
 - `snap_left` / `snap_right` Snap the focused window to the left/right half of the screen.
