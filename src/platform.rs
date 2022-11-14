@@ -37,7 +37,7 @@ impl Drop for Scoped_Default_SigChld {
 
 /// Executes `amixer get Master` and extracts whether it is muted and the volume level
 pub fn get_volume_info () -> Option<(bool, u32)> {
-  let _ = Scoped_Default_SigChld::new ();
+  let _guard = Scoped_Default_SigChld::new ();
   let result = match std::process::Command::new ("amixer")
     .args (["get", "Master"])
     .output ()
@@ -85,7 +85,7 @@ fn notify_volume (mute_notification: bool) {
 
 /// Executes `amixer -q sset Master toggle`
 fn mute_volume () {
-  let _ = Scoped_Default_SigChld::new ();
+  let _guard = Scoped_Default_SigChld::new ();
   if let Ok (mut process) = std::process::Command::new ("amixer")
     .args (["-q", "sset", "Master", "toggle"])
     .spawn ()
@@ -97,7 +97,7 @@ fn mute_volume () {
 
 /// Executes `amixer -q sset Master [value]%[+/-] unmute`
 fn change_volume (by: i32) {
-  let _ = Scoped_Default_SigChld::new ();
+  let _guard = Scoped_Default_SigChld::new ();
   let arg = format! ("{}%{}", by.abs (), if by < 0 { '-' } else { '+' });
   if let Ok (mut process) = std::process::Command::new ("amixer")
     .args (["-q", "sset", "Master", &arg, "unmute"])
@@ -109,7 +109,7 @@ fn change_volume (by: i32) {
 }
 
 pub fn suspend () -> std::io::Result<()> {
-  let _ = Scoped_Default_SigChld::new ();
+  let _guard = Scoped_Default_SigChld::new ();
   std::process::Command::new ("systemctl")
     .arg ("suspend")
     .spawn ()?
@@ -119,7 +119,7 @@ pub fn suspend () -> std::io::Result<()> {
 }
 
 pub fn logout () -> std::io::Result<()> {
-  let _ = Scoped_Default_SigChld::new ();
+  let _guard = Scoped_Default_SigChld::new ();
   std::process::Command::new ("loginctl")
     .arg ("terminate-session")
     // An empty argument terminates the calling session
