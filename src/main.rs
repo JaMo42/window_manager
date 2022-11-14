@@ -362,6 +362,10 @@ unsafe fn cleanup () {
   log::trace! ("Terminating dbus services");
   notifications::quit ();
   session_manager::quit ();
+  log::trace! ("Destroying tooltip window");
+  tooltip::tooltip.destroy ();
+  log::trace! ("Destroying bar");
+  bar.destroy ();
 }
 
 fn get_window_geometry (window: Window) -> Geometry {

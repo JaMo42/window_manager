@@ -20,7 +20,6 @@ struct Scoped_Default_SigChld;
 
 impl Scoped_Default_SigChld {
   fn new () -> Self {
-    log::trace! ("CREATE");
     unsafe {
       libc::signal (libc::SIGCHLD, libc::SIG_DFL);
     }
@@ -30,7 +29,6 @@ impl Scoped_Default_SigChld {
 
 impl Drop for Scoped_Default_SigChld {
   fn drop (&mut self) {
-    log::trace! ("DROP");
     unsafe {
       libc::signal (libc::SIGCHLD, libc::SIG_IGN);
     }

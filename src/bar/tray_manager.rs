@@ -138,6 +138,17 @@ impl Tray_Manager {
     this
   }
 
+  pub unsafe fn destroy (&mut self) {
+    for c in self.clients.iter () {
+      XReparentWindow (display, c.window (), root, 0, 0);
+    }
+    XDestroyWindow (display, self.window);
+    if let Some (notify_thread) = self.notify_thread.take () {
+      notify_thread.join ().ok ();
+    }
+    self.notify_thread = None;
+  }
+
   /// Resizes and positions the window. The main bar window is resized as needed.
   unsafe fn resize_window (&mut self) {
     let width = self.width ();
@@ -337,14 +348,6 @@ impl Tray_Manager {
       log::debug! ("\x1b[92mtray: unmapped tray icon {}\x1b[0m", event.window);
       client.set_mapped (false);
       self.update_mapped_count ();
-    }
-  }
-}
-
-impl Drop for Tray_Manager {
-  fn drop (&mut self) {
-    if let Some (notify_thread) = self.notify_thread.take () {
-      notify_thread.join ().ok ();
     }
   }
 }

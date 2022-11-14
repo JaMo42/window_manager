@@ -131,10 +131,13 @@ impl Class_Hints {
     if XGetClassHint (display, window, &mut class_hints) == 0 {
       None
     } else {
-      Some (Class_Hints {
+      let result = Some (Class_Hints {
         class: string_from_ptr! (class_hints.res_class),
         name: string_from_ptr! (class_hints.res_name),
-      })
+      });
+      XFree (class_hints.res_class as *mut c_void);
+      XFree (class_hints.res_name as *mut c_void);
+      result
     }
   }
 

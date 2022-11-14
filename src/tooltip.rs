@@ -96,15 +96,18 @@ impl Tooltip {
       self.active = false;
     }
   }
+
+  pub unsafe fn destroy (&mut self) {
+    if self.window != X_NONE {
+      XDestroyWindow (display, self.window);
+    }
+  }
 }
 
 impl Drop for Tooltip {
   fn drop (&mut self) {
-    if self.window != X_NONE {
-      // TODO: Isn't this called after main when the display is already closed?
-      unsafe {
-        XDestroyWindow (display, self.window);
-      }
+    unsafe {
+      self.destroy ();
     }
   }
 }

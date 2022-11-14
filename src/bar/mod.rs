@@ -198,21 +198,20 @@ impl Bar {
     (*self.mouse_widget).leave ();
     self.mouse_widget = widget::null_ptr ();
   }
-}
 
-impl Drop for Bar {
-  fn drop (&mut self) {
-    // TODO: same issue as with tooltip, display should already be closed here
+  pub unsafe fn destroy (&mut self) {
+    if self.window == X_NONE {
+      return;
+    }
     for w in self.left_widgets.iter () {
-      unsafe {
-        XDestroyWindow (display, w.window ());
-      }
+      XDestroyWindow (display, w.window ());
     }
     for w in self.right_widgets.iter () {
-      unsafe {
-        XDestroyWindow (display, w.window ());
-      }
+      XDestroyWindow (display, w.window ());
     }
+    XDestroyWindow (display, self.window);
+    self.window = X_NONE;
+    tray.destroy ();
   }
 }
 

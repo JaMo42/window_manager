@@ -256,6 +256,15 @@ impl Manager {
       executor::block_on (signal_close (id, CLOSE_REASON_EXPIRED));
     }));
   }
+
+  fn close_all (&mut self) {
+    for i in self.notifications.iter () {
+      i.destroy ();
+    }
+    // Destroying the notifications doesn't stop the threads so this is just
+    // in case there are finished threads, running threads are leaked.
+    self.join_finished_timeout_threads ();
+  }
 }
 
 struct Server {
@@ -346,7 +355,7 @@ async unsafe fn do_init () -> Result<()> {
 
 /// async implementation for `quit`
 async fn do_quit () -> Result<()> {
-  manager ().join_finished_timeout_threads ();
+  manager ().close_all ();
   dbus_connection ()
     .object_server ()
     .remove::<Server, _> (PATH)
