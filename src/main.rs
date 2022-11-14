@@ -500,6 +500,20 @@ unsafe fn set_window_opacity (window: Window, percent: u8) {
   }
 }
 
+#[cfg(debug)]
+#[allow(dead_code)]
+unsafe fn list_properties (window: Window) {
+  log::info! ("Properties for {} ({})", window_title (window), window);
+  let atoms = {
+    let mut n = 0;
+    let p = XListProperties (display, window, &mut n);
+    std::slice::from_raw_parts (p, n as usize)
+  };
+  for atom in atoms {
+    log::info! ("  {}", string_from_ptr! (XGetAtomName (display, *atom)));
+  }
+}
+
 fn run_process (command_line: &str) {
   use std::process::{Command, Stdio};
   // TODO: properly determine arguments (escaping spaces and ignoring them in strings)

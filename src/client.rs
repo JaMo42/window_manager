@@ -142,8 +142,9 @@ impl Client {
     let mut is_dialog = false;
 
     if let Some (motif_hints) = Motif_Hints::get (window) {
-      // Assume that is has its own title bar if it specifies any decorations
-      if motif_hints.flags & MWM_HINTS_DECORATIONS == MWM_HINTS_DECORATIONS {
+      if motif_hints.flags & MWM_HINTS_DECORATIONS == MWM_HINTS_DECORATIONS
+        && motif_hints.decorations == 0
+      {
         frame_kind = Frame_Kind::None;
       }
     } else if property::get_atom (window, Net::WMWindowType)
