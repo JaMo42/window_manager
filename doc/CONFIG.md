@@ -114,6 +114,13 @@ bar_height <height>
 Set the height of the status bar; see [Height values](#height-values).
 
 ```
+bar_update_interval <interval>
+```
+Set the interval in milliseconds in which the bar is automatically updated.
+Use `0` to disable automatic updates (it will still get updated by various events).
+The default is to update every 10 seconds.
+
+```
 window_title_font <font>
 ```
 Set the font used for window titles.

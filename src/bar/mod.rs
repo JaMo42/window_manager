@@ -7,6 +7,7 @@ use crate::core::*;
 use crate::cursor;
 use crate::ewmh;
 use crate::property;
+use crate::update_thread::Update_Thread;
 use crate::{set_window_kind, set_window_opacity};
 use std::ffi::CString;
 use tray_manager::Tray_Manager;
@@ -14,6 +15,8 @@ use widget::Widget;
 use x11::xlib::*;
 
 pub static mut tray: Tray_Manager = Tray_Manager::new ();
+
+pub static mut update_thread: Option<Update_Thread> = None;
 
 pub struct Bar {
   pub width: u32,

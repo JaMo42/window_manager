@@ -31,6 +31,7 @@ mod notifications;
 mod platform;
 mod session_manager;
 mod tooltip;
+mod update_thread;
 
 use crate::core::*;
 use bar::Bar;
@@ -39,6 +40,7 @@ use config::*;
 use draw::Drawing_Context;
 use geometry::*;
 use property::Net;
+use update_thread::Update_Thread;
 use workspace::*;
 
 mod paths {
@@ -232,6 +234,12 @@ unsafe fn init () {
     bar = Bar::create ();
     bar.build ();
     bar::tray = bar::tray_manager::Tray_Manager::create (bar.height);
+    if (*config).bar_update_interval > 0 {
+      bar::update_thread = Some (Update_Thread::new (
+        (*config).bar_update_interval,
+        bar::update,
+      ));
+    }
   }
   client::set_border_info ();
   notifications::init ();
@@ -367,6 +375,9 @@ unsafe fn cleanup () {
   log::trace! ("Destroying bar");
   bar.destroy ();
   log::trace! ("Destroying drawing context");
+  if let Some (t) = bar::update_thread.take () {
+    t.stop ();
+  }
   (*draw).destroy ();
 }
 

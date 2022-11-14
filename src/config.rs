@@ -130,6 +130,7 @@ pub struct Config {
   pub bar_time_format: String,
   pub bar_power_supply: String,
   pub bar_height: Height,
+  pub bar_update_interval: u64,
   pub title_font: FontDescription,
   pub title_height: Height,
   pub title_alignment: Alignment,
@@ -158,6 +159,7 @@ impl Config {
       bar_time_format: "%a %b %e %H:%M %Y".to_string (),
       bar_power_supply: "BAT0".to_string (),
       bar_height: Height::FontPlus (5),
+      bar_update_interval: 10000,
       title_font: FontDescription::from_string ("sans 14"),
       title_height: Height::FontPlus (1),
       title_alignment: Alignment::Left,
@@ -270,6 +272,10 @@ impl Config {
         Bar_Height (height) => {
           log::info! ("config: bar height: {}", height);
           self.bar_height = height;
+        }
+        Bar_Update_Interval (interval) => {
+          log::info! ("config: bar update interval: {}", interval);
+          self.bar_update_interval = interval;
         }
         Title_Font (description) => {
           log::info! ("config: title bar font: {}", description);
