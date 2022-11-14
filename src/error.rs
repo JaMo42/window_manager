@@ -56,3 +56,11 @@ pub unsafe fn fatal_error (text: &str) -> ! {
   }
   std::process::exit (1);
 }
+
+pub fn message_box (title: &str, body: &str) {
+  // TODO: use run_process once it's commandline parsing is fixed
+  std::process::Command::new ("window_manager_message_box")
+    .args ([title, body, "--kind", "Error", "--font-size", "20"])
+    .spawn ()
+    .ok ();
+}

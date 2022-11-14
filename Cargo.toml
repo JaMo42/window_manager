@@ -21,6 +21,12 @@ chrono = "0.4.19"
 librsvg = { git="https://gitlab.gnome.org/GNOME/librsvg" }
 zbus = "3.4.0"
 futures = "0.3.1"
+gtk = "0.16.1"
+gdk = "0.16.0"
+clap = { version = "4.0.23", features = ["derive"] }
+system_shutdown = "3.0.0"
+gio = "0.16.3"
+glib = "0.16.3"
 
 [features]
 default = ["bar"]
