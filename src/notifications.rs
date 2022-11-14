@@ -8,6 +8,9 @@ use x11::xlib::*;
 use zbus::zvariant;
 use zbus::{dbus_interface, Connection, Result, SignalContext};
 
+const NAME: &'static str = "org.freedesktop.Notifications";
+const PATH: &'static str = "/org/freedesktop/Notifications";
+
 /// The notification expired
 const CLOSE_REASON_EXPIRED: u32 = 1;
 /// The notification was dismissed by the user
@@ -319,7 +322,7 @@ impl Server {
 async fn signal_close (id: u32, reason: u32) {
   let iface_ref = dbus_connection ()
     .object_server ()
-    .interface::<_, Server> ("/org/freedesktop/Notifications")
+    .interface::<_, Server> (PATH)
     .await
     .unwrap ();
   let iface = iface_ref.get_mut ().await;
@@ -335,13 +338,8 @@ async unsafe fn do_init () -> Result<()> {
   let server = Server {
     manager: manager (),
   };
-  connection
-    .object_server ()
-    .at ("/org/freedesktop/Notifications", server)
-    .await?;
-  connection
-    .request_name ("org.freedesktop.Notifications")
-    .await?;
+  connection.object_server ().at (PATH, server).await?;
+  connection.request_name (NAME).await?;
   _dbus_connection = Some (connection);
   Ok (())
 }
@@ -351,11 +349,9 @@ async fn do_quit () -> Result<()> {
   manager ().join_finished_timeout_threads ();
   dbus_connection ()
     .object_server ()
-    .remove::<Server, _> ("/org/freedesktop/Notifications")
+    .remove::<Server, _> (PATH)
     .await?;
-  dbus_connection ()
-    .release_name ("org.freedesktop.Notifications")
-    .await?;
+  dbus_connection ().release_name (NAME).await?;
   Ok (())
 }
 

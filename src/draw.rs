@@ -19,6 +19,7 @@ pub mod resources {
   pub static mut battery_full: Svg_Resource = Svg_Resource::new ("battery_full.svg");
   pub static mut battery_critical: Svg_Resource = Svg_Resource::new ("battery_critical.svg");
   pub static mut battery_charging: Svg_Resource = Svg_Resource::new ("battery_charging.svg");
+  // TODO: lazy loading and probably only keep currently used loaded
   pub static mut battery_bars: [Svg_Resource; 6] = [
     Svg_Resource::new ("battery_1_bar.svg"),
     Svg_Resource::new ("battery_2_bar.svg"),
@@ -172,9 +173,7 @@ impl Drawing_Context {
   }
 
   pub unsafe fn select_font (&mut self, description: &FontDescription) {
-    self
-      .pango_layout
-      .set_font_description (Some (&description));
+    self.pango_layout.set_font_description (Some (&description));
   }
 
   pub unsafe fn font_height (&mut self, description: Option<&FontDescription>) -> u32 {

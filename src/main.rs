@@ -29,6 +29,7 @@ mod error;
 mod ewmh;
 mod notifications;
 mod platform;
+mod session_manager;
 mod tooltip;
 
 use crate::core::*;
@@ -234,6 +235,7 @@ unsafe fn init () {
   }
   client::set_border_info ();
   notifications::init ();
+  session_manager::init ();
 }
 
 const fn event_name (type_: c_int) -> &'static str {
@@ -316,6 +318,7 @@ unsafe fn run () {
       MotionNotify => event::motion (&event.button),
       PropertyNotify => event::property_notify (&event.property),
       UnmapNotify => event::unmap_notify (&event.unmap),
+      SessionManagerEvent => session_manager::manager ().process (),
       _ => {
         if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
           log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
@@ -327,18 +330,22 @@ unsafe fn run () {
 
 unsafe fn cleanup () {
   // Close all open clients
-  for ws in workspaces.iter () {
-    for c in ws.iter () {
+  log::trace! ("Closing clients");
+  for ws in workspaces.iter_mut () {
+    for c in ws.iter_mut () {
+      XKillClient (display, c.window);
+      c.destroy ();
       XDestroyWindow (display, c.window);
     }
   }
   // Close meta windows
+  log::trace! ("Killing meta windows");
   for w in meta_windows.iter () {
     XKillClient (display, *w);
+    XDestroyWindow (display, *w);
   }
-  // Cursors
-  cursor::free_cursors ();
   // Un-grab keys and buttons
+  log::trace! ("Un-grabbing keys and buttons");
   for key in (*config).key_binds.keys () {
     XUngrabKey (display, key.code as c_int, key.modifiers, root);
   }
@@ -346,11 +353,15 @@ unsafe fn cleanup () {
   XUngrabButton (display, 1, (*config).modifier | MOD_SHIFT, root);
   XUngrabButton (display, 3, (*config).modifier, root);
   // Properties
+  log::trace! ("Removing EWMH root properties");
   XDestroyWindow (display, property::wm_check_window);
   property::delete (root, Net::ActiveWindow);
-  XSync (display, X_FALSE);
-  // Notifications
+  // Components
+  log::trace! ("Freeing cursors");
+  cursor::free_cursors ();
+  log::trace! ("Terminating dbus services");
   notifications::quit ();
+  session_manager::quit ();
 }
 
 fn get_window_geometry (window: Window) -> Geometry {
@@ -361,7 +372,6 @@ fn get_window_geometry (window: Window) -> Geometry {
   let mut _border_width: c_uint = 0;
   let mut _depth: c_uint = 0;
   let mut _root: Window = 0;
-
   unsafe {
     XGetGeometry (
       display,
@@ -375,7 +385,6 @@ fn get_window_geometry (window: Window) -> Geometry {
       &mut _depth,
     );
   }
-
   Geometry { x, y, w, h }
 }
 
@@ -476,6 +485,7 @@ unsafe fn set_window_opacity (window: Window, percent: u8) {
 
 fn run_process (command_line: &str) {
   use std::process::{Command, Stdio};
+  // TODO: properly determine arguments (escaping spaces and ignoring them in strings)
   let mut parts = command_line.split (' ');
   let program = parts.next ().unwrap ();
   let args = parts.collect::<Vec<&str>> ();
@@ -542,6 +552,28 @@ fn main () {
     run ();
     log::trace! ("Cleaning up");
     cleanup ();
+    if let Err (error) = match quit_reason.as_str () {
+      "logout" => {
+        log::info! ("Logging out");
+        // not implemented
+        //system_shutdown::logout ()
+        platform::logout ()
+      }
+      "restart" => {
+        log::info! ("Rebooting system");
+        system_shutdown::reboot ()
+      }
+      "shutdown" => {
+        log::info! ("Shutting down system");
+        system_shutdown::shutdown ()
+      }
+      _ => Ok (()),
+    } {
+      log::error! ("  Failed: {}", error);
+    }
+    // For some reason this quites the program so we need to handle the quit
+    // reasons before
+    log::trace! ("Closing X server connection");
     XCloseDisplay (display);
   }
 }

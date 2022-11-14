@@ -184,7 +184,7 @@ pub unsafe fn set_allowed_actions (window: Window, may_resize: bool) {
   let mut actions = vec! [
     atom (Net::WMActionMove),
     atom (Net::WMActionClose),
-    atom (Net::WMActionChangeDesktop)
+    atom (Net::WMActionChangeDesktop),
   ];
   if may_resize {
     actions.push (atom (Net::WMActionResize));

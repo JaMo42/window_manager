@@ -7,7 +7,7 @@
 CONFIG_DIR=$CONFIG_PREFIX/window_manager
 RESOURCE_DIR=$CONFIG_DIR/res
 
-echo Installing program to: $INSTALL_PREFIX
+echo Installing binaries to: $INSTALL_PREFIX
 echo Installing configuration to: $CONFIG_DIR
 echo Installing resources to: $RESOURCE_DIR
 
@@ -15,6 +15,8 @@ test -f "target/release/window_manager" || cargo build --release
 
 echo Installing program
 sudo cp -v target/release/window_manager $INSTALL_PREFIX/window_manager
+sudo cp -v target/release/quit $INSTALL_PREFIX/window_manager_quit
+sudo cp -v target/release/message_box $INSTALL_PREFIX/window_manager_message_box
 
 read -p "Install config? [y/N] " -n 1 -r
 echo

@@ -23,7 +23,7 @@ macro_rules! string_from_ptr {
 
 macro_rules! uninitialized {
   () => {
-    std::mem::MaybeUninit::uninit ().assume_init ()
+    std::mem::MaybeUninit::zeroed ().assume_init ()
   };
 }
 
@@ -49,6 +49,9 @@ pub const MOD_ALT: c_uint = Mod1Mask;
 pub const MOD_SHIFT: c_uint = ShiftMask;
 pub const MOD_CTRL: c_uint = ControlMask;
 pub static mut numlock_mask: c_uint = 0;
+
+/// Used to handle session manager messages from the mainloop
+pub const SessionManagerEvent: i32 = LASTEvent + 1;
 
 pub const SNAP_NONE: u8 = 0x0;
 pub const SNAP_LEFT: u8 = 0x1;
@@ -77,6 +80,7 @@ pub static mut root: Window = X_NONE;
 pub static mut workspaces: Vec<Workspace> = Vec::new ();
 pub static mut active_workspace: usize = 0;
 pub static mut running: bool = false;
+pub static mut quit_reason: String = String::new ();
 // Need to store as pointer since it contains a HashMap
 pub static mut config: *const Config = std::ptr::null_mut ();
 pub static mut screen_size: Geometry = Geometry::new ();

@@ -16,11 +16,30 @@ pub mod actions {
   }
 }
 
+struct Scoped_Default_SigChld;
+
+impl Scoped_Default_SigChld {
+  fn new () -> Self {
+    log::trace! ("CREATE");
+    unsafe {
+      libc::signal (libc::SIGCHLD, libc::SIG_DFL);
+    }
+    Self {}
+  }
+}
+
+impl Drop for Scoped_Default_SigChld {
+  fn drop (&mut self) {
+    log::trace! ("DROP");
+    unsafe {
+      libc::signal (libc::SIGCHLD, libc::SIG_IGN);
+    }
+  }
+}
+
 /// Executes `amixer get Master` and extracts whether it is muted and the volume level
 pub fn get_volume_info () -> Option<(bool, u32)> {
-  unsafe {
-    libc::signal (libc::SIGCHLD, libc::SIG_DFL);
-  }
+  let _ = Scoped_Default_SigChld::new ();
   let result = match std::process::Command::new ("amixer")
     .args (["get", "Master"])
     .output ()
@@ -38,9 +57,6 @@ pub fn get_volume_info () -> Option<(bool, u32)> {
       None
     }
   };
-  unsafe {
-    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
-  }
   result
 }
 
@@ -71,26 +87,19 @@ fn notify_volume (mute_notification: bool) {
 
 /// Executes `amixer -q sset Master toggle`
 fn mute_volume () {
-  unsafe {
-    libc::signal (libc::SIGCHLD, libc::SIG_DFL);
-  }
+  let _ = Scoped_Default_SigChld::new ();
   if let Ok (mut process) = std::process::Command::new ("amixer")
     .args (["-q", "sset", "Master", "toggle"])
     .spawn ()
   {
     process.wait ().ok ();
   }
-  unsafe {
-    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
-  }
   bar::update ();
 }
 
 /// Executes `amixer -q sset Master [value]%[+/-] unmute`
 fn change_volume (by: i32) {
-  unsafe {
-    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
-  }
+  let _ = Scoped_Default_SigChld::new ();
   let arg = format! ("{}%{}", by.abs (), if by < 0 { '-' } else { '+' });
   if let Ok (mut process) = std::process::Command::new ("amixer")
     .args (["-q", "sset", "Master", &arg, "unmute"])
@@ -98,8 +107,27 @@ fn change_volume (by: i32) {
   {
     process.wait ().ok ();
   }
-  unsafe {
-    libc::signal (libc::SIGCHLD, libc::SIG_IGN);
-  }
   bar::update ();
+}
+
+pub fn suspend () -> std::io::Result<()> {
+  let _ = Scoped_Default_SigChld::new ();
+  std::process::Command::new ("systemctl")
+    .arg ("suspend")
+    .spawn ()?
+    .wait ()
+    .ok ();
+  Ok (())
+}
+
+pub fn logout () -> std::io::Result<()> {
+  let _ = Scoped_Default_SigChld::new ();
+  std::process::Command::new ("loginctl")
+    .arg ("terminate-session")
+    // An empty argument terminates the calling session
+    .arg ("")
+    .spawn ()?
+    .wait ()
+    .ok ();
+  Ok (())
 }

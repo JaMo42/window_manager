@@ -4,10 +4,10 @@ use super::config_parser;
 use super::draw::Alignment;
 use super::paths;
 use super::*;
+use pango::FontDescription;
 use std::collections::{BTreeMap, HashMap};
 use std::ffi::CString;
 use x11::keysym::*;
-use pango::FontDescription;
 
 #[macro_export]
 macro_rules! clean_mods {
