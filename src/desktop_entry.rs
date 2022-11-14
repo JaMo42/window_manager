@@ -8,7 +8,7 @@ pub struct Desktop_Entry {
 
 impl Desktop_Entry {
   fn find_file (application_name: &str) -> Option<String> {
-    const BASE_PATH: &'static str = "/usr/share/applications";
+    const BASE_PATH: &str = "/usr/share/applications";
     let path = format! ("{}/{}.desktop", BASE_PATH, application_name);
     // Some programs have names like `org.gnome.<application>`, for now we don't
     // bother trying to find those; I assume using the application name like

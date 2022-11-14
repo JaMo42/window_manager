@@ -40,6 +40,20 @@ macro_rules! my_panic {
   }};
 }
 
+macro_rules! log_error {
+  ($result:expr) => {
+    if let Err (error) = $result {
+      log::error! ("{}", error);
+    }
+  };
+
+  ($result:expr, $what:expr) => {
+    if let Err (error) = $result {
+      log::error! ("{}: {}", what, error);
+    }
+  };
+}
+
 pub const X_FALSE: c_int = 0;
 pub const X_TRUE: c_int = 1;
 pub const X_NONE: c_ulong = 0;
@@ -63,7 +77,7 @@ pub const SNAP_MAXIMIZED: u8 = 0x10;
 pub const MOUSE_MOVE_RESIZE_RATE: u64 = 1000 / 30;
 
 #[repr(usize)]
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum Window_Kind {
   Root,
   Client,

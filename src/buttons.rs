@@ -19,7 +19,7 @@ pub struct Button {
   icon: &'static mut Svg_Resource,
   base_color: Color,
   hovered_color: Color,
-  action: unsafe fn(&mut Client),
+  action: unsafe fn (&mut Client),
   pub window: Window,
 }
 
@@ -29,7 +29,7 @@ impl Button {
     icon: &'static mut Svg_Resource,
     base_color: Color,
     hovered_color: Color,
-    action: unsafe fn(&mut Client),
+    action: unsafe fn (&mut Client),
   ) -> Self {
     let button_size = decorated_frame_offset.y as u32;
     let mut attributes: XSetWindowAttributes = uninitialized! ();

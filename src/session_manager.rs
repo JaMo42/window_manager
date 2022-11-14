@@ -25,8 +25,8 @@ use futures::executor;
 use x11::xlib::*;
 use zbus::{dbus_interface, Connection, Result};
 
-const NAME: &'static str = "com.github.JaMo42.window_manager.SessionManager";
-const PATH: &'static str = "/com/github/JaMo42/window_manager/SessionManager";
+const NAME: &str = "com.github.JaMo42.window_manager.SessionManager";
+const PATH: &str = "/com/github/JaMo42/window_manager/SessionManager";
 
 static mut _dbus_connection: Option<Connection> = None;
 static mut _manager: Manager = Manager::new ();

@@ -8,8 +8,8 @@ use x11::xlib::*;
 use zbus::zvariant;
 use zbus::{dbus_interface, Connection, Result, SignalContext};
 
-const NAME: &'static str = "org.freedesktop.Notifications";
-const PATH: &'static str = "/org/freedesktop/Notifications";
+const NAME: &str = "org.freedesktop.Notifications";
+const PATH: &str = "/org/freedesktop/Notifications";
 
 /// The notification expired
 const CLOSE_REASON_EXPIRED: u32 = 1;

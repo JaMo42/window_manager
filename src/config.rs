@@ -39,10 +39,10 @@ impl Key {
 }
 
 pub enum Action {
-  WM (unsafe fn(&mut Client)),
-  WS (unsafe fn(usize, Option<&mut Client>), usize, bool),
+  WM (unsafe fn (&mut Client)),
+  WS (unsafe fn (usize, Option<&mut Client>), usize, bool),
   Launch (String),
-  Generic (unsafe fn()),
+  Generic (unsafe fn ()),
 }
 
 impl Action {

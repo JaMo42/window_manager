@@ -180,7 +180,7 @@ impl Drawing_Context {
   }
 
   pub unsafe fn select_font (&mut self, description: &FontDescription) {
-    self.pango_layout.set_font_description (Some (&description));
+    self.pango_layout.set_font_description (Some (description));
   }
 
   pub unsafe fn font_height (&mut self, description: Option<&FontDescription>) -> u32 {

@@ -60,8 +60,8 @@ fn quit () {
 }
 
 fn send_choice (choice: &'static str) {
-  const NAME: &'static str = "com.github.JaMo42.window_manager.SessionManager";
-  const PATH: &'static str = "/com/github/JaMo42/window_manager/SessionManager";
+  const NAME: &str = "com.github.JaMo42.window_manager.SessionManager";
+  const PATH: &str = "/com/github/JaMo42/window_manager/SessionManager";
   match gio::bus_get_sync (BusType::Session, Cancellable::NONE) {
     Ok (connection) => {
       let params = (choice,).to_variant ();

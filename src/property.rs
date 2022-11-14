@@ -8,7 +8,7 @@ use x11::xlib::*;
 macro_rules! set_cardinal {
   ($w:expr, $p:expr, $v:expr) => {
     let data = $v as c_uint;
-    crate::property::set (
+    $crate::property::set (
       $w,
       $p,
       XA_CARDINAL,
