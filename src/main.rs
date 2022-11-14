@@ -366,6 +366,8 @@ unsafe fn cleanup () {
   tooltip::tooltip.destroy ();
   log::trace! ("Destroying bar");
   bar.destroy ();
+  log::trace! ("Destroying drawing context");
+  (*draw).destroy ();
 }
 
 fn get_window_geometry (window: Window) -> Geometry {

@@ -54,6 +54,8 @@ pub unsafe fn fatal_error (text: &str) -> ! {
       running = false;
     }
   }
+  my_draw.destroy ();
+  XDestroyWindow (display, window);
   std::process::exit (1);
 }
 

@@ -97,6 +97,12 @@ impl Drawing_Context {
     }
   }
 
+  pub unsafe fn destroy (&mut self) {
+    cairo_surface_destroy (self.cairo_surface.to_raw_none ());
+    XFreePixmap (display, self.drawable);
+    XFreeGC (display, self.gc);
+  }
+
   pub unsafe fn fill_rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: Color) {
     XSetForeground (display, self.gc, color.pixel);
     XFillRectangle (display, self.drawable, self.gc, x, y, w, h);
