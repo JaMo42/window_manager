@@ -8,6 +8,10 @@ pub unsafe fn quit () {
   running = false;
 }
 
+pub unsafe fn quit_dialog () {
+  run_process ("window_manager_quit");
+}
+
 pub unsafe fn close_client (client: &mut Client) {
   if !client.send_event (property::atom (WM::DeleteWindow)) {
     XKillClient (display, client.window);

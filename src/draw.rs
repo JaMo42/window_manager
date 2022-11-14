@@ -28,6 +28,7 @@ pub mod resources {
     Svg_Resource::new ("battery_5_bar.svg"),
     Svg_Resource::new ("battery_6_bar.svg"),
   ];
+  pub static mut power: Svg_Resource = Svg_Resource::new ("power.svg");
 }
 
 pub struct Svg_Resource {
@@ -495,6 +496,7 @@ pub unsafe fn load_resources () {
   for i in resources::battery_bars.iter_mut () {
     load_svg (i);
   }
+  load_svg (&mut resources::power);
 }
 
 /// Get the icon for an application. The returned value is boxed as svg

@@ -58,7 +58,7 @@ unsafe fn draw_icon_and_text (
   color: Option<Color>,
   height: u32,
 ) -> u32 {
-  const ICON_TEXT_GAP: i32 = 3;
+  const ICON_TEXT_GAP: u32 = 3;
   let color = color.unwrap_or ((*config).colors.bar_text);
   let mut width = 0;
   (*draw).fill_rect (0, 0, screen_size.w, height, (*config).colors.bar_background);
@@ -66,11 +66,12 @@ unsafe fn draw_icon_and_text (
     let size = (height as f64 * 0.9).round () as u32;
     let pos = ((height - size) / 2) as i32;
     (*draw).draw_colored_svg (svg, color, pos, pos, size, size);
-    width += height + ICON_TEXT_GAP as u32;
+    width += height;
   }
   if string.is_empty () {
     return width;
   }
+  width += ICON_TEXT_GAP;
   // Font is selected by bar
   width += (*draw)
     .text (string)
@@ -378,6 +379,46 @@ impl Widget for Workspaces {
 
   fn invalidate (&mut self) {
     self.last_workspace = unsafe { workspaces.len () };
+  }
+}
+
+pub struct Quit {
+  window: Window,
+  width: u32,
+}
+
+impl Quit {
+  pub fn new () -> Option<Self> {
+    let window;
+    let width;
+    unsafe {
+      window = create_window ();
+      // Note: assumes this is always the rightmost widget, this way we don't
+      // need to resize on every update
+      width = bar.height;
+      draw_icon_and_text (
+        "",
+        Some (&mut resources::power),
+        Some ((*config).colors.bar_text),
+        bar.height,
+      );
+      resize_and_render (window, bar.height, bar.height, 0);
+    }
+    Some (Self { window, width })
+  }
+}
+
+impl Widget for Quit {
+  fn window (&self) -> Window {
+    self.window
+  }
+
+  unsafe fn update (&mut self, _height: u32, _gap: u32) -> u32 {
+    self.width
+  }
+
+  unsafe fn click (&mut self, _event: &XButtonEvent) {
+    crate::action::quit_dialog ();
   }
 }
 

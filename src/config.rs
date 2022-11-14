@@ -52,6 +52,7 @@ impl Action {
     match s {
       "close_window" => WM (action::close_client),
       "quit" => Generic (action::quit),
+      "quit_dialog" => Generic (action::quit_dialog),
       "snap_maximized" => WM (|c| unsafe { action::snap (c, SNAP_MAXIMIZED) }),
       "snap_left" => WM (action::snap_left),
       "snap_right" => WM (action::snap_right),
