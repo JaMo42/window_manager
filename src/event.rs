@@ -433,7 +433,11 @@ pub unsafe fn client_message (event: &XClientMessageEvent) {
   } else if event.message_type == property::atom (Net::SystemTrayOpcode) {
     bar::tray.client_message (event);
   } else {
-    log::debug! ("Unhandeled client message event: {}", event.message_type);
+    log::debug! (
+      "Unhandeled client message event: {} ({})",
+      string_from_ptr! (XGetAtomName (display, event.message_type)),
+      event.message_type
+    );
     log::debug! ("  Recipient: {}", event.window);
     log::debug! ("  Data (longs): {:?}", event.data.as_longs ());
   }
