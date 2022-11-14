@@ -52,7 +52,9 @@ impl Tooltip {
 
   unsafe fn move_and_resize (&mut self, x: i32, y: i32, w: u32, h: u32) {
     self.geometry = Geometry::from_parts (x - w as i32 / 2, y, w, h);
-    self.geometry.clamp (&screen_size);
+    if self.geometry.x as u32 + self.geometry.w > screen_size.w {
+      self.geometry.x = (screen_size.w - self.geometry.w) as i32;
+    }
     XMoveResizeWindow (
       display,
       self.window,
@@ -78,7 +80,7 @@ impl Tooltip {
     let height = text.get_height () + 2 * Self::BORDER + 1;
     self.move_and_resize (x, y, width, height);
     (*draw).fill_rect (0, 0, width, height, (*config).colors.bar_background);
-    text = (*draw).text (string);
+    //text = (*draw).text (string);
     text
       .at (Self::BORDER as i32, Self::BORDER as i32)
       .color ((*config).colors.bar_text)

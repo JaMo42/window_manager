@@ -420,6 +420,16 @@ impl Widget for Quit {
   unsafe fn click (&mut self, _event: &XButtonEvent) {
     crate::action::quit_dialog ();
   }
+
+  unsafe fn enter (&mut self) {
+    // not optimal since this contains the gap on one side
+    let g = get_window_geometry (self.window);
+    tooltip.show ("Open the quit dialog", g.x + g.w as i32 / 2, g.h as i32);
+  }
+
+  unsafe fn leave (&mut self) {
+    tooltip.close ();
+  }
 }
 
 pub const fn null_ptr () -> *mut dyn Widget {
