@@ -5,7 +5,6 @@ use crate::cursor;
 use crate::property;
 use crate::property::Net;
 use libc::{c_long, c_uchar, c_uint};
-use std::ffi::CString;
 use std::thread;
 use x11::xlib::*;
 

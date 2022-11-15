@@ -402,7 +402,7 @@ impl Quit {
         Some ((*config).colors.bar_text),
         bar.height,
       );
-      resize_and_render (window, bar.height, bar.height, 0);
+      resize_and_render (window, bar.height + super::Bar::RIGHT_GAP, bar.height, 0);
     }
     Some (Self { window, width })
   }

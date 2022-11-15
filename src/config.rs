@@ -6,7 +6,6 @@ use super::paths;
 use super::*;
 use pango::FontDescription;
 use std::collections::{BTreeMap, HashMap};
-use std::ffi::CString;
 use x11::keysym::*;
 
 #[macro_export]

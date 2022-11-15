@@ -1,6 +1,5 @@
 use super::core::*;
 use super::geometry::Geometry;
-use std::ffi::CString;
 use std::os::raw::*;
 use x11::xlib::*;
 

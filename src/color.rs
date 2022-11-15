@@ -1,6 +1,5 @@
 use super::core::display;
 use std::collections::BTreeMap;
-use std::ffi::CString;
 use std::mem::size_of;
 use x11::xft::{XftColor, XftColorAllocName};
 use x11::xlib::*;

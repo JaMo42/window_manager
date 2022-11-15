@@ -9,7 +9,6 @@ use crate::ewmh;
 use crate::property;
 use crate::update_thread::Update_Thread;
 use crate::{set_window_kind, set_window_opacity};
-use std::ffi::CString;
 use tray_manager::Tray_Manager;
 use widget::Widget;
 use x11::xlib::*;

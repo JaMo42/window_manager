@@ -8,7 +8,7 @@ use x11::xlib::*;
 
 macro_rules! c_str {
   ($s:expr) => {
-    CString::new ($s).unwrap ().as_ptr ()
+    std::ffi::CString::new ($s).unwrap ().as_ptr ()
   };
 }
 
