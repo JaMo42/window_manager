@@ -1,4 +1,4 @@
-use super::{window::Into_Window, *};
+use super::{window::To_XWindow, *};
 use std::ffi::{CStr, CString};
 
 pub struct Display {
@@ -144,11 +144,11 @@ impl Display {
     Scoped_Grab::new (self.connection)
   }
 
-  pub fn set_input_focus<W: Into_Window> (&self, window: W) {
+  pub fn set_input_focus<W: To_XWindow> (&self, window: W) {
     unsafe {
       XSetInputFocus (
         self.connection,
-        window.into_window (),
+        window.to_xwindow (),
         RevertToParent,
         CurrentTime,
       );
@@ -316,12 +316,12 @@ impl Display {
     unsafe { XGetSelectionOwner (self.connection, selection) }
   }
 
-  pub fn set_selection_ownder<W: Into_Window> (&self, selection: Atom, owner: W) {
+  pub fn set_selection_ownder<W: To_XWindow> (&self, selection: Atom, owner: W) {
     unsafe {
       XSetSelectionOwner (
         self.connection,
         selection,
-        owner.into_window (),
+        owner.to_xwindow (),
         CurrentTime,
       );
     }
@@ -338,18 +338,18 @@ impl Display {
   }
 }
 
-pub trait Into_Display {
-  fn into_display (&self) -> XDisplay;
+pub trait To_XDisplay {
+  fn to_xdisplay (&self) -> XDisplay;
 }
 
-impl Into_Display for Display {
-  fn into_display (&self) -> XDisplay {
+impl To_XDisplay for Display {
+  fn to_xdisplay (&self) -> XDisplay {
     self.as_raw ()
   }
 }
 
-impl Into_Display for XDisplay {
-  fn into_display (&self) -> XDisplay {
+impl To_XDisplay for XDisplay {
+  fn to_xdisplay (&self) -> XDisplay {
     *self
   }
 }

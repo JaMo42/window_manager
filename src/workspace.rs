@@ -1,7 +1,7 @@
 use super::client::Client;
 use super::core::*;
 use super::property;
-use crate::x::{window::Into_Window, Window, XNone, XWindow};
+use crate::x::{window::To_XWindow, Window, XNone, XWindow};
 use std::ops::{Deref, DerefMut};
 use x11::xlib::*;
 
@@ -73,8 +73,8 @@ impl Workspace {
     self.clients[0].focus ();
   }
 
-  pub unsafe fn focus<W: Into_Window> (&mut self, window: W) {
-    let window = window.into_window ();
+  pub unsafe fn focus<W: To_XWindow> (&mut self, window: W) {
+    let window = window.to_xwindow ();
     if window == XNone || root == window {
       log::warn! (
         "Tried to focus {}",

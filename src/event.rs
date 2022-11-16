@@ -2,17 +2,17 @@ use super::config::*;
 use super::core::*;
 use super::property::{atom, Net, Normal_Hints};
 use super::*;
-use x::{window::Into_Window, XFalse, XNone};
+use x::{window::To_XWindow, XFalse, XNone};
 
 pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 
-pub unsafe fn win2client<W: Into_Window> (window: W) -> Option<&'static mut Client> {
+pub unsafe fn win2client<W: To_XWindow> (window: W) -> Option<&'static mut Client> {
   let mut data: XPointer = std::ptr::null_mut ();
-  if window.into_window () == XNone
-    || window.into_window () == root.handle ()
+  if window.to_xwindow () == XNone
+    || window.to_xwindow () == root.handle ()
     || XFindContext (
       display.as_raw (),
-      window.into_window (),
+      window.to_xwindow (),
       wm_context,
       &mut data,
     ) != 0
@@ -276,7 +276,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     let _grab = display.scoped_grab ();
     let wa = window.get_attributes ();
     if wa
-      .and_then (|a| Some (a.override_redirect != XFalse))
+      .map (|a| a.override_redirect != XFalse)
       .unwrap_or (false)
     {
       log::info! ("ignoring window with override_redirect: {}", window);

@@ -1,5 +1,5 @@
 use super::display::Display;
-use super::window::{Into_Window, Window};
+use super::window::{To_XWindow, Window};
 use super::*;
 
 #[derive(Copy, Clone)]
@@ -142,8 +142,8 @@ impl Window_Builder {
     }
   }
 
-  pub fn parent<W: Into_Window> (&mut self, handle: W) -> &mut Self {
-    self.parent = handle.into_window ();
+  pub fn parent<W: To_XWindow> (&mut self, handle: W) -> &mut Self {
+    self.parent = handle.to_xwindow ();
     self
   }
 
