@@ -133,7 +133,7 @@ impl Preview {
     let mut vi: XVisualInfo = uninitialized! ();
     XMatchVisualInfo (
       display.as_raw (),
-      XDefaultScreen (display.as_raw ()),
+      display.default_screen (),
       32,
       TrueColor,
       &mut vi,

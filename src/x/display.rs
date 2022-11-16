@@ -72,6 +72,18 @@ impl Display {
     (self.width, self.height)
   }
 
+  pub fn default_visual (&self) -> *mut Visual {
+    unsafe { XDefaultVisual (self.connection, self.screen) }
+  }
+
+  pub fn default_colormap (&self) -> Colormap {
+    unsafe { XDefaultColormap (self.connection, self.screen) }
+  }
+
+  pub fn default_depth (&self) -> u32 {
+    unsafe { XDefaultDepth (self.connection, self.screen) as u32 }
+  }
+
   pub fn close (&mut self) {
     if !self.connection.is_null () {
       unsafe {

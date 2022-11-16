@@ -73,12 +73,12 @@ impl Drawing_Context {
       root.handle (),
       width,
       height,
-      XDefaultDepth (display.as_raw (), XDefaultScreen (display.as_raw ())) as u32,
+      display.default_depth (),
     );
     let cairo_surface_raw = cairo_xlib_surface_create (
       display.as_raw (),
       drawable,
-      XDefaultVisual (display.as_raw (), XDefaultScreen (display.as_raw ())),
+      display.default_visual (),
       width as i32,
       height as i32,
     );

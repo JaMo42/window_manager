@@ -448,14 +448,14 @@ impl Client {
     if urgency {
       self.set_border (&(*config).colors.urgent);
     }
-    let hints = XGetWMHints (display.as_raw (), self.window.handle ());
+    let hints = self.window.get_wm_hints ();
     if !hints.is_null () {
       (*hints).flags = if urgency {
         (*hints).flags | XUrgencyHint
       } else {
         (*hints).flags & !XUrgencyHint
       };
-      XSetWMHints (display.as_raw (), self.window.handle (), hints);
+      self.window.set_wm_hints (hints);
       XFree (hints as *mut c_void);
     }
     bar.invalidate_widgets ();
@@ -463,13 +463,13 @@ impl Client {
   }
 
   pub unsafe fn update_hints (&mut self) {
-    let hints = XGetWMHints (display.as_raw (), self.window.handle ());
+    let hints = self.window.get_wm_hints ();
     if !hints.is_null () {
       if let Some (focused) = focused_client! () {
         if *focused == *self && ((*hints).flags & XUrgencyHint) != 0 {
           // It's being made urgent but it's already the active window
           (*hints).flags &= !XUrgencyHint;
-          XSetWMHints (display.as_raw (), self.window.handle (), hints);
+          self.window.set_wm_hints (hints);
         }
       } else {
         self.is_urgent = ((*hints).flags & XUrgencyHint) != 0;
@@ -479,23 +479,12 @@ impl Client {
   }
 
   pub unsafe fn send_event (&self, protocol: Atom) -> bool {
-    let mut protocols: *mut Atom = std::ptr::null_mut ();
     let mut is_supported = false;
-    let mut count: c_int = 0;
-    if XGetWMProtocols (
-      display.as_raw (),
-      self.window.handle (),
-      &mut protocols,
-      &mut count,
-    ) != 0
-    {
-      for i in 0..count {
-        is_supported = *protocols.add (i as usize) == protocol;
-        if is_supported {
-          break;
-        }
+    for p in self.window.get_wm_protocols () {
+      is_supported = *p == protocol;
+      if is_supported {
+        break;
       }
-      XFree (protocols as *mut c_void);
     }
     if is_supported {
       self.window.send_client_message (|message| {

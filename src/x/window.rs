@@ -221,6 +221,30 @@ impl Window {
       self.send_event (event, StructureNotifyMask)
     }
   }
+
+  pub fn get_wm_hints (&self) -> *mut XWMHints {
+    unsafe { XGetWMHints (self.display (), self.handle) }
+  }
+
+  pub fn set_wm_hints (&self, hints: *mut XWMHints) {
+    unsafe {
+      XSetWMHints (self.display (), self.handle, hints);
+    }
+  }
+
+  pub fn get_wm_protocols (&self) -> &[Atom] {
+    unsafe {
+      let mut protocols: *mut Atom = std::ptr::null_mut ();
+      let mut count: i32 = 0;
+      if XGetWMProtocols (self.display (), self.handle, &mut protocols, &mut count) != 0 {
+        let result = std::slice::from_raw_parts (protocols, count as usize);
+        XFree (protocols as *mut libc::c_void);
+        result
+      } else {
+        &[]
+      }
+    }
+  }
 }
 
 pub trait Into_Window {

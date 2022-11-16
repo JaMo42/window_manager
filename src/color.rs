@@ -2,7 +2,6 @@ use super::core::display;
 use std::collections::BTreeMap;
 use std::mem::size_of;
 use x11::xft::{XftColor, XftColorAllocName};
-use x11::xlib::*;
 
 #[derive(Copy, Clone)]
 pub struct Color {
@@ -23,14 +22,11 @@ impl Color {
   }
 
   pub unsafe fn alloc_from_hex (hex: &str) -> Self {
-    let screen = display.default_screen ();
-    let visual = XDefaultVisual (display.as_raw (), screen);
-    let color_map = XDefaultColormap (display.as_raw (), screen);
     let mut xcolor: XftColor = uninitialized! ();
     XftColorAllocName (
       display.as_raw (),
-      visual,
-      color_map,
+      display.default_visual (),
+      display.default_colormap (),
       c_str! (hex),
       &mut xcolor,
     );

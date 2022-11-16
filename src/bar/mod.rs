@@ -49,10 +49,6 @@ impl Bar {
   }
 
   pub unsafe fn create () -> Self {
-    let mut class_hint = XClassHint {
-      res_name: c_str! ("window_manager_bar") as *mut libc::c_char,
-      res_class: c_str! ("window_manager_bar") as *mut libc::c_char,
-    };
     let width = screen_size.w as u32;
     let height = (*config).bar_height.get (Some (&(*config).bar_font));
     let window = Window::builder (&display)
@@ -65,7 +61,6 @@ impl Bar {
           .cursor (cursor::normal);
       })
       .build ();
-    XSetClassHint (display.as_raw (), window.handle (), &mut class_hint);
     ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
     set_window_opacity (window, (*config).bar_opacity);
     // We don't want to interact with the blank part, instead the widgets
