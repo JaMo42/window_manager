@@ -494,7 +494,7 @@ impl Client {
   pub unsafe fn send_event (&self, protocol: Atom) -> bool {
     let mut is_supported = false;
     for p in self.window.get_wm_protocols () {
-      is_supported = *p == protocol;
+      is_supported = p == protocol;
       if is_supported {
         break;
       }

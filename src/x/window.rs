@@ -232,16 +232,16 @@ impl Window {
     }
   }
 
-  pub fn get_wm_protocols (&self) -> &[Atom] {
+  pub fn get_wm_protocols (&self) -> Vec<Atom> {
     unsafe {
       let mut protocols: *mut Atom = std::ptr::null_mut ();
       let mut count: i32 = 0;
       if XGetWMProtocols (self.display (), self.handle, &mut protocols, &mut count) != 0 {
-        let result = std::slice::from_raw_parts (protocols, count as usize);
+        let result = std::slice::from_raw_parts (protocols, count as usize).to_vec ();
         XFree (protocols as *mut libc::c_void);
         result
       } else {
-        &[]
+        Vec::new ()
       }
     }
   }

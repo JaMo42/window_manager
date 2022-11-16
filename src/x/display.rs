@@ -318,12 +318,7 @@ impl Display {
 
   pub fn set_selection_ownder<W: To_XWindow> (&self, selection: Atom, owner: W) {
     unsafe {
-      XSetSelectionOwner (
-        self.connection,
-        selection,
-        owner.to_xwindow (),
-        CurrentTime,
-      );
+      XSetSelectionOwner (self.connection, selection, owner.to_xwindow (), CurrentTime);
     }
   }
 

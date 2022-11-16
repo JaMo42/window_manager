@@ -13,12 +13,6 @@ pub unsafe fn quit_dialog () {
 }
 
 pub unsafe fn close_client (client: &mut Client) {
-  for i in 0..workspaces.len () {
-    log::debug! ("Workspace {}", i+1);
-    for c in workspaces[i].iter () {
-      log::debug! ("  {}", c.window);
-    }
-  }
   if !client.send_event (property::atom (WM::DeleteWindow)) {
     client.window.kill_client ();
     display.sync (false);

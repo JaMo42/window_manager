@@ -275,10 +275,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   } else {
     let _grab = display.scoped_grab ();
     let wa = window.get_attributes ();
-    if wa
-      .map (|a| a.override_redirect != XFalse)
-      .unwrap_or (false)
-    {
+    if wa.map (|a| a.override_redirect != XFalse).unwrap_or (false) {
       log::info! ("ignoring window with override_redirect: {}", window);
       return;
     }
