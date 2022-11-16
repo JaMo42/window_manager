@@ -101,6 +101,7 @@ pub struct Client {
   pub is_dialog: bool,
   pub is_minimized: bool,
   pub border_color: &'static color::Color,
+  text_color: &'static color::Color,
   geometry: Geometry,
   prev_geometry: Geometry,
   title: String,
@@ -161,6 +162,7 @@ impl Client {
       is_dialog,
       is_minimized: false,
       border_color: &(*config).colors.normal,
+      text_color: &(*config).colors.normal_text,
       geometry,
       prev_geometry: geometry,
       title: window_title (window),
@@ -213,6 +215,7 @@ impl Client {
       is_dialog: false,
       is_minimized: false,
       border_color: &*(1 as *const color::Color),
+      text_color: &*(1 as *const color::Color),
       geometry: uninitialized! (),
       prev_geometry: uninitialized! (),
       title: String::new (),
@@ -249,6 +252,7 @@ impl Client {
       let frame_size = self.frame_geometry ();
       let frame_offset = self.frame_kind.frame_offset ();
       let mut actual_title_x = title_x;
+
       (*draw).fill_rect (
         0,
         frame_offset.y,
@@ -281,7 +285,7 @@ impl Client {
         .at (actual_title_x, 0)
         .align_vertically (draw::Alignment::Centered, frame_offset.y)
         .align_horizontally ((*config).title_alignment, self.title_space)
-        .color ((*config).colors.bar_active_workspace_text)
+        .color (*self.text_color)
         .width (self.title_space)
         .draw ();
 
@@ -301,6 +305,15 @@ impl Client {
   pub unsafe fn set_border (&mut self, color: &'static color::Color) {
     if self.frame_kind.should_draw_border () {
       self.border_color = color;
+      if color.pixel == (*config).colors.normal.pixel {
+        self.text_color = &(*config).colors.normal_text;
+      } else if color.pixel == (*config).colors.focused.pixel {
+        self.text_color = &(*config).colors.focused_text;
+      } else if color.pixel == (*config).colors.urgent.pixel {
+        self.text_color = &(*config).colors.urgent_text;
+      } else if color.pixel == (*config).colors.selected.pixel {
+        self.text_color = &(*config).colors.selected_text;
+      }
       self.draw_border ();
     }
   }

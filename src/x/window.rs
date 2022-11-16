@@ -197,8 +197,8 @@ impl Window {
   {
     unsafe {
       let mut event: XEvent = std::mem::MaybeUninit::zeroed ().assume_init ();
+      event.type_ = ClientMessage;
       let message = &mut event.client_message;
-      message.type_ = ClientMessage;
       message.display = self.display ();
       message.window = self.handle;
       build (message);
@@ -212,8 +212,8 @@ impl Window {
   {
     unsafe {
       let mut event: XEvent = std::mem::MaybeUninit::zeroed ().assume_init ();
+      event.type_ = ConfigureNotify;
       let configure = &mut event.configure;
-      configure.type_ = ConfigureNotify;
       configure.display = self.display ();
       configure.window = self.handle;
       configure.event = self.handle;
