@@ -1,6 +1,6 @@
 use crate::core::*;
 use crate::property::{self, XEmbed};
-use crate::x::{Window, XFalse};
+use crate::x::Window;
 use libc::c_long;
 use x11::xlib::*;
 
@@ -50,23 +50,15 @@ impl Info {
 }
 
 pub unsafe fn send_message (recipient: Window, msg: c_long, d1: c_long, d2: c_long, d3: c_long) {
-  let mut event: XEvent = std::mem::zeroed ();
-  let message = &mut event.client_message;
-  message.window = recipient.handle ();
-  message.message_type = property::atom (XEmbed::XEmbed);
-  message.format = 32;
-  message.data.set_long (0, CurrentTime as c_long);
-  message.data.set_long (1, msg);
-  message.data.set_long (2, d1);
-  message.data.set_long (3, d2);
-  message.data.set_long (4, d3);
-  XSendEvent (
-    display.as_raw (),
-    recipient.handle (),
-    XFalse,
-    NoEventMask,
-    &mut event,
-  );
+  recipient.send_client_message (|message| {
+    message.message_type = property::atom (XEmbed::XEmbed);
+    message.format = 32;
+    message.data.set_long (0, CurrentTime as c_long);
+    message.data.set_long (1, msg);
+    message.data.set_long (2, d1);
+    message.data.set_long (3, d2);
+    message.data.set_long (4, d3);
+  });
   display.sync (false);
 }
 

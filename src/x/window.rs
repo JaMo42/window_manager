@@ -178,6 +178,49 @@ impl Window {
       }
     }
   }
+
+  pub fn send_event (&self, mut event: XEvent, mask: i64) -> bool {
+    unsafe {
+      XSendEvent (
+        self.display (),
+        self.handle,
+        XFalse,
+        mask,
+        &mut event as *mut XEvent,
+      ) != 0
+    }
+  }
+
+  pub fn send_client_message<F> (&self, build: F) -> bool
+  where
+    F: Fn(&mut XClientMessageEvent),
+  {
+    unsafe {
+      let mut event: XEvent = std::mem::MaybeUninit::zeroed ().assume_init ();
+      let message = &mut event.client_message;
+      message.type_ = ClientMessage;
+      message.display = self.display ();
+      message.window = self.handle;
+      build (message);
+      self.send_event (event, NoEventMask)
+    }
+  }
+
+  pub fn send_configure_event<F> (&self, build: F) -> bool
+  where
+    F: Fn(&mut XConfigureEvent),
+  {
+    unsafe {
+      let mut event: XEvent = std::mem::MaybeUninit::zeroed ().assume_init ();
+      let configure = &mut event.configure;
+      configure.type_ = ConfigureNotify;
+      configure.display = self.display ();
+      configure.window = self.handle;
+      configure.event = self.handle;
+      build (configure);
+      self.send_event (event, StructureNotifyMask)
+    }
+  }
 }
 
 pub trait Into_Window {

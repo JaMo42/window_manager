@@ -4,7 +4,7 @@ use crate::core::*;
 use crate::cursor;
 use crate::property;
 use crate::property::Net;
-use crate::x::{Window, XFalse, XNone, XWindow};
+use crate::x::{Window, XNone, XWindow};
 use libc::{c_long, c_uchar, c_uint};
 use std::thread;
 use x11::xlib::*;
@@ -43,25 +43,17 @@ impl Tray_Manager {
 
   /// Notifies clients about the new tray manager
   unsafe fn notify_clients (&self) {
-    let mut event: XEvent = std::mem::zeroed ();
-    let message = &mut event.client_message;
-    message.window = root.handle ();
-    message.message_type = property::atom (property::Other::Manager);
-    message.format = 32;
-    message.data.set_long (0, CurrentTime as c_long);
-    message
-      .data
-      .set_long (1, property::atom (Net::SystemTrayS0) as c_long);
-    message.data.set_long (2, self.window.handle () as c_long);
-    message.data.set_long (3, 0);
-    message.data.set_long (4, 0);
-    XSendEvent (
-      display.as_raw (),
-      root.handle (),
-      XFalse,
-      NoEventMask,
-      &mut event,
-    );
+    root.send_client_message (|message| {
+      message.message_type = property::atom (property::Other::Manager);
+      message.format = 32;
+      message.data.set_long (0, CurrentTime as c_long);
+      message
+        .data
+        .set_long (1, property::atom (Net::SystemTrayS0) as c_long);
+      message.data.set_long (2, self.window.handle () as c_long);
+      message.data.set_long (3, 0);
+      message.data.set_long (4, 0);
+    });
     display.sync (false);
   }
 

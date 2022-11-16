@@ -498,20 +498,12 @@ impl Client {
       XFree (protocols as *mut c_void);
     }
     if is_supported {
-      let mut event: XEvent = uninitialized! ();
-      event.type_ = ClientMessage;
-      event.client_message.window = self.window.handle ();
-      event.client_message.message_type = property::atom (WM::Protocols);
-      event.client_message.format = 32;
-      event.client_message.data.set_long (0, protocol as i64);
-      event.client_message.data.set_long (1, CurrentTime as i64);
-      XSendEvent (
-        display.as_raw (),
-        self.window.handle (),
-        XFalse,
-        NoEventMask,
-        &mut event,
-      ) != 0
+      self.window.send_client_message (|message| {
+        message.message_type = property::atom (WM::Protocols);
+        message.format = 32;
+        message.data.set_long (0, protocol as i64);
+        message.data.set_long (1, CurrentTime as i64);
+      })
     } else {
       false
     }
@@ -540,25 +532,15 @@ impl Client {
 
   pub unsafe fn configure (&self) {
     let g = self.client_geometry ();
-    let mut ev: XConfigureEvent = uninitialized! ();
-    ev.type_ = ConfigureNotify;
-    ev.display = display.as_raw ();
-    ev.event = self.window.handle ();
-    ev.window = self.window.handle ();
-    ev.x = g.x;
-    ev.x = g.x;
-    ev.width = g.w as i32;
-    ev.height = g.h as i32;
-    ev.border_width = 0;
-    ev.above = XNone;
-    ev.override_redirect = XFalse;
-    XSendEvent (
-      display.as_raw (),
-      self.window.handle (),
-      XFalse,
-      StructureNotifyMask,
-      &mut ev as *mut XConfigureEvent as *mut XEvent,
-    );
+    self.window.send_configure_event (|configure| {
+      configure.x = g.x;
+      configure.x = g.x;
+      configure.width = g.w as i32;
+      configure.height = g.h as i32;
+      configure.border_width = 0;
+      configure.above = XNone;
+      configure.override_redirect = XFalse;
+    });
   }
 
   pub unsafe fn click (&mut self, window: XWindow) {
