@@ -3,6 +3,7 @@ use crate::client::{decorated_frame_offset, Client, Client_Geometry};
 use crate::core::*;
 use crate::ewmh;
 use crate::property;
+use crate::x::Window;
 use rand::{prelude::ThreadRng, Rng};
 use std::os::raw::*;
 use x11::xlib::*;
@@ -130,30 +131,34 @@ impl Preview {
 
   pub unsafe fn create (initial_geometry: Geometry) -> Self {
     let mut vi: XVisualInfo = uninitialized! ();
-    XMatchVisualInfo (display, XDefaultScreen (display), 32, TrueColor, &mut vi);
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
-    attributes.override_redirect = X_TRUE;
-    attributes.event_mask = 0;
-    attributes.border_pixel = (*config).colors.selected.pixel;
-    attributes.background_pixel = 0;
-    attributes.colormap = XCreateColormap (display, root, vi.visual, AllocNone);
-    let window = XCreateWindow (
-      display,
-      root,
-      initial_geometry.x - Self::BORDER_WIDTH,
-      initial_geometry.y - Self::BORDER_WIDTH,
-      initial_geometry.w,
-      initial_geometry.h,
-      Self::BORDER_WIDTH as c_uint,
-      vi.depth,
-      InputOutput as c_uint,
-      vi.visual,
-      CWEventMask | CWOverrideRedirect | CWBackPixel | CWBorderPixel | CWColormap,
-      &mut attributes,
+    XMatchVisualInfo (
+      display.as_raw (),
+      XDefaultScreen (display.as_raw ()),
+      32,
+      TrueColor,
+      &mut vi,
     );
+    let colormap = XCreateColormap (display.as_raw (), root.handle (), vi.visual, AllocNone);
+    let window = Window::builder (&display)
+      .position (
+        initial_geometry.x - Self::BORDER_WIDTH,
+        initial_geometry.y - Self::BORDER_WIDTH,
+      )
+      .size (initial_geometry.w, initial_geometry.h)
+      .border_width (Self::BORDER_WIDTH as c_uint)
+      .depth (vi.depth)
+      .visual (vi.visual)
+      .attributes (|attributes| {
+        attributes
+          .override_redirect (true)
+          .border_pixel ((*config).colors.selected.pixel)
+          .background_pixel (0);
+      })
+      .colormap (colormap)
+      .build ();
     ewmh::set_window_type (window, property::Net::WMWindowTypeDesktop);
-    XClearWindow (display, window);
-    XMapWindow (display, window);
+    window.clear ();
+    window.map ();
     Preview {
       window,
       original_geometry: initial_geometry,
@@ -242,13 +247,13 @@ impl Preview {
       gg.y -= Preview::BORDER_WIDTH;
       gg
     };
-    XMoveResizeWindow (display, self.window, g.x, g.y, g.w, g.h);
-    XClearWindow (display, self.window);
-    XSync (display, X_FALSE);
+    self.window.move_and_resize (g.x, g.y, g.w, g.h);
+    self.window.clear ();
+    display.sync (false);
   }
 
   pub unsafe fn finish (&mut self, client: &mut Client, snap: bool) {
-    XDestroyWindow (display, self.window);
+    self.window.destroy ();
     if snap {
       client.save_geometry ();
       client.snap_state = move_snap_flags (self.geometry.x as u32, self.geometry.y as u32);

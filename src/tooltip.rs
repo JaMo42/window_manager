@@ -3,7 +3,7 @@ use super::ewmh;
 use super::geometry::Geometry;
 use super::property::Net;
 use super::set_window_kind;
-use x11::xlib::*;
+use crate::x::Window;
 
 pub struct Tooltip {
   window: Window,
@@ -21,31 +21,20 @@ impl Tooltip {
 
   pub const fn new () -> Self {
     Self {
-      window: X_NONE,
+      window: Window::uninit (),
       geometry: Geometry::new (),
       active: false,
     }
   }
 
   unsafe fn create (&mut self) {
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
-    attributes.background_pixel = (*config).colors.bar_background.pixel;
-    attributes.event_mask = NoEventMask;
-    attributes.override_redirect = X_TRUE;
-    self.window = XCreateWindow (
-      display,
-      root,
-      0,
-      0,
-      10,
-      10,
-      0,
-      CopyFromParent,
-      CopyFromParent as u32,
-      CopyFromParent as *mut Visual,
-      CWBackPixel | CWEventMask | CWOverrideRedirect,
-      &mut attributes,
-    );
+    self.window = Window::builder (&display)
+      .attributes (|attributes| {
+        attributes
+          .background_pixel ((*config).colors.bar_background.pixel)
+          .override_redirect (true);
+      })
+      .build ();
     ewmh::set_window_type (self.window, Net::WMWindowTypeTooltip);
     set_window_kind (self.window, Window_Kind::Meta_Or_Unmanaged);
   }
@@ -55,9 +44,7 @@ impl Tooltip {
     if self.geometry.x as u32 + self.geometry.w > screen_size.w {
       self.geometry.x = (screen_size.w - self.geometry.w) as i32;
     }
-    XMoveResizeWindow (
-      display,
-      self.window,
+    self.window.move_and_resize (
       self.geometry.x,
       self.geometry.y,
       self.geometry.w,
@@ -66,7 +53,7 @@ impl Tooltip {
   }
 
   pub unsafe fn show (&mut self, string: &str, x: i32, y: i32) {
-    if self.window == X_NONE {
+    if self.window.is_none () {
       self.create ();
     }
     if self.active {
@@ -85,21 +72,21 @@ impl Tooltip {
       .at (Self::BORDER as i32, Self::BORDER as i32)
       .color ((*config).colors.bar_text)
       .draw ();
-    XMapRaised (display, self.window);
+    self.window.map_raised ();
     (*draw).render (self.window, 0, 0, width, height);
     self.active = true;
   }
 
   pub unsafe fn close (&mut self) {
     if self.active {
-      XUnmapWindow (display, self.window);
+      self.window.unmap ();
       self.active = false;
     }
   }
 
   pub unsafe fn destroy (&mut self) {
-    if self.window != X_NONE {
-      XDestroyWindow (display, self.window);
+    if self.window.is_some () {
+      self.window.destroy ();
     }
   }
 }

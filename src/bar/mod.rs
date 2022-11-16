@@ -8,6 +8,7 @@ use crate::cursor;
 use crate::ewmh;
 use crate::property;
 use crate::update_thread::Update_Thread;
+use crate::x::{Window, XWindow};
 use crate::{set_window_kind, set_window_opacity};
 use tray_manager::Tray_Manager;
 use widget::Widget;
@@ -39,7 +40,7 @@ impl Bar {
     Self {
       width: 0,
       height: 0,
-      window: X_NONE,
+      window: Window::uninit (),
       last_scroll_time: 0,
       left_widgets: Vec::new (),
       right_widgets: Vec::new (),
@@ -48,39 +49,29 @@ impl Bar {
   }
 
   pub unsafe fn create () -> Self {
-    let screen = XDefaultScreen (display);
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
-    attributes.override_redirect = X_TRUE;
-    attributes.background_pixel = (*config).colors.bar_background.pixel;
-    attributes.event_mask = ButtonPressMask | ExposureMask;
-    attributes.cursor = cursor::normal;
     let mut class_hint = XClassHint {
       res_name: c_str! ("window_manager_bar") as *mut libc::c_char,
       res_class: c_str! ("window_manager_bar") as *mut libc::c_char,
     };
     let width = screen_size.w as u32;
     let height = (*config).bar_height.get (Some (&(*config).bar_font));
-    let window = XCreateWindow (
-      display,
-      root,
-      0,
-      0,
-      width,
-      height,
-      0,
-      XDefaultDepth (display, screen),
-      CopyFromParent as u32,
-      XDefaultVisual (display, screen),
-      CWOverrideRedirect | CWBackPixel | CWEventMask | CWCursor,
-      &mut attributes,
-    );
-    XSetClassHint (display, window, &mut class_hint);
+    let window = Window::builder (&display)
+      .size (width, height)
+      .attributes (|attributes| {
+        attributes
+          .override_redirect (true)
+          .background_pixel ((*config).colors.bar_background.pixel)
+          .event_mask (ButtonPressMask | ExposureMask)
+          .cursor (cursor::normal);
+      })
+      .build ();
+    XSetClassHint (display.as_raw (), window.handle (), &mut class_hint);
     ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
     set_window_opacity (window, (*config).bar_opacity);
     // We don't want to interact with the blank part, instead the widgets
     // use `Window_Kind::Status_Bar`.
     set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
-    XMapRaised (display, window);
+    window.map_raised ();
     Self {
       width,
       height,
@@ -120,7 +111,7 @@ impl Bar {
     let mut x = 0;
     for w in self.left_widgets.iter_mut () {
       let width = w.update (self.height, Self::WIDGET_GAP as u32);
-      XMoveWindow (display, w.window (), x, 0);
+      w.window ().r#move (x, 0);
       x += width as i32;
       x += Self::WIDGET_GAP;
     }
@@ -133,20 +124,21 @@ impl Bar {
       if first {
         let width = w.update (self.height, Self::RIGHT_GAP);
         x -= width as i32;
-        XMoveWindow (display, w.window (), x, 0);
         first = false;
       } else {
         let width = w.update (self.height, Self::WIDGET_GAP as u32);
         x -= width as i32;
         x -= Self::WIDGET_GAP;
-        XMoveWindow (display, w.window (), x, 0);
       }
+      w.window ().r#move (x, 0);
     }
     let mid_width = (x - mid_x) as u32;
 
-    XMoveResizeWindow (display, self.window, mid_x, 0, mid_width, self.height);
-    XClearWindow (display, self.window);
-    XSync (display, X_FALSE);
+    self
+      .window
+      .move_and_resize (mid_x, 0, mid_width, self.height);
+    self.window.clear ();
+    display.sync (false);
   }
 
   pub fn invalidate_widgets (&mut self) {
@@ -160,12 +152,11 @@ impl Bar {
   }
 
   pub unsafe fn resize (&mut self, width: u32) {
-    XResizeWindow (display, self.window, width, self.height);
     self.width = width;
     self.draw ();
   }
 
-  pub unsafe fn click (&mut self, window: Window, event: &XButtonEvent) {
+  pub unsafe fn click (&mut self, window: XWindow, event: &XButtonEvent) {
     // Limit scroll speed
     // We just do this for all button types as it doesn't matter for normal
     // button presses.
@@ -182,7 +173,7 @@ impl Bar {
     }
   }
 
-  pub unsafe fn enter (&mut self, window: Window) {
+  pub unsafe fn enter (&mut self, window: XWindow) {
     for w in self
       .left_widgets
       .iter_mut ()
@@ -196,23 +187,23 @@ impl Bar {
     }
   }
 
-  pub unsafe fn leave (&mut self, _window: Window) {
+  pub unsafe fn leave (&mut self, _window: XWindow) {
     (*self.mouse_widget).leave ();
     self.mouse_widget = widget::null_ptr ();
   }
 
   pub unsafe fn destroy (&mut self) {
-    if self.window == X_NONE {
+    if self.window.is_none () {
       return;
     }
     for w in self.left_widgets.iter () {
-      XDestroyWindow (display, w.window ());
+      w.window ().destroy ();
     }
     for w in self.right_widgets.iter () {
-      XDestroyWindow (display, w.window ());
+      w.window ().destroy ();
     }
-    XDestroyWindow (display, self.window);
-    self.window = X_NONE;
+    self.window.destroy ();
+    self.window = Window::uninit ();
     tray.destroy ();
   }
 }

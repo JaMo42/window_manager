@@ -1,6 +1,7 @@
 use crate::color::Color;
 use crate::core::*;
 use crate::draw::{Alignment, Drawing_Context};
+use crate::x::Window;
 use pango::FontDescription;
 use x11::xlib::*;
 
@@ -13,23 +14,13 @@ pub unsafe fn fatal_error (text: &str) -> ! {
   let height = screen_size.h - 2 * border as u32;
 
   let mut my_draw = Drawing_Context::new ();
-  let mut attributes: XSetWindowAttributes = uninitialized! ();
-  attributes.event_mask = KeyPressMask;
-  let window = XCreateWindow (
-    display,
-    root,
-    0,
-    0,
-    screen_size.w,
-    screen_size.h,
-    0,
-    CopyFromParent,
-    CopyFromParent as u32,
-    CopyFromParent as *mut Visual,
-    CWEventMask,
-    &mut attributes,
-  );
-  XMapRaised (display, window);
+  let window = Window::builder (&display)
+    .size (screen_size.w, screen_size.h)
+    .attributes (|attributes| {
+      attributes.event_mask (KeyPressMask);
+    })
+    .build ();
+  window.map_raised ();
 
   my_draw
     .rect (0, 0, screen_size.w, screen_size.h)
@@ -47,15 +38,15 @@ pub unsafe fn fatal_error (text: &str) -> ! {
 
   let mut event: XEvent = uninitialized! ();
   running = true;
-  XSync (display, X_FALSE);
+  display.sync (true);
   while running {
-    XNextEvent (display, &mut event);
+    display.next_event (&mut event);
     if event.type_ == KeyPress {
       running = false;
     }
   }
   my_draw.destroy ();
-  XDestroyWindow (display, window);
+  window.destroy ();
   std::process::exit (1);
 }
 

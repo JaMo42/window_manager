@@ -2,6 +2,7 @@ use super::core::*;
 use super::ewmh;
 use super::property::Net;
 use super::set_window_kind;
+use crate::x::{Window, XWindow};
 use futures::executor;
 use std::thread;
 use x11::xlib::*;
@@ -40,25 +41,13 @@ struct Notification {
 
 impl Notification {
   pub fn new (id: u32, summary: &str, body: &str) -> Self {
-    let window = unsafe {
-      let mut attributes: XSetWindowAttributes = uninitialized! ();
-      attributes.background_pixel = (*config).colors.bar_background.pixel;
-      attributes.event_mask = ButtonPressMask;
-      XCreateWindow (
-        display,
-        root,
-        0,
-        0,
-        10,
-        10,
-        0,
-        CopyFromParent,
-        CopyFromParent as u32,
-        CopyFromParent as *mut Visual,
-        CWBackPixel | CWEventMask,
-        &mut attributes,
-      )
-    };
+    let window = Window::builder (unsafe { &display })
+      .attributes (|attributes| {
+        attributes
+          .background_pixel (unsafe { &*config }.colors.bar_background.pixel)
+          .event_mask (ButtonPressMask);
+      })
+      .build ();
     unsafe {
       ewmh::set_window_type (window, Net::WMWindowTypeNotification);
       set_window_kind (window, Window_Kind::Notification);
@@ -72,16 +61,12 @@ impl Notification {
       body: String::new (),
     };
     this.replace (summary, body);
-    unsafe {
-      XMapWindow (display, window);
-    }
+    window.map ();
     this
   }
 
   pub fn destroy (&self) {
-    unsafe {
-      XDestroyWindow (display, self.window);
-    }
+    self.window.destroy ();
   }
 
   unsafe fn draw (&self) -> (u32, u32) {
@@ -144,7 +129,7 @@ impl Notification {
       height = body_y;
     }
     // Render
-    XResizeWindow (display, self.window, width, height);
+    self.window.resize (width, height);
     (*draw).render (self.window, 0, 0, width, height);
     (width, height)
   }
@@ -212,13 +197,11 @@ impl Manager {
     let mut y = unsafe { window_area.y };
     let x_right = unsafe { window_area.x + window_area.w as i32 };
     for n in self.notifications.iter () {
-      unsafe {
-        XMoveWindow (display, n.window, x_right - n.width as i32, y);
-      }
+      n.window.r#move (x_right - n.width as i32, y);
       y += n.height as i32 + 10;
     }
     unsafe {
-      XSync (display, X_FALSE);
+      display.sync (false);
     }
   }
 
@@ -229,7 +212,7 @@ impl Manager {
     }
   }
 
-  fn maybe_close (&mut self, window: Window) -> bool {
+  fn maybe_close (&mut self, window: XWindow) -> bool {
     if let Some (idx) = self.notifications.iter ().position (|n| n.window == window) {
       let id = self.notifications[idx].id;
       self.close_notification (id);
@@ -384,7 +367,7 @@ pub unsafe fn quit () {
 
 /// If `window` is the window of a notification, closes that notification and
 /// returns `true`. Returns `false` otherwise.
-pub fn maybe_close (window: Window) -> bool {
+pub fn maybe_close (window: XWindow) -> bool {
   manager ().maybe_close (window)
 }
 

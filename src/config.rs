@@ -25,14 +25,14 @@ impl Key {
   pub fn from_str (key: *const c_char, modifiers: c_uint) -> Self {
     Key {
       modifiers,
-      code: unsafe { XKeysymToKeycode (display, XStringToKeysym (key)) as c_uint },
+      code: unsafe { &display }.keysym_to_keycode (unsafe { XStringToKeysym (key) }) as u32,
     }
   }
 
   pub fn from_sym (sym: c_uint, modifiers: c_uint) -> Self {
     Key {
       modifiers,
-      code: unsafe { XKeysymToKeycode (display, sym as c_ulong) as c_uint },
+      code: unsafe { &display }.keysym_to_keycode (sym as KeySym) as u32,
     }
   }
 }

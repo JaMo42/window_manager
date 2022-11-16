@@ -3,6 +3,7 @@ use super::core::*;
 use super::desktop_entry::Desktop_Entry;
 use super::geometry::Geometry;
 use super::paths;
+use crate::x::Window;
 use cairo::ffi::*;
 use librsvg::{CairoRenderer, SvgHandle};
 use pango::FontDescription;
@@ -68,16 +69,16 @@ impl Drawing_Context {
     let width = screen_size.w as u32;
     let height = screen_size.h as u32;
     let drawable = XCreatePixmap (
-      display,
-      root,
+      display.as_raw (),
+      root.handle (),
       width,
       height,
-      XDefaultDepth (display, XDefaultScreen (display)) as u32,
+      XDefaultDepth (display.as_raw (), XDefaultScreen (display.as_raw ())) as u32,
     );
     let cairo_surface_raw = cairo_xlib_surface_create (
-      display,
+      display.as_raw (),
       drawable,
-      XDefaultVisual (display, XDefaultScreen (display)),
+      XDefaultVisual (display.as_raw (), XDefaultScreen (display.as_raw ())),
       width as i32,
       height as i32,
     );
@@ -90,7 +91,7 @@ impl Drawing_Context {
       pangocairo::create_layout (&cairo_context).expect ("Failed to create pango layout");
     Self {
       drawable,
-      gc: XCreateGC (display, root, 0, std::ptr::null_mut ()),
+      gc: XCreateGC (display.as_raw (), root.handle (), 0, std::ptr::null_mut ()),
       cairo_surface,
       cairo_context,
       pango_layout,
@@ -99,13 +100,13 @@ impl Drawing_Context {
 
   pub unsafe fn destroy (&mut self) {
     cairo_surface_destroy (self.cairo_surface.to_raw_none ());
-    XFreePixmap (display, self.drawable);
-    XFreeGC (display, self.gc);
+    XFreePixmap (display.as_raw (), self.drawable);
+    XFreeGC (display.as_raw (), self.gc);
   }
 
   pub unsafe fn fill_rect (&mut self, x: i32, y: i32, w: u32, h: u32, color: Color) {
-    XSetForeground (display, self.gc, color.pixel);
-    XFillRectangle (display, self.drawable, self.gc, x, y, w, h);
+    XSetForeground (display.as_raw (), self.gc, color.pixel);
+    XFillRectangle (display.as_raw (), self.drawable, self.gc, x, y, w, h);
   }
 
   pub unsafe fn rect (&mut self, x: i32, y: i32, w: u32, h: u32) -> Shape_Builder {
@@ -202,12 +203,12 @@ impl Drawing_Context {
     Rendered_Text::from_context (self)
   }
 
-  pub unsafe fn render (&mut self, win: Window, xoff: i32, yoff: i32, width: u32, height: u32) {
+  pub unsafe fn render (&mut self, window: Window, xoff: i32, yoff: i32, width: u32, height: u32) {
     self.cairo_surface.flush ();
     XCopyArea (
-      display,
+      display.as_raw (),
       self.drawable,
-      win,
+      window.handle (),
       self.gc,
       xoff,
       yoff,
@@ -216,7 +217,7 @@ impl Drawing_Context {
       xoff,
       yoff,
     );
-    XSync (display, X_FALSE);
+    display.sync (false);
   }
 }
 

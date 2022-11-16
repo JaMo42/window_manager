@@ -42,7 +42,7 @@ pub fn manager () -> &'static mut Manager {
 unsafe fn notify_mainloop () {
   let mut event: XEvent = uninitialized! ();
   event.type_ = SessionManagerEvent;
-  XPutBackEvent (display, &mut event);
+  display.push_event (&mut event);
 }
 
 enum Message {

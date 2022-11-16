@@ -3,6 +3,7 @@ use super::config::Config;
 use super::draw::Drawing_Context;
 use super::geometry::Geometry;
 use super::workspace::Workspace;
+use crate::x::{Display, Window, XNone};
 use std::os::raw::*;
 use x11::xlib::*;
 
@@ -49,14 +50,10 @@ macro_rules! log_error {
 
   ($result:expr, $what:expr) => {
     if let Err (error) = $result {
-      log::error! ("{}: {}", what, error);
+      log::error! ("{}: {}", $what, error);
     }
   };
 }
-
-pub const X_FALSE: c_int = 0;
-pub const X_TRUE: c_int = 1;
-pub const X_NONE: c_ulong = 0;
 
 pub const MOD_WIN: c_uint = Mod4Mask;
 pub const MOD_ALT: c_uint = Mod1Mask;
@@ -89,8 +86,8 @@ pub enum Window_Kind {
   Tray_Client,
 }
 
-pub static mut display: *mut Display = std::ptr::null_mut ();
-pub static mut root: Window = X_NONE;
+pub static mut display: Display = Display::uninit ();
+pub static mut root: Window = Window::uninit ();
 pub static mut workspaces: Vec<Workspace> = Vec::new ();
 pub static mut active_workspace: usize = 0;
 pub static mut running: bool = false;
@@ -104,5 +101,5 @@ pub static mut mouse_held: c_uint = 0;
 pub static mut meta_windows: Vec<Window> = Vec::new ();
 pub static mut draw: *mut Drawing_Context = std::ptr::null_mut ();
 pub static mut bar: Bar = Bar::new ();
-pub static mut wm_context: XContext = X_NONE as XContext;
-pub static mut wm_winkind_context: XContext = X_NONE as XContext;
+pub static mut wm_context: XContext = XNone as XContext;
+pub static mut wm_winkind_context: XContext = XNone as XContext;

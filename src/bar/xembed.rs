@@ -1,5 +1,6 @@
 use crate::core::*;
 use crate::property::{self, XEmbed};
+use crate::x::{Window, XFalse};
 use libc::c_long;
 use x11::xlib::*;
 
@@ -51,7 +52,7 @@ impl Info {
 pub unsafe fn send_message (recipient: Window, msg: c_long, d1: c_long, d2: c_long, d3: c_long) {
   let mut event: XEvent = std::mem::zeroed ();
   let message = &mut event.client_message;
-  message.window = recipient;
+  message.window = recipient.handle ();
   message.message_type = property::atom (XEmbed::XEmbed);
   message.format = 32;
   message.data.set_long (0, CurrentTime as c_long);
@@ -59,8 +60,14 @@ pub unsafe fn send_message (recipient: Window, msg: c_long, d1: c_long, d2: c_lo
   message.data.set_long (2, d1);
   message.data.set_long (3, d2);
   message.data.set_long (4, d3);
-  XSendEvent (display, recipient, X_FALSE, NoEventMask, &mut event);
-  XSync (display, X_FALSE);
+  XSendEvent (
+    display.as_raw (),
+    recipient.handle (),
+    XFalse,
+    NoEventMask,
+    &mut event,
+  );
+  display.sync (false);
 }
 
 pub unsafe fn embed (window: Window, parent: Window, version: u32) {
@@ -68,7 +75,7 @@ pub unsafe fn embed (window: Window, parent: Window, version: u32) {
     window,
     EMBEDDED_NOTIFY,
     0,
-    parent as c_long,
+    parent.handle () as c_long,
     u32::min (version, VERSION) as i64,
   );
 }

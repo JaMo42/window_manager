@@ -4,7 +4,7 @@ use super::color::Color;
 use super::core::*;
 use super::draw::{resources, Svg_Resource};
 use super::set_window_kind;
-use libc::c_uint;
+use crate::x::{Window, XNone};
 use std::ptr::NonNull;
 use x11::xlib::*;
 
@@ -32,32 +32,19 @@ impl Button {
     action: unsafe fn (&mut Client),
   ) -> Self {
     let button_size = decorated_frame_offset.y as u32;
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
-    attributes.override_redirect = X_TRUE;
-    attributes.event_mask = ButtonPressMask | ButtonReleaseMask | EnterWindowMask | LeaveWindowMask;
-    attributes.background_pixmap = X_NONE;
-    attributes.save_under = X_FALSE;
-    attributes.backing_store = NotUseful;
-    let window = XCreateWindow (
-      display,
-      owner.frame,
-      0,
-      0,
-      button_size,
-      button_size,
-      0,
-      CopyFromParent,
-      InputOutput as c_uint,
-      CopyFromParent as *mut Visual,
-      CWEventMask | CWOverrideRedirect | CWBackPixmap | CWSaveUnder | CWBackingStore,
-      &mut attributes,
-    );
-    XSaveContext (
-      display,
-      window,
-      wm_context,
-      owner as *mut Client as XPointer,
-    );
+    let window = Window::builder (&display)
+      .parent (owner.frame)
+      .size (button_size, button_size)
+      .attributes (|attributes| {
+        attributes
+          .override_redirect (true)
+          .event_mask (ButtonPressMask | ButtonReleaseMask | EnterWindowMask | LeaveWindowMask)
+          .background_pixmap (XNone)
+          .save_under (false)
+          .backing_store (NotUseful);
+      })
+      .build ();
+    window.save_context (wm_context, owner as *mut Client as XPointer);
     set_window_kind (window, Window_Kind::Frame_Button);
     Self {
       owner: NonNull::new_unchecked (owner as *mut Client),
@@ -138,7 +125,7 @@ impl Button {
       let width = self.owner.as_ref ().frame_geometry ().w;
       width as i32 - decorated_frame_offset.y * (index + 1)
     };
-    XMoveWindow (display, self.window, x, 0);
+    self.window.r#move (x, 0);
   }
 
   pub unsafe fn click (&mut self) {

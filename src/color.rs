@@ -23,11 +23,17 @@ impl Color {
   }
 
   pub unsafe fn alloc_from_hex (hex: &str) -> Self {
-    let screen = XDefaultScreen (display);
-    let visual = XDefaultVisual (display, screen);
-    let color_map = XDefaultColormap (display, screen);
+    let screen = display.default_screen ();
+    let visual = XDefaultVisual (display.as_raw (), screen);
+    let color_map = XDefaultColormap (display.as_raw (), screen);
     let mut xcolor: XftColor = uninitialized! ();
-    XftColorAllocName (display, visual, color_map, c_str! (hex), &mut xcolor);
+    XftColorAllocName (
+      display.as_raw (),
+      visual,
+      color_map,
+      c_str! (hex),
+      &mut xcolor,
+    );
     Color {
       pixel: xcolor.pixel,
       red: xcolor.color.red as f64 / 0xffff as f64,

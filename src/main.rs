@@ -6,6 +6,8 @@
 use std::os::raw::*;
 use x11::xlib::*;
 
+mod x;
+
 #[macro_use]
 mod core;
 mod client;
@@ -42,6 +44,7 @@ use geometry::*;
 use property::Net;
 use update_thread::Update_Thread;
 use workspace::*;
+use x::{window::Into_Window, Display, Window, XDisplay, XNone, XWindow};
 
 mod paths {
   pub static mut config: String = String::new ();
@@ -68,7 +71,7 @@ mod paths {
   }
 }
 
-unsafe extern "C" fn x_error (my_display: *mut Display, event: *mut XErrorEvent) -> c_int {
+unsafe extern "C" fn x_error (my_display: XDisplay, event: *mut XErrorEvent) -> c_int {
   const ERROR_TEXT_SIZE: usize = 1024;
   let mut error_text_buf: [c_char; ERROR_TEXT_SIZE] = [0; ERROR_TEXT_SIZE];
   let error_text = &mut error_text_buf as *mut c_char;
@@ -78,41 +81,29 @@ unsafe extern "C" fn x_error (my_display: *mut Display, event: *mut XErrorEvent)
     error_text,
     ERROR_TEXT_SIZE as i32,
   );
-  let error_msg = std::ffi::CStr::from_ptr (error_text)
-    .to_str ()
-    .unwrap ()
-    .to_string ();
+  let error_msg = string_from_ptr! (error_text);
   eprintln! ("window_manager|x-error: {}", error_msg);
   log::error! ("\x1b[31mX Error: {}\x1b[0m", error_msg);
   0
 }
 
 unsafe fn connect () {
-  display = XOpenDisplay (std::ptr::null ());
-  if display.is_null () {
-    eprintln! ("can't open display");
-    std::process::exit (1);
-  }
-  root = XDefaultRootWindow (display);
-  let scn = XDefaultScreen (display);
-  screen_size = Geometry::from_parts (
-    0,
-    0,
-    XDisplayWidth (display, scn) as u32,
-    XDisplayHeight (display, scn) as u32,
-  );
+  display = Display::connect (None);
+  root = Window::from_handle (&display, display.root ());
+  screen_size = Geometry::from_parts (0, 0, display.width (), display.height ());
 }
 
 unsafe fn update_numlock_mask () {
-  let modmap = XGetModifierMapping (display);
+  let modmap = display.get_modifier_mapping ();
   numlock_mask = 0;
-  for i in 0..8 {
+  'outer: for i in 0..8 {
     for j in 0..(*modmap).max_keypermod {
       let check = *(*modmap)
         .modifiermap
         .add ((i * (*modmap).max_keypermod + j) as usize);
-      if check == XKeysymToKeycode (display, x11::keysym::XK_Num_Lock as u64) {
+      if check == display.keysym_to_keycode (x11::keysym::XK_Num_Lock as KeySym) {
         numlock_mask = 1 << i;
+        break 'outer;
       }
     }
   }
@@ -121,60 +112,19 @@ unsafe fn update_numlock_mask () {
 
 unsafe fn grab_keys () {
   update_numlock_mask ();
-  XUngrabKey (display, AnyKey as i32, AnyModifier, root);
+  display.ungrab_key (AnyKey as u32, AnyModifier);
   for key in (*config).key_binds.keys () {
     for extra in [0, LockMask, numlock_mask, LockMask | numlock_mask] {
-      XGrabKey (
-        display,
-        key.code as c_int,
-        key.modifiers | extra,
-        root,
-        X_TRUE,
-        GrabModeAsync,
-        GrabModeAsync,
-      );
+      display.grab_key (key.code, key.modifiers | extra);
     }
   }
 }
 
 unsafe fn grab_buttons () {
-  XUngrabButton (display, AnyButton as u32, AnyModifier, root);
-  XGrabButton (
-    display,
-    1,
-    (*config).modifier,
-    root,
-    X_TRUE,
-    (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
-    GrabModeAsync,
-    GrabModeAsync,
-    X_NONE,
-    X_NONE,
-  );
-  XGrabButton (
-    display,
-    1,
-    (*config).modifier | MOD_SHIFT,
-    root,
-    X_TRUE,
-    (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
-    GrabModeAsync,
-    GrabModeAsync,
-    X_NONE,
-    X_NONE,
-  );
-  XGrabButton (
-    display,
-    3,
-    (*config).modifier,
-    root,
-    X_TRUE,
-    (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
-    GrabModeAsync,
-    GrabModeAsync,
-    X_NONE,
-    X_NONE,
-  );
+  display.ungrab_button (AnyButton as u32, AnyModifier);
+  display.grab_button (1, (*config).modifier);
+  display.grab_button (1, (*config).modifier | MOD_SHIFT);
+  display.grab_button (3, (*config).modifier);
 }
 
 unsafe fn select_input (mut mask: c_long) {
@@ -189,10 +139,7 @@ unsafe fn select_input (mut mask: c_long) {
       | StructureNotifyMask
       | PropertyChangeMask;
   }
-  let mut wa: XSetWindowAttributes = uninitialized! ();
-  wa.event_mask = mask;
-  XChangeWindowAttributes (display, root, CWEventMask, &mut wa);
-  XSelectInput (display, root, wa.event_mask);
+  root.change_event_mask (mask);
 }
 
 fn run_autostartrc () {
@@ -212,15 +159,15 @@ fn run_autostartrc () {
 }
 
 unsafe fn init () {
-  wm_context = XUniqueContext ();
-  wm_winkind_context = XUniqueContext ();
+  wm_context = x::unique_context ();
+  wm_winkind_context = x::unique_context ();
   workspaces.reserve ((*config).workspace_count);
   for _ in 0..(*config).workspace_count {
     workspaces.push (Workspace::new ());
   }
-  XSetErrorHandler (Some (x_error));
-  XSetWindowBackground (display, root, (*config).colors.background.pixel);
-  XClearWindow (display, root);
+  x::set_error_handler (x_error);
+  root.set_background (&(*config).colors.background);
+  root.clear ();
   property::load_atoms ();
   property::init_set_root_properties ();
   cursor::load_cursors ();
@@ -291,9 +238,9 @@ const fn event_name (type_: c_int) -> &'static str {
 unsafe fn run () {
   let mut event: XEvent = uninitialized! ();
   running = true;
-  XSync (display, X_FALSE);
+  display.sync (false);
   while running {
-    XNextEvent (display, &mut event);
+    display.next_event (&mut event);
     if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
       if event.type_ as usize > 35 {
         log::warn! (
@@ -341,28 +288,28 @@ unsafe fn cleanup () {
   log::trace! ("Closing clients");
   for ws in workspaces.iter_mut () {
     for c in ws.iter_mut () {
-      XKillClient (display, c.window);
+      c.window.kill_client ();
       c.destroy ();
-      XDestroyWindow (display, c.window);
+      c.window.destroy ();
     }
   }
   // Close meta windows
   log::trace! ("Killing meta windows");
   for w in meta_windows.iter () {
-    XKillClient (display, *w);
-    XDestroyWindow (display, *w);
+    w.kill_client ();
+    w.destroy ();
   }
   // Un-grab keys and buttons
   log::trace! ("Un-grabbing keys and buttons");
   for key in (*config).key_binds.keys () {
-    XUngrabKey (display, key.code as c_int, key.modifiers, root);
+    display.ungrab_key (key.code, key.modifiers);
   }
-  XUngrabButton (display, 1, (*config).modifier, root);
-  XUngrabButton (display, 1, (*config).modifier | MOD_SHIFT, root);
-  XUngrabButton (display, 3, (*config).modifier, root);
+  display.ungrab_button (1, (*config).modifier);
+  display.ungrab_button (1, (*config).modifier | MOD_SHIFT);
+  display.ungrab_button (3, (*config).modifier);
   // Properties
   log::trace! ("Removing EWMH root properties");
-  XDestroyWindow (display, property::wm_check_window);
+  property::wm_check_window.destroy ();
   property::delete (root, Net::ActiveWindow);
   // Components
   log::trace! ("Freeing cursors");
@@ -388,11 +335,11 @@ fn get_window_geometry (window: Window) -> Geometry {
   let mut h: c_uint = 0;
   let mut _border_width: c_uint = 0;
   let mut _depth: c_uint = 0;
-  let mut _root: Window = 0;
+  let mut _root: XWindow = 0;
   unsafe {
     XGetGeometry (
-      display,
-      window,
+      display.as_raw (),
+      window.handle (),
       &mut _root,
       &mut x,
       &mut y,
@@ -417,7 +364,7 @@ unsafe fn window_title (window: Window) -> String {
   // XFetchName / Default
   else {
     let mut title_c_str: *mut c_char = std::ptr::null_mut ();
-    XFetchName (display, window, &mut title_c_str);
+    XFetchName (display.as_raw (), window.handle (), &mut title_c_str);
     if title_c_str.is_null () {
       "?".to_string ()
     } else {
@@ -434,16 +381,19 @@ unsafe fn update_client_list () {
   property::delete (root, Net::ClientList);
   for ws in workspaces.iter () {
     for c in ws.iter () {
-      property::append (root, Net::ClientList, XA_WINDOW, 32, &c.window, 1);
+      property::append (root, Net::ClientList, XA_WINDOW, 32, &c.window.handle (), 1);
     }
   }
 }
 
-unsafe fn get_window_kind (window: Window) -> Option<Window_Kind> {
+unsafe fn get_window_kind<W: Into_Window> (window: W) -> Option<Window_Kind> {
+  let window = window.into_window ();
   let mut data: XPointer = std::ptr::null_mut ();
-  if window == root {
+  if window == root.handle () {
     Some (Window_Kind::Root)
-  } else if window == X_NONE || XFindContext (display, window, wm_winkind_context, &mut data) != 0 {
+  } else if window == XNone
+    || XFindContext (display.as_raw (), window, wm_winkind_context, &mut data) != 0
+  {
     None
   } else if !data.is_null () {
     // Can't do conversions in the match
@@ -474,15 +424,10 @@ unsafe fn get_window_kind (window: Window) -> Option<Window_Kind> {
 }
 
 unsafe fn set_window_kind (window: Window, kind: Window_Kind) {
-  XSaveContext (
-    display,
-    window,
-    wm_winkind_context,
-    kind as usize as *const i8,
-  );
+  window.save_context (wm_winkind_context, kind as usize as XPointer);
 }
 
-unsafe fn is_kind (window: Window, kind: Window_Kind) -> bool {
+unsafe fn is_kind<W: Into_Window> (window: W, kind: Window_Kind) -> bool {
   if let Some (window_kind) = get_window_kind (window) {
     kind == window_kind
   } else {
@@ -506,11 +451,11 @@ unsafe fn list_properties (window: Window) {
   log::info! ("Properties for {} ({})", window_title (window), window);
   let atoms = {
     let mut n = 0;
-    let p = XListProperties (display, window, &mut n);
+    let p = XListProperties (display.as_raw (), window.handle (), &mut n);
     std::slice::from_raw_parts (p, n as usize)
   };
   for atom in atoms {
-    log::info! ("  {}", string_from_ptr! (XGetAtomName (display, *atom)));
+    log::info! ("  {}", display.get_atom_name (*atom));
   }
 }
 
@@ -583,28 +528,29 @@ fn main () {
     run ();
     log::trace! ("Cleaning up");
     cleanup ();
-    if let Err (error) = match quit_reason.as_str () {
-      "logout" => {
-        log::info! ("Logging out");
-        // not implemented
-        //system_shutdown::logout ()
-        platform::logout ()
-      }
-      "restart" => {
-        log::info! ("Rebooting system");
-        system_shutdown::reboot ()
-      }
-      "shutdown" => {
-        log::info! ("Shutting down system");
-        system_shutdown::shutdown ()
-      }
-      _ => Ok (()),
-    } {
-      log::error! ("  Failed: {}", error);
-    }
+    log_error! (
+      match quit_reason.as_str () {
+        "logout" => {
+          log::info! ("Logging out");
+          // not implemented
+          //system_shutdown::logout ()
+          platform::logout ()
+        }
+        "restart" => {
+          log::info! ("Rebooting system");
+          system_shutdown::reboot ()
+        }
+        "shutdown" => {
+          log::info! ("Shutting down system");
+          system_shutdown::shutdown ()
+        }
+        _ => Ok (()),
+      },
+      "  Failed:"
+    );
     // For some reason this quites the program so we need to handle the quit
     // reasons before
     log::trace! ("Closing X server connection");
-    XCloseDisplay (display);
+    display.close ();
   }
 }

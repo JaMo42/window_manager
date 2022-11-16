@@ -3,6 +3,7 @@ use super::client::Client;
 use super::core::*;
 use super::event::{mouse_move, mouse_resize};
 use super::property::{self, atom, Net, WM};
+use crate::x::Window;
 use libc::c_long;
 use x11::xlib::*;
 

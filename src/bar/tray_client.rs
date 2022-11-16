@@ -2,6 +2,7 @@ use super::xembed;
 use crate::core::*;
 use crate::property::{self, WM};
 use crate::set_window_kind;
+use crate::x::{Window, XWindow};
 use x11::xlib::*;
 
 pub struct Tray_Client {
@@ -12,7 +13,8 @@ pub struct Tray_Client {
 }
 
 impl Tray_Client {
-  pub fn new (window: Window, size: u32) -> Self {
+  pub fn new (window: XWindow, size: u32) -> Self {
+    let window = Window::from_handle (unsafe { &display }, window);
     unsafe {
       set_window_kind (window, Window_Kind::Tray_Client);
     }
@@ -33,14 +35,14 @@ impl Tray_Client {
   }
 
   pub unsafe fn set_position (&self, x: i32, y: i32) {
-    XMoveWindow (display, self.window, x, y);
+    self.window.r#move (x, y);
     self.configure (x, y);
   }
 
   pub unsafe fn configure (&self, x: i32, y: i32) {
     XConfigureWindow (
-      display,
-      self.window,
+      display.as_raw (),
+      self.window.handle (),
       (CWX | CWY | CWWidth | CWHeight) as u32,
       &mut XWindowChanges {
         x,
@@ -60,10 +62,10 @@ impl Tray_Client {
 
   pub unsafe fn update_mapped_state (&mut self) {
     if self.xembed_info.is_mapped () {
-      XMapRaised (display, self.window);
+      self.window.map_raised ();
       self.is_mapped = true;
     } else {
-      XUnmapWindow (display, self.window);
+      self.window.unmap ();
       self.is_mapped = false;
     }
   }

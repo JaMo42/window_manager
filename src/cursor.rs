@@ -1,19 +1,20 @@
 use super::core::*;
+use crate::x::XNone;
 use std::os::raw::*;
 use x11::xlib::*;
 
-pub static mut normal: Cursor = X_NONE;
-pub static mut moving: Cursor = X_NONE;
-pub static mut resizing: Cursor = X_NONE;
-pub static mut resizing_horizontal: Cursor = X_NONE;
-pub static mut resizing_vertical: Cursor = X_NONE;
+pub static mut normal: Cursor = XNone;
+pub static mut moving: Cursor = XNone;
+pub static mut resizing: Cursor = XNone;
+pub static mut resizing_horizontal: Cursor = XNone;
+pub static mut resizing_vertical: Cursor = XNone;
 
 unsafe fn create_cursor (shape: c_uint) -> Cursor {
-  XCreateFontCursor (display, shape)
+  display.create_font_cursor (shape)
 }
 
 unsafe fn free_cursor (cursor: Cursor) {
-  XFreeCursor (display, cursor);
+  display.free_cursor (cursor);
 }
 
 pub unsafe fn load_cursors () {
@@ -22,9 +23,9 @@ pub unsafe fn load_cursors () {
   resizing = create_cursor (120); //XC_sizing
   resizing_horizontal = create_cursor (108); //XC_sb_h_double_arrow
   resizing_vertical = create_cursor (116); //XC_sb_v_double_arrow
-  let mut wa: XSetWindowAttributes = uninitialized! ();
-  wa.cursor = normal;
-  XChangeWindowAttributes (display, root, CWCursor, &mut wa);
+  root.change_attributes (|a| {
+    a.cursor (normal);
+  });
 }
 
 pub unsafe fn free_cursors () {

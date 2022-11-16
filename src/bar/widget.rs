@@ -5,38 +5,29 @@ use crate::ewmh;
 use crate::platform;
 use crate::property;
 use crate::tooltip::tooltip;
+use crate::x::Window;
 use crate::{get_window_geometry, set_window_kind, set_window_opacity};
 use x11::xlib::*;
 
 unsafe fn create_window () -> Window {
-  let mut attributes: XSetWindowAttributes = uninitialized! ();
-  attributes.background_pixel = (*config).colors.bar_background.pixel;
-  attributes.event_mask = ButtonPressMask | EnterWindowMask | LeaveWindowMask;
-  attributes.backing_store = WhenMapped;
-  let window = XCreateWindow (
-    display,
-    root,
-    0,
-    0,
-    10,
-    10,
-    0,
-    CopyFromParent,
-    CopyFromParent as u32,
-    CopyFromParent as *mut Visual,
-    CWBackPixel | CWEventMask | CWBackingStore,
-    &mut attributes,
-  );
+  let window = Window::builder (&display)
+    .attributes (|attributes| {
+      attributes
+        .background_pixel ((*config).colors.bar_background.pixel)
+        .event_mask (ButtonPressMask | EnterWindowMask | LeaveWindowMask)
+        .backing_store (WhenMapped);
+    })
+    .build ();
   ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
   set_window_opacity (window, (*config).bar_opacity);
   set_window_kind (window, Window_Kind::Status_Bar);
-  XMapWindow (display, window);
+  window.map ();
   window
 }
 
 pub trait Widget {
   unsafe fn resize (&self, x: i32, width: u32, height: u32) {
-    XMoveResizeWindow (display, self.window (), x, 0, width, height);
+    self.window ().move_and_resize (x, 0, width, height);
   }
 
   fn window (&self) -> Window;
@@ -84,7 +75,7 @@ unsafe fn draw_icon_and_text (
 }
 
 unsafe fn resize_and_render (window: Window, width: u32, height: u32, gap: u32) {
-  XResizeWindow (display, window, width + gap, height);
+  window.resize (width + gap, height);
   (*draw).render (window, 0, 0, width, height);
 }
 
@@ -295,15 +286,11 @@ impl Workspaces {
   pub fn new () -> Option<Self> {
     let window = unsafe { create_window () };
     unsafe {
-      XResizeWindow (
-        display,
-        window,
-        // Note: assumes this is never the rightmost widget, this way we don't
-        // need to resize on every update
+      window.resize (
         bar.height * workspaces.len () as u32 + super::Bar::WIDGET_GAP as u32,
         bar.height,
-      )
-    };
+      );
+    }
     Some (Self {
       window,
       last_workspace: unsafe { workspaces.len () },

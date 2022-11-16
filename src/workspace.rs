@@ -1,6 +1,7 @@
 use super::client::Client;
 use super::core::*;
 use super::property;
+use crate::x::{window::Into_Window, Window, XNone, XWindow};
 use std::ops::{Deref, DerefMut};
 use x11::xlib::*;
 
@@ -49,12 +50,7 @@ impl Workspace {
         first.focus ();
       } else {
         property::delete (root, property::Net::ActiveWindow);
-        XSetInputFocus (
-          display,
-          PointerRoot as u64,
-          RevertToPointerRoot,
-          CurrentTime,
-        );
+        display.set_input_focus (PointerRoot as XWindow);
       }
       return c;
     }
@@ -77,11 +73,12 @@ impl Workspace {
     self.clients[0].focus ();
   }
 
-  pub unsafe fn focus (&mut self, window: Window) {
-    if window == X_NONE || window == root {
+  pub unsafe fn focus<W: Into_Window> (&mut self, window: W) {
+    let window = window.into_window ();
+    if window == XNone || root == window {
       log::warn! (
         "Tried to focus {}",
-        if window == X_NONE { "None" } else { "Root" }
+        if window == XNone { "None" } else { "Root" }
       );
     } else if let Some (idx) = self
       .clients
@@ -102,42 +99,28 @@ impl Workspace {
       return;
     }
     // Create dummy window to handle window switch loop input
-    let s = XDefaultScreen (display);
-    let w = XCreateSimpleWindow (
-      display,
-      root,
-      0,
-      0,
-      1,
-      1,
-      0,
-      XBlackPixel (display, s),
-      XBlackPixel (display, s),
+    let w = display.create_simple_window ();
+    w.map ();
+    XSelectInput (
+      display.as_raw (),
+      w.handle (),
+      KeyPressMask | KeyReleaseMask,
     );
-    XMapWindow (display, w);
-    XSelectInput (display, w, KeyPressMask | KeyReleaseMask);
-    XSetInputFocus (display, w, RevertToParent, CurrentTime);
-    XGrabKeyboard (
-      display,
-      w,
-      X_FALSE,
-      GrabModeAsync,
-      GrabModeAsync,
-      CurrentTime,
-    );
-    XSync (display, X_TRUE);
+    display.set_input_focus (w);
+    display.grab_keyboard (w);
+    display.sync (true);
     // Add the first Tab back to the event queue
     {
       let mut ev: XEvent = uninitialized! ();
       ev.type_ = KeyPress;
       ev.key.keycode = 0x17;
-      XPutBackEvent (display, &mut ev);
+      display.push_event (&mut ev);
     }
     // Run window switcher loop
     let mut switch_idx = 0;
     let mut event: XEvent = uninitialized! ();
     loop {
-      XMaskEvent (display, KeyPressMask | KeyReleaseMask, &mut event);
+      display.mask_event (KeyPressMask | KeyReleaseMask, &mut event);
       match event.type_ {
         KeyPress => {
           if event.key.keycode == 0x17 {
@@ -163,13 +146,12 @@ impl Workspace {
       }
     }
     // Clean up
-    XUngrabKeyboard (display, CurrentTime);
-    XDestroyWindow (display, w);
+    display.ungrab_keyboard ();
     // Focus the resulting window
     self.focus_client (switch_idx);
     // Re-grab main input
     super::grab_keys ();
-    XSync (display, X_FALSE);
+    display.sync (false);
   }
 
   pub fn has_urgent (&self) -> bool {

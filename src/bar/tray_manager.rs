@@ -4,6 +4,7 @@ use crate::core::*;
 use crate::cursor;
 use crate::property;
 use crate::property::Net;
+use crate::x::{Window, XFalse, XNone, XWindow};
 use libc::{c_long, c_uchar, c_uint};
 use std::thread;
 use x11::xlib::*;
@@ -26,7 +27,7 @@ pub struct Tray_Manager {
 impl Tray_Manager {
   pub const fn new () -> Self {
     Self {
-      window: X_NONE,
+      window: Window::uninit (),
       clients: Vec::new (),
       notify_thread: None,
       current_mapped_count: 0,
@@ -44,18 +45,24 @@ impl Tray_Manager {
   unsafe fn notify_clients (&self) {
     let mut event: XEvent = std::mem::zeroed ();
     let message = &mut event.client_message;
-    message.window = root;
+    message.window = root.handle ();
     message.message_type = property::atom (property::Other::Manager);
     message.format = 32;
     message.data.set_long (0, CurrentTime as c_long);
     message
       .data
       .set_long (1, property::atom (Net::SystemTrayS0) as c_long);
-    message.data.set_long (2, self.window as c_long);
+    message.data.set_long (2, self.window.handle () as c_long);
     message.data.set_long (3, 0);
     message.data.set_long (4, 0);
-    XSendEvent (display, root, X_FALSE, NoEventMask, &mut event);
-    XSync (display, X_FALSE);
+    XSendEvent (
+      display.as_raw (),
+      root.handle (),
+      XFalse,
+      NoEventMask,
+      &mut event,
+    );
+    display.sync (false);
   }
 
   /// Does a non-blocking delayed call of `notify_clients`
@@ -71,32 +78,24 @@ impl Tray_Manager {
   /// Creates the tray window and gets the tray selection
   pub unsafe fn create (height: u32) -> Self {
     log::trace! ("Creating tray window");
-    let screen = XDefaultScreen (display);
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
-    attributes.override_redirect = X_TRUE;
-    attributes.background_pixel = (*config).colors.bar_background.pixel;
-    attributes.event_mask =
-      SubstructureRedirectMask | StructureNotifyMask | ExposureMask | PropertyChangeMask;
-    attributes.cursor = cursor::normal;
-    let window = XCreateWindow (
-      display,
-      root,
-      (screen_size.w - height) as i32,
-      0,
-      height,
-      height,
-      0,
-      XDefaultDepth (display, screen),
-      CopyFromParent as u32,
-      XDefaultVisual (display, screen),
-      CWOverrideRedirect | CWBackPixel | CWEventMask | CWCursor,
-      &mut attributes,
-    );
+    let window = Window::builder (&display)
+      .position ((screen_size.w - height) as i32, 0)
+      .size (height, height)
+      .attributes (|attributes| {
+        attributes
+          .override_redirect (true)
+          .background_pixel ((*config).colors.bar_background.pixel)
+          .event_mask (
+            SubstructureRedirectMask | StructureNotifyMask | ExposureMask | PropertyChangeMask,
+          )
+          .cursor (cursor::normal);
+      })
+      .build ();
     meta_windows.push (window);
     crate::ewmh::set_window_type (window, property::Net::WMWindowTypeDock);
     crate::set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
     if (*config).bar_opacity != 100 {
-      let atom = XInternAtom (display, c_str! ("_NET_WM_WINDOW_OPACITY"), X_FALSE);
+      let atom = display.intern_atom ("_NET_WM_WINDOW_OPACITY");
       let value = 42949672u32 * (*config).bar_opacity as u32;
       set_cardinal! (window, atom, value);
     }
@@ -108,20 +107,20 @@ impl Tray_Manager {
     {
       let protocols = &mut [property::atom (property::WM::TakeFocus)];
       XSetWMProtocols (
-        display,
-        window,
+        display.as_raw (),
+        window.handle (),
         protocols.as_mut_ptr (),
         protocols.len () as i32,
       );
     }
 
-    let atom = property::atom (Net::SystemTrayS0);
-    if XGetSelectionOwner (display, atom) != X_NONE {
+    let selection = property::atom (Net::SystemTrayS0);
+    if display.get_selection_owner (selection) != XNone {
       my_panic! ("Tray selection already owned");
     }
     log::trace! ("Settings tray selection");
-    XSetSelectionOwner (display, atom, window, CurrentTime);
-    if XGetSelectionOwner (display, atom) != window {
+    display.set_selection_ownder (selection, window);
+    if window != display.get_selection_owner (selection) {
       my_panic! ("Failed to set tray selection");
     }
 
@@ -139,9 +138,9 @@ impl Tray_Manager {
 
   pub unsafe fn destroy (&mut self) {
     for c in self.clients.iter () {
-      XReparentWindow (display, c.window (), root, 0, 0);
+      c.window ().reparent (root, 0, 0);
     }
-    XDestroyWindow (display, self.window);
+    self.window.destroy ();
     if let Some (notify_thread) = self.notify_thread.take () {
       notify_thread.join ().ok ();
     }
@@ -154,19 +153,14 @@ impl Tray_Manager {
     bar.resize (screen_size.w - width);
     if width != 0 {
       if !self.is_mapped {
-        XMapWindow (display, self.window);
+        self.window.map ();
         self.is_mapped = true;
       }
-      XMoveResizeWindow (
-        display,
-        self.window,
-        (screen_size.w - width) as i32,
-        0,
-        width,
-        self.height,
-      );
+      self
+        .window
+        .move_and_resize ((screen_size.w - width) as i32, 0, width, self.height);
     } else {
-      XUnmapWindow (display, self.window);
+      self.window.unmap ();
       self.is_mapped = false;
     }
   }
@@ -185,7 +179,7 @@ impl Tray_Manager {
   }
 
   // If `window` is the window of a tray client, remove that client
-  pub unsafe fn maybe_remove_client (&mut self, window: Window) -> bool {
+  pub unsafe fn maybe_remove_client (&mut self, window: XWindow) -> bool {
     if let Some (idx) = self.find_client_index (window) {
       self.clients.remove (idx);
       self.arrange_icons ();
@@ -198,12 +192,12 @@ impl Tray_Manager {
   }
 
   /// Finds the index of a client by its window
-  pub unsafe fn find_client_index (&self, window: Window) -> Option<usize> {
+  pub unsafe fn find_client_index (&self, window: XWindow) -> Option<usize> {
     self.clients.iter ().position (|c| c.window () == window)
   }
 
   /// Finds a client by its window
-  pub unsafe fn find_client (&mut self, window: Window) -> Option<&mut Tray_Client> {
+  pub unsafe fn find_client (&mut self, window: XWindow) -> Option<&mut Tray_Client> {
     self
       .find_client_index (window)
       .map (|idx| &mut self.clients[idx])
@@ -227,7 +221,7 @@ impl Tray_Manager {
       return;
     }
 
-    XClearWindow (display, self.window);
+    self.window.clear ();
 
     let mut x = 0;
     for client in self.clients.iter () {
@@ -238,7 +232,7 @@ impl Tray_Manager {
       }
     }
 
-    XFlush (display);
+    display.flush ();
   }
 
   /// Reconfigures the tray
@@ -255,29 +249,34 @@ impl Tray_Manager {
   }
 
   /// Handles a docking request
-  unsafe fn dock (&mut self, window: Window) {
+  unsafe fn dock (&mut self, window: XWindow) {
     let client_idx = self.clients.len () as i32;
 
     self.clients.push (Tray_Client::new (window, self.height));
     let client = self.clients.last_mut ().unwrap ();
+    let window = client.window ();
 
     client.query_xembed_info ();
     //let should_map = client.xembed_info ().is_mapped ();
 
     log::trace! ("tray: update client attributes");
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
-    attributes.event_mask = StructureNotifyMask | PropertyChangeMask;
-    attributes.background_pixel = (*config).colors.bar_background.pixel;
-    XChangeWindowAttributes (display, window, CWEventMask | CWBackPixel, &mut attributes);
+    window.change_attributes (|attributes| {
+      attributes
+        .event_mask (StructureNotifyMask | PropertyChangeMask)
+        .background_pixel ((*config).colors.bar_background.pixel);
+    });
 
     log::trace! ("tray: reparent client");
     {
       let x = client_idx * self.height as i32;
-      XReparentWindow (display, window, self.window, x, 0);
+      window.reparent (self.window, x, 0);
     }
 
     log::trace! ("tray: send xembed notification");
     xembed::embed (window, self.window, client.xembed_info ().version ());
+
+    // if should_map
+    client.set_mapped (true);
 
     self.sort_clients ();
 
@@ -285,7 +284,7 @@ impl Tray_Manager {
     //if should_map {
     if true {
       log::trace! ("tray: map client");
-      XMapWindow (display, window);
+      window.map ();
       self.update_mapped_count ();
     } else {
       log::trace! ("tray: client should not be mapped");
@@ -310,7 +309,7 @@ impl Tray_Manager {
     log::debug! ("Tray client message");
     log::debug! ("  Opcode: {} ({})", opcode, OPCODE_NAMES[opcode as usize]);
     if opcode == OPCODE_REQUEST_DOCK {
-      self.dock (event.data.get_long (2) as Window);
+      self.dock (event.data.get_long (2) as XWindow);
     }
   }
 

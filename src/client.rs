@@ -3,6 +3,7 @@ use super::core::*;
 use super::geometry::*;
 use super::property::{Motif_Hints, MWM_HINTS_DECORATIONS, WM};
 use super::*;
+use crate::x::*;
 
 pub static mut decorated_frame_offset: Geometry = Geometry::new ();
 pub static mut border_frame_offset: Geometry = Geometry::new ();
@@ -13,27 +14,17 @@ static mut icon_position: i32 = 0;
 static mut icon_size: u32 = 0;
 
 unsafe fn create_frame (g: Geometry) -> Window {
-  let mut attributes: XSetWindowAttributes = uninitialized! ();
-  attributes.background_pixmap = X_NONE;
-  attributes.cursor = cursor::normal;
-  attributes.override_redirect = X_TRUE;
-  attributes.event_mask = SubstructureRedirectMask;
-  let screen = XDefaultScreen (display);
-
-  XCreateWindow (
-    display,
-    root,
-    g.x,
-    g.y,
-    g.w,
-    g.h,
-    0,
-    XDefaultDepth (display, screen),
-    InputOutput as u32,
-    XDefaultVisual (display, screen),
-    CWBackPixmap | CWEventMask | CWCursor,
-    &mut attributes,
-  )
+  Window::builder (&display)
+    .position (g.x, g.y)
+    .size (g.w, g.h)
+    .attributes (|attributes| {
+      attributes
+        .background_pixmap (XNone)
+        .cursor (cursor::normal)
+        .override_redirect (true)
+        .event_mask (SubstructureRedirectMask);
+    })
+    .build ()
 }
 
 /// Specifies how to change the frame and client geometry when resizing a client
@@ -127,16 +118,12 @@ impl Client {
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
 
-    let mut attributes: XSetWindowAttributes = uninitialized! ();
-    attributes.event_mask = StructureNotifyMask | PropertyChangeMask;
-    attributes.do_not_propagate_mask = ButtonPressMask | ButtonReleaseMask;
-    XChangeWindowAttributes (
-      display,
-      window,
-      CWEventMask | CWDontPropagate,
-      &mut attributes,
-    );
-    XSetWindowBorderWidth (display, window, 0);
+    window.change_attributes (|attributes| {
+      attributes
+        .event_mask (StructureNotifyMask | PropertyChangeMask)
+        .do_not_propagate_mask (ButtonPressMask | ButtonReleaseMask);
+    });
+    window.set_border_width (0);
 
     let mut frame_kind = Frame_Kind::Decorated;
     let mut is_dialog = false;
@@ -156,7 +143,7 @@ impl Client {
 
     let frame = create_frame (frame_kind.get_frame (geometry));
     let (reparent_x, reparent_y) = frame_kind.parent_offset ();
-    XReparentWindow (display, window, frame, reparent_x, reparent_y);
+    window.reparent (frame, reparent_x, reparent_y);
 
     let icon = if (*config).window_icon_size > 0 && frame_kind.should_draw_decorations () {
       property::Class_Hints::new (window).and_then (|h| draw::get_app_icon (&h.name))
@@ -184,8 +171,8 @@ impl Client {
       icon,
     });
     let this = result.as_mut () as *mut Client as XPointer;
-    XSaveContext (display, window, wm_context, this);
-    XSaveContext (display, frame, wm_context, this);
+    window.save_context (wm_context, this);
+    frame.save_context (wm_context, this);
     set_window_kind (window, Window_Kind::Client);
     set_window_kind (frame, Window_Kind::Frame);
 
@@ -210,7 +197,7 @@ impl Client {
       }
     }
 
-    XMapSubwindows (display, frame);
+    frame.map_subwindows ();
 
     result
   }
@@ -218,7 +205,7 @@ impl Client {
   pub unsafe fn dummy (window: Window) -> Self {
     Client {
       window,
-      frame: X_NONE,
+      frame: Window::uninit (),
       workspace: 0,
       snap_state: 0,
       is_urgent: false,
@@ -250,11 +237,11 @@ impl Client {
   }
 
   pub unsafe fn map (&mut self) {
-    XMapWindow (display, self.frame);
+    self.frame.map ();
   }
 
   pub unsafe fn unmap (&self) {
-    XUnmapWindow (display, self.frame);
+    self.frame.unmap ();
   }
 
   pub unsafe fn draw_border (&mut self) {
@@ -396,17 +383,17 @@ impl Client {
     if self.icon.is_some () {
       self.title_space -= self.frame_kind.frame_offset ().y + Self::ICON_TITLE_GAP;
     }
-    XMoveResizeWindow (display, self.frame, fx, fy, fw, fh);
+    self.frame.move_and_resize (fx, fy, fw, fh);
     for i in 0..self.left_buttons.len () {
       self.left_buttons[i].move_ (i as i32, true);
     }
     for i in 0..self.right_buttons.len () {
       self.right_buttons[i].move_ (i as i32, false);
     }
-    XResizeWindow (display, self.window, cw, ch);
+    self.window.resize (cw, ch);
     self.configure ();
     self.draw_border ();
-    XSync (display, X_FALSE);
+    display.sync (false);
   }
 
   pub unsafe fn unsnap (&mut self) {
@@ -434,22 +421,22 @@ impl Client {
       self.unminimize (false);
     }
     if self.is_fullscreen {
-      XRaiseWindow (display, self.window);
+      self.window.raise ();
     } else {
       self.set_border (&(*config).colors.focused);
-      XRaiseWindow (display, self.frame);
+      self.frame.raise ();
     }
-    XSetInputFocus (display, self.window, RevertToParent, CurrentTime);
+    display.set_input_focus (self.window);
     self.send_event (property::atom (WM::TakeFocus));
     property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &self.window, 1);
-    XSync (display, X_FALSE);
+    display.sync (false);
   }
 
   pub unsafe fn raise (&self) {
     if self.is_fullscreen {
-      XRaiseWindow (display, self.window);
+      self.window.raise ();
     } else {
-      XRaiseWindow (display, self.frame);
+      self.frame.raise ();
     }
   }
 
@@ -461,14 +448,14 @@ impl Client {
     if urgency {
       self.set_border (&(*config).colors.urgent);
     }
-    let hints = XGetWMHints (display, self.window);
+    let hints = XGetWMHints (display.as_raw (), self.window.handle ());
     if !hints.is_null () {
       (*hints).flags = if urgency {
         (*hints).flags | XUrgencyHint
       } else {
         (*hints).flags & !XUrgencyHint
       };
-      XSetWMHints (display, self.window, hints);
+      XSetWMHints (display.as_raw (), self.window.handle (), hints);
       XFree (hints as *mut c_void);
     }
     bar.invalidate_widgets ();
@@ -476,13 +463,13 @@ impl Client {
   }
 
   pub unsafe fn update_hints (&mut self) {
-    let hints = XGetWMHints (display, self.window);
+    let hints = XGetWMHints (display.as_raw (), self.window.handle ());
     if !hints.is_null () {
       if let Some (focused) = focused_client! () {
         if *focused == *self && ((*hints).flags & XUrgencyHint) != 0 {
           // It's being made urgent but it's already the active window
           (*hints).flags &= !XUrgencyHint;
-          XSetWMHints (display, self.window, hints);
+          XSetWMHints (display.as_raw (), self.window.handle (), hints);
         }
       } else {
         self.is_urgent = ((*hints).flags & XUrgencyHint) != 0;
@@ -495,7 +482,13 @@ impl Client {
     let mut protocols: *mut Atom = std::ptr::null_mut ();
     let mut is_supported = false;
     let mut count: c_int = 0;
-    if XGetWMProtocols (display, self.window, &mut protocols, &mut count) != 0 {
+    if XGetWMProtocols (
+      display.as_raw (),
+      self.window.handle (),
+      &mut protocols,
+      &mut count,
+    ) != 0
+    {
       for i in 0..count {
         is_supported = *protocols.add (i as usize) == protocol;
         if is_supported {
@@ -507,12 +500,18 @@ impl Client {
     if is_supported {
       let mut event: XEvent = uninitialized! ();
       event.type_ = ClientMessage;
-      event.client_message.window = self.window;
+      event.client_message.window = self.window.handle ();
       event.client_message.message_type = property::atom (WM::Protocols);
       event.client_message.format = 32;
       event.client_message.data.set_long (0, protocol as i64);
       event.client_message.data.set_long (1, CurrentTime as i64);
-      XSendEvent (display, self.window, X_FALSE, NoEventMask, &mut event) != 0
+      XSendEvent (
+        display.as_raw (),
+        self.window.handle (),
+        XFalse,
+        NoEventMask,
+        &mut event,
+      ) != 0
     } else {
       false
     }
@@ -525,14 +524,14 @@ impl Client {
     self.is_fullscreen = state;
     if state {
       self.snap_state = SNAP_NONE;
-      XReparentWindow (display, self.window, root, 0, 0);
-      XResizeWindow (display, self.window, screen_size.w, screen_size.h);
-      XRaiseWindow (display, self.window);
-      XSetInputFocus (display, self.window, RevertToNone, CurrentTime);
+      self.window.reparent (root, 0, 0);
+      self.window.resize (screen_size.w, screen_size.h);
+      self.window.raise ();
+      display.set_input_focus (self.window);
       ewmh::set_net_wm_state (self, &[property::atom (Net::WMStateFullscreen)]);
     } else {
       let (reparent_x, reparent_y) = self.frame_kind.parent_offset ();
-      XReparentWindow (display, self.window, self.frame, reparent_x, reparent_y);
+      self.window.reparent (self.frame, reparent_x, reparent_y);
       self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
       self.focus ();
       ewmh::set_net_wm_state (self, &[]);
@@ -543,28 +542,28 @@ impl Client {
     let g = self.client_geometry ();
     let mut ev: XConfigureEvent = uninitialized! ();
     ev.type_ = ConfigureNotify;
-    ev.display = display;
-    ev.event = self.window;
-    ev.window = self.window;
+    ev.display = display.as_raw ();
+    ev.event = self.window.handle ();
+    ev.window = self.window.handle ();
     ev.x = g.x;
     ev.x = g.x;
     ev.width = g.w as i32;
     ev.height = g.h as i32;
     ev.border_width = 0;
-    ev.above = X_NONE;
-    ev.override_redirect = X_FALSE;
+    ev.above = XNone;
+    ev.override_redirect = XFalse;
     XSendEvent (
-      display,
-      self.window,
-      X_FALSE,
+      display.as_raw (),
+      self.window.handle (),
+      XFalse,
       StructureNotifyMask,
       &mut ev as *mut XConfigureEvent as *mut XEvent,
     );
   }
 
-  pub unsafe fn click (&mut self, window: Window) {
+  pub unsafe fn click (&mut self, window: XWindow) {
     for b in self.buttons_mut () {
-      if b.window == window {
+      if b.window.handle () == window {
         b.click ();
         return;
       }
@@ -587,13 +586,13 @@ impl Client {
   }
 
   pub unsafe fn destroy (&self) {
-    XDeleteContext (display, self.window, wm_context);
+    self.window.delete_context (wm_context);
     for b in self.buttons () {
-      XDeleteContext (display, b.window, wm_context);
+      b.window.delete_context (wm_context);
     }
-    XDeleteContext (display, self.frame, wm_context);
-    XSelectInput (display, self.frame, X_NONE as i64);
-    XDestroyWindow (display, self.frame);
+    self.frame.delete_context (wm_context);
+    XSelectInput (display.as_raw (), self.frame.handle (), XNone as i64);
+    self.frame.destroy ();
   }
 }
 

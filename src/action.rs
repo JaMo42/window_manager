@@ -14,8 +14,8 @@ pub unsafe fn quit_dialog () {
 
 pub unsafe fn close_client (client: &mut Client) {
   if !client.send_event (property::atom (WM::DeleteWindow)) {
-    XKillClient (display, client.window);
-    XSync (display, X_FALSE);
+    client.window.kill_client ();
+    display.sync (false);
   }
 }
 
@@ -136,7 +136,7 @@ pub unsafe fn minimize (client: &mut Client) {
     workspaces[active_workspace].focus (f.window);
   } else {
     property::delete (root, property::Net::ActiveWindow);
-    XSetInputFocus (display, root, RevertToParent, CurrentTime);
+    display.set_input_focus (root);
   }
 }
 

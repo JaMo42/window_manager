@@ -1,5 +1,6 @@
 use super::core::*;
 use super::geometry::Geometry;
+use crate::x::{Window, XFalse, XNone};
 use std::os::raw::*;
 use x11::xlib::*;
 
@@ -127,7 +128,7 @@ pub struct Class_Hints {
 impl Class_Hints {
   pub unsafe fn new (window: Window) -> Option<Class_Hints> {
     let mut class_hints: XClassHint = uninitialized! ();
-    if XGetClassHint (display, window, &mut class_hints) == 0 {
+    if XGetClassHint (display.as_raw (), window.handle (), &mut class_hints) == 0 {
       None
     } else {
       let result = Some (Class_Hints {
@@ -145,22 +146,22 @@ impl Class_Hints {
   }
 }
 
-pub static mut net: [Atom; Net::Last as usize] = [X_NONE; Net::Last as usize];
-pub static mut wm: [Atom; WM::Last as usize] = [X_NONE; WM::Last as usize];
-pub static mut xembed: [Atom; XEmbed::Last as usize] = [X_NONE; XEmbed::Last as usize];
-pub static mut other: [Atom; Other::Last as usize] = [X_NONE; Other::Last as usize];
+pub static mut net: [Atom; Net::Last as usize] = [XNone; Net::Last as usize];
+pub static mut wm: [Atom; WM::Last as usize] = [XNone; WM::Last as usize];
+pub static mut xembed: [Atom; XEmbed::Last as usize] = [XNone; XEmbed::Last as usize];
+pub static mut other: [Atom; Other::Last as usize] = [XNone; Other::Last as usize];
 
-pub static mut wm_check_window: Window = X_NONE;
+pub static mut wm_check_window: Window = Window::uninit ();
 
 pub unsafe fn load_atoms () {
   macro_rules! W {
     ($property:ident, $name:expr) => {
-      wm[WM::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
+      wm[WM::$property as usize] = display.intern_atom ($name)
     };
   }
   macro_rules! N {
     ($property:ident, $name:expr) => {
-      net[Net::$property as usize] = XInternAtom (display, c_str! ($name), X_FALSE)
+      net[Net::$property as usize] = display.intern_atom ($name)
     };
   }
 
@@ -205,18 +206,19 @@ pub unsafe fn load_atoms () {
   N! (WMWindowTypeNotification, "_NET_WM_WINDOW_TYPE_NOTIFICATION");
   N! (WMWindowTypeTooltip, "_NET_WM_WINDOW_TYPE_TOOLTIP");
 
-  xembed[XEmbed::XEmbed as usize] = XInternAtom (display, c_str! ("_XEMBED"), X_FALSE);
-  xembed[XEmbed::Info as usize] = XInternAtom (display, c_str! ("_XEMBED_INFO"), X_FALSE);
+  xembed[XEmbed::XEmbed as usize] = display.intern_atom ("_XEMBED");
+  xembed[XEmbed::Info as usize] = display.intern_atom ("_XEMBED_INFO");
 
-  other[Other::Manager as usize] = XInternAtom (display, c_str! ("MANAGER"), X_FALSE);
-  other[Other::MotfifWMHints as usize] = XInternAtom (display, c_str! ("_MOTIF_WM_HINTS"), X_FALSE);
+  other[Other::Manager as usize] = display.intern_atom ("MANAGER");
+  other[Other::MotfifWMHints as usize] = display.intern_atom ("_MOTIF_WM_HINTS");
 }
 
 pub unsafe fn init_set_root_properties () {
   const wm_name: &str = "window_manager";
-  let utf8_string = XInternAtom (display, c_str! ("UTF8_STRING"), X_FALSE);
+  let utf8_string = display.intern_atom ("UTF8_STRING");
 
-  wm_check_window = XCreateSimpleWindow (display, root, 0, 0, 1, 1, 0, 0, 0);
+  wm_check_window = display.create_simple_window ();
+
   set (
     wm_check_window,
     Net::SupportingWMCheck,
@@ -255,7 +257,7 @@ pub unsafe fn atom<P: Into_Atom> (property: P) -> Atom {
 }
 
 pub unsafe fn delete<P: Into_Atom> (window: Window, property: P) {
-  XDeleteProperty (display, window, property.into_atom ());
+  XDeleteProperty (display.as_raw (), window.handle (), property.into_atom ());
 }
 
 pub unsafe fn set<P: Into_Atom, T> (
@@ -267,8 +269,8 @@ pub unsafe fn set<P: Into_Atom, T> (
   n: c_int,
 ) {
   XChangeProperty (
-    display,
-    window,
+    display.as_raw (),
+    window.handle (),
     property.into_atom (),
     type_,
     format,
@@ -287,8 +289,8 @@ pub unsafe fn append<P: Into_Atom, T> (
   n: c_int,
 ) {
   XChangeProperty (
-    display,
-    window,
+    display.as_raw (),
+    window.handle (),
     property.into_atom (),
     type_,
     format,
@@ -344,18 +346,18 @@ pub unsafe fn get<P: Into_Atom> (
   length: usize,
   type_: Atom,
 ) -> Option<Property_Data> {
-  let mut actual_type: Atom = X_NONE;
+  let mut actual_type: Atom = XNone;
   let mut format: c_int = 0;
   let mut nitems: c_ulong = 0;
   let mut bytes_after: c_ulong = 0;
   let mut data: *mut c_uchar = std::ptr::null_mut ();
   let status = XGetWindowProperty (
-    display,
-    window,
+    display.as_raw (),
+    window.handle (),
     property.into_atom (),
     offset as i64,
     length as i64,
-    X_FALSE,
+    XFalse,
     type_,
     &mut actual_type,
     &mut format,
@@ -414,7 +416,7 @@ pub unsafe fn get_string<P: Into_Atom> (window: Window, property: P) -> Option<S
 pub unsafe fn get_atom<P: Into_Atom> (window: Window, property: P) -> Atom {
   get_data_for_scalar::<Atom, _> (window, property, XA_ATOM, 0)
     .map (|data| data.value ())
-    .unwrap_or (X_NONE)
+    .unwrap_or (XNone)
 }
 
 #[derive(Copy, Clone)]
@@ -438,7 +440,7 @@ impl Normal_Hints {
       };
     }
     let mut _ignored = 0;
-    if XGetWMNormalHints (display, window, hints, &mut _ignored) == 0 {
+    if XGetWMNormalHints (display.as_raw (), window.handle (), hints, &mut _ignored) == 0 {
       XFree (hints as *mut c_void);
       return None;
     }
