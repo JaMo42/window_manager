@@ -1,5 +1,5 @@
 use super::core::*;
-use super::draw::Svg_Resource;
+use super::draw::{get_icon, Svg_Resource};
 use super::ewmh;
 use super::property::Net;
 use super::set_window_kind;
@@ -147,12 +147,7 @@ impl Notification {
         let pathname = &self.icon[8..];
         Svg_Resource::open (pathname)
       } else {
-        let pathname = format! (
-          "/usr/share/icons/{}/48x48/apps/{}.svg",
-          (*config).icon_theme,
-          self.icon
-        );
-        Svg_Resource::open (&pathname)
+        get_icon (&self.icon)
       } {
         log::trace! ("Drawing notification icon");
         (*draw).draw_svg (

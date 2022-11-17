@@ -536,3 +536,31 @@ pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
   );
   Svg_Resource::open (&icon_path)
 }
+
+/// Looks for an icon with the given name in the configured theme folder.
+pub unsafe fn get_icon (name: &str) -> Option<Box<Svg_Resource>> {
+  let dirs = [
+    "apps",
+    "actions",
+    "categories",
+    "devices",
+    "emblems",
+    "emotes",
+    "intl",
+    "mimetypes",
+    "places",
+    "status",
+  ];
+  for d in dirs {
+    let pathname = format! (
+      "/usr/share/icons/{}/48x48/{}/{}.svg",
+      (*config).icon_theme,
+      d,
+      name
+    );
+    if std::fs::metadata (&pathname).is_ok () {
+      return Svg_Resource::open (&pathname);
+    }
+  }
+  None
+}

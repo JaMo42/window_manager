@@ -79,10 +79,7 @@ pub fn run (cmd: &[&str]) -> Result<()> {
 
 pub fn run_and_await (cmd: &[&str]) -> Result<ExitStatus> {
   let _guard = Scoped_Default_SigChld::new ();
-  Command::new (cmd[0])
-    .args (&cmd[1..])
-    .spawn ()
-    .and_then (|mut c| c.wait ())
+  Command::new (cmd[0]).args (&cmd[1..]).status ()
 }
 
 pub fn run_and_await_with_output (cmd: &[&str]) -> Result<String> {
