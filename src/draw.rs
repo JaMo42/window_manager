@@ -54,6 +54,25 @@ impl Svg_Resource {
   pub fn is_some (&self) -> bool {
     self.handle.is_some ()
   }
+
+  pub fn open (pathname: &str) -> Option<Box<Self>> {
+    let static_path: &'static str = unsafe { &*(pathname as *const str) };
+    let mut this = Box::new (Self::new (static_path));
+    let loader = librsvg::Loader::new ();
+    match loader.read_path (this.file) {
+      Ok (handle) => {
+        this.handle = Some (handle);
+        let static_handle: &'static SvgHandle =
+          unsafe { &*(this.handle.as_ref ().unwrap () as *const SvgHandle) };
+        this.renderer = Some (CairoRenderer::new (static_handle));
+      }
+      Err (error) => {
+        log::error! ("Failed to load {}: {}", this.file, error);
+        return None;
+      }
+    }
+    Some (this)
+  }
 }
 
 pub struct Drawing_Context {
@@ -515,20 +534,5 @@ pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
     (*config).icon_theme,
     desktop_entry.icon?
   );
-  let loader = librsvg::Loader::new ();
-  let static_path: &'static str = &*(icon_path.as_str () as *const str);
-  let mut svg = Box::new (Svg_Resource::new (static_path));
-  match loader.read_path (svg.file) {
-    Ok (handle) => {
-      svg.handle = Some (handle);
-      let static_handle: &'static SvgHandle =
-        &*(svg.handle.as_ref ().unwrap () as *const SvgHandle);
-      svg.renderer = Some (CairoRenderer::new (static_handle));
-    }
-    Err (error) => {
-      log::error! ("Failed to load {}: {}", svg.file, error);
-      return None;
-    }
-  }
-  Some (svg)
+  Svg_Resource::open (&icon_path)
 }

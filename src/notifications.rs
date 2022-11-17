@@ -1,4 +1,5 @@
 use super::core::*;
+use super::draw::Svg_Resource;
 use super::ewmh;
 use super::property::Net;
 use super::set_window_kind;
@@ -37,10 +38,12 @@ struct Notification {
   height: u32,
   summary: String,
   body: String,
+  // Can't store the icon directly because of thread things
+  icon: String,
 }
 
 impl Notification {
-  pub fn new (id: u32, summary: &str, body: &str) -> Self {
+  pub fn new (id: u32, summary: &str, body: &str, icon: &str) -> Self {
     let window = Window::builder (unsafe { &display })
       .attributes (|attributes| {
         attributes
@@ -59,8 +62,9 @@ impl Notification {
       height: 0,
       summary: String::new (),
       body: String::new (),
+      icon: String::new (),
     };
-    this.replace (summary, body);
+    this.replace (summary, body, icon);
     window.map ();
     this
   }
@@ -71,9 +75,15 @@ impl Notification {
 
   unsafe fn draw (&self) -> (u32, u32) {
     const BORDER: u32 = 5;
-    let width;
+    const ICON_SIZE: u32 = 48;
+    let mut width = 0;
     let body_y;
     let height;
+    let text_x = if self.icon.is_empty () {
+      BORDER as i32
+    } else {
+      (3 * BORDER + ICON_SIZE) as i32
+    };
     let background = (*config).colors.notification_background;
     let foreground = (*config).colors.notification_text;
     let mut summary_font = (*config).bar_font.clone ();
@@ -85,7 +95,10 @@ impl Notification {
       let title_width = (*draw).text (&self.summary).get_width ();
       (*draw).select_font (body_font);
       let body_width = (*draw).text (&self.body).get_width ();
-      width = u32::max (title_width, body_width) + 2 * BORDER;
+      width += u32::max (title_width, body_width) + 2 * BORDER;
+      if !self.icon.is_empty () {
+        width += ICON_SIZE + 2 * BORDER;
+      }
     }
     // Summary
     {
@@ -98,7 +111,7 @@ impl Notification {
         .color (background.scale (0.9))
         .draw ();
       summary_text
-        .at (BORDER as i32, BORDER as i32)
+        .at (text_x, BORDER as i32)
         .color (foreground)
         .draw ();
     }
@@ -116,7 +129,7 @@ impl Notification {
           background,
         );
         body_text
-          .at (BORDER as i32, (body_y + BORDER) as i32)
+          .at (text_x, (body_y + BORDER) as i32)
           .color (foreground)
           .draw ();
       }
@@ -128,15 +141,39 @@ impl Notification {
     } else {
       height = body_y;
     }
+    // Icon
+    if !self.icon.is_empty () {
+      if let Some (mut icon) = if self.icon.starts_with ("file://") {
+        let pathname = &self.icon[8..];
+        Svg_Resource::open (pathname)
+      } else {
+        let pathname = format! (
+          "/usr/share/icons/{}/48x48/apps/{}.svg",
+          (*config).icon_theme,
+          self.icon
+        );
+        Svg_Resource::open (&pathname)
+      } {
+        log::trace! ("Drawing notification icon");
+        (*draw).draw_svg (
+          icon.as_mut (),
+          BORDER as i32,
+          (height - ICON_SIZE) as i32 / 2,
+          ICON_SIZE,
+          ICON_SIZE,
+        );
+      }
+    }
     // Render
     self.window.resize (width, height);
     (*draw).render (self.window, 0, 0, width, height);
     (width, height)
   }
 
-  pub fn replace (&mut self, summary: &str, body: &str) {
+  pub fn replace (&mut self, summary: &str, body: &str, icon: &str) {
     self.summary = summary.to_owned ();
     self.body = body.to_owned ();
+    self.icon = icon.to_owned ();
     unsafe {
       (self.width, self.height) = self.draw ();
     };
@@ -173,13 +210,13 @@ impl Manager {
     self.notifications.iter ().position (|n| n.id == id)
   }
 
-  fn new_notification (&mut self, id: u32, summary: &str, body: &str) {
+  fn new_notification (&mut self, id: u32, summary: &str, body: &str, icon: &str) {
     if let Some (idx) = self.find (id) {
-      self.notifications[idx].replace (summary, body);
+      self.notifications[idx].replace (summary, body, icon);
     } else {
       self
         .notifications
-        .push (Notification::new (id, summary, body));
+        .push (Notification::new (id, summary, body, icon));
     }
     self.update ();
     self.arrange ();
@@ -268,7 +305,7 @@ impl Server {
 
   /// `org.freedesktop.Notifications.GetCapabilities`
   async fn get_capabilities (&self) -> Vec<&str> {
-    vec! ["body", "persistence"]
+    vec! ["body", "persistence", "body-images"]
   }
 
   /// `org.freedesktop.Notifications.Notify`
@@ -277,7 +314,7 @@ impl Server {
     &mut self,
     _app_name: &str,
     replaces_id: u32,
-    _app_icon: &str,
+    app_icon: &str,
     summary: &str,
     body: &str,
     _actions: Vec<&str>,
@@ -285,7 +322,7 @@ impl Server {
     expire_timeout: i32,
   ) -> u32 {
     let id = self.manager.get_id (replaces_id);
-    self.manager.new_notification (id, summary, body);
+    self.manager.new_notification (id, summary, body, app_icon);
     if expire_timeout < 0 && unsafe { &*config }.default_notification_timeout != 0 {
       manager ().close_after (id, unsafe { &*config }.default_notification_timeout);
     } else if expire_timeout > 0 {
@@ -374,7 +411,7 @@ pub fn maybe_close (window: XWindow) -> bool {
 /// Spawns a notification
 pub fn notify (summary: &str, body: &str, timeout: i32) {
   let id = manager ().get_id (0);
-  manager ().new_notification (id, summary, body);
+  manager ().new_notification (id, summary, body, "");
   if timeout < 0 && unsafe { &*config }.default_notification_timeout != 0 {
     manager ().close_after (id, unsafe { &*config }.default_notification_timeout);
   } else if timeout > 0 {
