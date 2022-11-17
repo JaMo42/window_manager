@@ -89,7 +89,7 @@ pub fn run_and_await_with_output (cmd: &[&str]) -> Result<String> {
   let _guard = Scoped_Default_SigChld::new ();
   Command::new (cmd[0])
     .args (&cmd[1..])
-    .stderr (Stdio::null ())
+    .stderr (Stdio::inherit ())
     .output ()
     .map (|output| String::from_utf8_lossy (&output.stdout).into_owned ())
 }
