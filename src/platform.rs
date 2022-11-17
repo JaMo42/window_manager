@@ -1,5 +1,6 @@
 use super::bar;
 use super::notifications;
+use super::process::{run_and_await, run_and_await_with_output};
 
 pub mod actions {
   pub unsafe fn increase_volume () {
@@ -16,34 +17,10 @@ pub mod actions {
   }
 }
 
-struct Scoped_Default_SigChld;
-
-impl Scoped_Default_SigChld {
-  fn new () -> Self {
-    unsafe {
-      libc::signal (libc::SIGCHLD, libc::SIG_DFL);
-    }
-    Self {}
-  }
-}
-
-impl Drop for Scoped_Default_SigChld {
-  fn drop (&mut self) {
-    unsafe {
-      libc::signal (libc::SIGCHLD, libc::SIG_IGN);
-    }
-  }
-}
-
 /// Executes `amixer get Master` and extracts whether it is muted and the volume level
 pub fn get_volume_info () -> Option<(bool, u32)> {
-  let _guard = Scoped_Default_SigChld::new ();
-  let result = match std::process::Command::new ("amixer")
-    .args (["get", "Master"])
-    .output ()
-  {
-    Ok (raw_output) => {
-      let output = String::from_utf8 (raw_output.stdout).unwrap ();
+  let result = match run_and_await_with_output (&["amixer", "get", "Master"]) {
+    Ok (output) => {
       // <level>%] [<on/off>]
       let info = &output[output.find ('[').unwrap () + 1..];
       let level = info.split ('%').next ().unwrap ().parse ().unwrap ();
@@ -85,47 +62,22 @@ fn notify_volume (mute_notification: bool) {
 
 /// Executes `amixer -q sset Master toggle`
 fn mute_volume () {
-  let _guard = Scoped_Default_SigChld::new ();
-  if let Ok (mut process) = std::process::Command::new ("amixer")
-    .args (["-q", "sset", "Master", "toggle"])
-    .spawn ()
-  {
-    process.wait ().ok ();
-  }
+  run_and_await (&["amixer", "-q", "sset", "Master", "toggle"]).ok ();
   bar::update ();
 }
 
 /// Executes `amixer -q sset Master [value]%[+/-] unmute`
 fn change_volume (by: i32) {
-  let _guard = Scoped_Default_SigChld::new ();
   let arg = format! ("{}%{}", by.abs (), if by < 0 { '-' } else { '+' });
-  if let Ok (mut process) = std::process::Command::new ("amixer")
-    .args (["-q", "sset", "Master", &arg, "unmute"])
-    .spawn ()
-  {
-    process.wait ().ok ();
-  }
+  run_and_await (&["amixer", "-q", "sset", "Master", &arg, "unmute"]).ok ();
   bar::update ();
 }
 
 pub fn suspend () -> std::io::Result<()> {
-  let _guard = Scoped_Default_SigChld::new ();
-  std::process::Command::new ("systemctl")
-    .arg ("suspend")
-    .spawn ()?
-    .wait ()
-    .ok ();
-  Ok (())
+  run_and_await (&["systemctl", "suspend"]).map (|_| ())
 }
 
 pub fn logout () -> std::io::Result<()> {
-  let _guard = Scoped_Default_SigChld::new ();
-  std::process::Command::new ("loginctl")
-    .arg ("terminate-session")
-    // An empty argument terminates the calling session
-    .arg ("")
-    .spawn ()?
-    .wait ()
-    .ok ();
-  Ok (())
+  // An empty argument terminates the calling session
+  run_and_await (&["loginctl", "terminate-session", ""]).map (|_| ())
 }

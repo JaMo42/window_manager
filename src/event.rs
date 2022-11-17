@@ -1,5 +1,6 @@
 use super::config::*;
 use super::core::*;
+use super::process;
 use super::property::{atom, Net, Normal_Hints};
 use super::*;
 use x::{window::To_XWindow, XFalse, XNone};
@@ -242,7 +243,14 @@ pub unsafe fn key_press (event: &XKeyEvent) {
         f (*workspace_index, maybe_client);
       }
       Action::Launch (cmd) => {
-        run_process (cmd);
+        if let Err (error) = process::run (
+          &cmd
+            .iter ()
+            .map (std::ops::Deref::deref)
+            .collect::<Vec<&str>> (),
+        ) {
+          log::error! ("Failed to run process '{}': {}", cmd.join (" "), error);
+        }
       }
       Action::Generic (f) => {
         f ();
@@ -252,13 +260,9 @@ pub unsafe fn key_press (event: &XKeyEvent) {
 }
 
 pub unsafe fn map_request (event: &XMapRequestEvent) {
-  // TODO: should only check active workspace?
-  for ws in workspaces.iter () {
-    for c in ws.iter () {
-      if c.window == event.window {
-        display.map_window (event.window);
-        return;
-      }
+  if let Some (client) = win2client (event.window) {
+    if client.workspace == active_workspace {
+      client.map ();
     }
   }
   // New client

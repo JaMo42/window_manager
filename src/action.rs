@@ -1,6 +1,7 @@
 use super::client::*;
 use super::core::*;
 use super::geometry::*;
+use super::process;
 use super::property::WM;
 use super::*;
 
@@ -9,7 +10,7 @@ pub unsafe fn quit () {
 }
 
 pub unsafe fn quit_dialog () {
-  run_process ("window_manager_quit");
+  process::run (&["window_manager_quit"]).ok ();
 }
 
 pub unsafe fn close_client (client: &mut Client) {

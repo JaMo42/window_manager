@@ -31,6 +31,7 @@ mod error;
 mod ewmh;
 mod notifications;
 mod platform;
+mod process;
 mod session_manager;
 mod tooltip;
 mod update_thread;
@@ -175,7 +176,7 @@ unsafe fn init () {
   grab_buttons ();
   select_input (0);
   // Ignore SIGCHLD so we don't leave defunct processes behind
-  libc::signal (libc::SIGCHLD, libc::SIG_IGN);
+  process::ignore_sigchld (true);
   run_autostartrc ();
   if cfg! (feature = "bar") {
     bar = Bar::create ();
@@ -456,25 +457,6 @@ unsafe fn list_properties (window: Window) {
   };
   for atom in atoms {
     log::info! ("  {}", display.get_atom_name (*atom));
-  }
-}
-
-fn run_process (command_line: &str) {
-  use std::process::{Command, Stdio};
-  // TODO: properly determine arguments (escaping spaces and ignoring them in strings)
-  let mut parts = command_line.split (' ');
-  let program = parts.next ().unwrap ();
-  let args = parts.collect::<Vec<&str>> ();
-  if Command::new (program)
-    .args (args)
-    .stdout (Stdio::null ())
-    .stderr (Stdio::null ())
-    .spawn ()
-    .is_ok ()
-  {
-    log::trace! ("Launched process: {}", command_line);
-  } else {
-    log::error! ("Failed to run process: {}", command_line);
   }
 }
 

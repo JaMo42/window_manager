@@ -4,6 +4,7 @@ use super::config_parser;
 use super::draw::Alignment;
 use super::paths;
 use super::*;
+use crate::process::split_commandline;
 use crate::x::string_to_keysym;
 use pango::FontDescription;
 use std::collections::{BTreeMap, HashMap};
@@ -41,7 +42,7 @@ impl Key {
 pub enum Action {
   WM (unsafe fn (&mut Client)),
   WS (unsafe fn (usize, Option<&mut Client>), usize, bool),
-  Launch (String),
+  Launch (Vec<String>),
   Generic (unsafe fn ()),
 }
 
@@ -233,7 +234,10 @@ impl Config {
             key_str,
             command
           );
-          self.add (Key::from_str (&key_str, modifier), Action::Launch (command));
+          self.add (
+            Key::from_str (&key_str, modifier),
+            Action::Launch (split_commandline (&command)),
+          );
         }
         Color (element, color_hex) => {
           log::info! ("config: color: {} -> {}", element, color_hex);
