@@ -1,0 +1,41 @@
+[layout]
+workspaces = 4
+gaps = 5
+pad = [46, 10, 10, 10]
+
+[window]
+border = 5
+title_font = "sans 16"
+title_bar_height = "+4"
+right_buttons = ["close"]
+icon_size = 90
+
+[theme]
+colors = "default"
+icons = "Papirus"
+
+[keys]
+mod = "Win"
+
+[keys.bindings]
+'Mod+Q' = "close_window"
+'Mod+Shift+Q' = "quit"
+'Mod+space' = "$ rofi -show run"
+'Mod+Return' = "$ xfce4-terminal"
+'Mod+Up' = "snap_maximized"
+'Mod+Down' = "unsnap_or_center"
+'Mod+Left' = "snap_left"
+'Mod+Right' = "snap_right"
+'Mod+Alt+Up' = "snap_up"
+'Mod+Alt+Down' = "snap_down"
+'Mod+M' = "minimize"
+'Mod+R' = "raise_all"
+'Mod+Print' = "$ scrot ~/Pictures/Screenshots/%Y-%m-%d-%H%M%S-screenshot.jpg"
+'XF86AudioLowerVolume' = "decrease_volume"
+'XF86AudioRaiseVolume' = "increase_volume"
+'XF86AudioMute' = "mute_volume"
+
+[bar]
+font = "sans 18"
+opacity = 80
+height = "36"

@@ -1,10 +1,9 @@
-use super::color;
 use super::color::*;
-use super::config_parser;
 use super::draw::Alignment;
 use super::paths;
 use super::*;
-use crate::process::split_commandline;
+use crate::config_parser::*;
+use crate::error::fatal_error;
 use crate::x::string_to_keysym;
 use pango::FontDescription;
 use std::collections::{BTreeMap, HashMap};
@@ -83,6 +82,7 @@ impl Action {
   }
 }
 
+#[derive(Debug)]
 pub enum Height {
   FontPlus (u32),
   Absolute (u32),
@@ -97,17 +97,17 @@ impl Height {
   }
 }
 
-impl std::fmt::Display for Height {
-  fn fmt (&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-    match *self {
-      Height::FontPlus (n) => {
-        if n == 0 {
-          write! (f, "same as font height")
-        } else {
-          write! (f, "font height + {}", n)
-        }
-      }
-      Height::Absolute (n) => write! (f, "{}", n),
+impl std::str::FromStr for Height {
+  type Err = std::num::ParseIntError;
+
+  fn from_str (s: &str) -> Result<Self, Self::Err> {
+    let has_plus = s.starts_with ('+');
+    let num_s = if has_plus { &s[1..] } else { s };
+    let n = num_s.parse ()?;
+    if has_plus || n == 0 {
+      Ok (Height::FontPlus (n))
+    } else {
+      Ok (Height::Absolute (n))
     }
   }
 }
@@ -145,32 +145,102 @@ pub struct Config {
 }
 
 impl Config {
-  pub fn new () -> Self {
-    Config {
-      modifier: MOD_WIN,
+  fn maybe_load () -> Result<Self, String> {
+    use std::str::FromStr;
+    macro_rules! E {
+      ($result:expr) => {
+        $result.map_err (|e| e.to_string ())?
+      };
+    }
+    let c = E! (parse (unsafe { &paths::config }));
+    let general = c.general.unwrap_or_default ();
+    let layout = c.layout.unwrap_or_default ();
+    let window = c.window.unwrap_or_default ();
+    let theme = c.theme.unwrap_or_default ();
+    let keys = c.keys.unwrap_or_default ();
+    let bar_ = c.bar.unwrap_or_default ();
+
+    let mut this = Config {
+      modifier: keys
+        .r#mod
+        .map (|m| modifiers_from_string (&m))
+        .unwrap_or (MOD_WIN),
       key_binds: HashMap::new (),
-      padding: (0, 0, 0, 0),
-      gap: 0,
-      border_width: 0,
-      workspace_count: 1,
-      meta_window_classes: Vec::new (),
-      colors: Color_Scheme::new_uninit (),
-      bar_font: FontDescription::from_string ("sans 14"),
-      bar_opacity: 100,
-      bar_time_format: "%a %b %e %H:%M %Y".to_string (),
-      bar_power_supply: "BAT0".to_string (),
-      bar_height: Height::FontPlus (5),
-      bar_update_interval: 10000,
-      title_font: FontDescription::from_string ("sans 14"),
-      title_height: Height::FontPlus (1),
-      title_alignment: Alignment::Left,
-      left_buttons: Vec::new (),
-      right_buttons: Vec::new (),
-      button_icon_size: 75,
-      circle_buttons: false,
-      default_notification_timeout: 6000,
-      icon_theme: "Papirus".to_string (),
-      window_icon_size: 0,
+      padding: layout.pad.unwrap_or ((0, 0, 0, 0)),
+      gap: layout.gaps.unwrap_or (0),
+      border_width: window.border.unwrap_or (0),
+      workspace_count: layout.workspaces.unwrap_or (1),
+      meta_window_classes: general.meta_window_classes.unwrap_or (Vec::new ()),
+      colors: if let Some (name) = theme.colors {
+        E! (parse_color_scheme (name))
+      } else {
+        unsafe { Color_Scheme::new (&Color_Scheme_Config::new (), &BTreeMap::new ())? }
+      },
+      bar_font: FontDescription::from_string (&bar_.font.unwrap_or ("sans 14".to_string ())),
+      bar_opacity: bar_.opacity.unwrap_or (100).clamp (0, 100),
+      bar_time_format: bar_
+        .time_format
+        .unwrap_or ("%a %b %e %H:%M %Y".to_string ()),
+      bar_power_supply: bar_.power_supply.unwrap_or ("BAT0".to_string ()),
+      bar_height: E! (Height::from_str (
+        &bar_.height.unwrap_or ("+5".to_string ())
+      )),
+      bar_update_interval: bar_.update_interval.unwrap_or (10000),
+      title_font: FontDescription::from_string (
+        &window.title_font.unwrap_or ("sans 14".to_string ()),
+      ),
+      title_height: E! (Height::from_str (
+        &window.title_bar_height.unwrap_or ("+2".to_string ())
+      )),
+      title_alignment: E! (Alignment::from_str (
+        &window.title_alignment.unwrap_or ("Left".to_string ())
+      )),
+      left_buttons: window.left_buttons.unwrap_or_default (),
+      right_buttons: window.right_buttons.unwrap_or_default (),
+      button_icon_size: window.button_icon_size.unwrap_or (75).clamp (0, 100),
+      circle_buttons: window.circle_buttons.unwrap_or (false),
+      default_notification_timeout: general.default_notification_timeout.unwrap_or (6000) as i32,
+      icon_theme: theme.icons.unwrap_or ("Papirus".to_string ()),
+      window_icon_size: window.icon_size.unwrap_or (0).clamp (0, 100),
+    };
+    if let Some (table) = keys.bindings {
+      let m = this.modifier;
+      parse_key_bindings (&table, &mut this, m);
+    }
+    // Pre-defined key bindings
+    for ws_idx in 0..this.workspace_count {
+      let sym = XK_1 + ws_idx as u32;
+      this.add (
+        Key::from_sym (sym, this.modifier),
+        Action::WS (action::select_workspace, ws_idx, false),
+      );
+      this.add (
+        Key::from_sym (sym, this.modifier | MOD_SHIFT),
+        Action::WS (action::move_to_workspace, ws_idx, true),
+      );
+    }
+    this.add (
+      Key::from_sym (XK_Tab, MOD_ALT),
+      Action::Generic (action::switch_window),
+    );
+    // Set window area
+    unsafe {
+      window_area = Geometry::from_parts (
+        screen_size.x + this.padding.2,
+        screen_size.y + this.padding.0,
+        screen_size.w - (this.padding.2 + this.padding.3) as u32,
+        screen_size.h - (this.padding.0 + this.padding.1) as u32,
+      );
+    }
+    Ok (this)
+  }
+
+  pub fn load () -> Self {
+    match Self::maybe_load () {
+      Ok (this) => this,
+      Err (error) => unsafe {
+        fatal_error (&format! ("Could not load configuration:\n\t{}", error));
+      },
     }
   }
 
@@ -183,174 +253,5 @@ impl Config {
       modifiers: clean_mods! (modifiers),
       code: key_code,
     })
-  }
-
-  pub fn load (&mut self) {
-    // Parse file
-    let source = config_parser::read_file (unsafe { &paths::config }).unwrap ();
-    let parser = config_parser::Parser::new (source.chars ());
-    let mut color_scheme_config = Color_Scheme_Config::new ();
-    let mut color_defs: BTreeMap<String, Color> = BTreeMap::new ();
-    for def in parser {
-      use config_parser::Definition_Type::*;
-      match def {
-        Workspaces (count) => {
-          log::info! ("config: workspace count: {}", count);
-          self.workspace_count = count;
-        }
-        Gaps (size) => {
-          log::info! ("config: gaps: {}", size);
-          self.gap = size;
-        }
-        Padding (t, b, l, r) => {
-          log::info! ("config: padding: {} {} {} {}", t, b, l, r);
-          self.padding = (t, b, l, r);
-        }
-        Border (width) => {
-          log::info! ("config: border width: {}", width);
-          // Needs to be i32 for `XWindowChanges.border_width` but we want to
-          // parse it as unsigned.
-          self.border_width = width as i32;
-        }
-        Meta (title) => {
-          log::info! ("config: meta window: {}", title);
-          self.meta_window_classes.push (title);
-        }
-        Mod (modifier) => {
-          log::info! ("config: user modifier: {}", modifier);
-          self.modifier = modifier;
-        }
-        Bind_Key (modifier, key_str, action_str) => {
-          log::info! ("config: bind: {}+{} -> {}", modifier, key_str, action_str);
-          self.add (
-            Key::from_str (&key_str, modifier),
-            Action::from_str (&action_str),
-          );
-        }
-        Bind_Command (modifier, key_str, command) => {
-          log::info! (
-            "config: bind: {}+{} -> launch: '{}'",
-            modifier,
-            key_str,
-            command
-          );
-          self.add (
-            Key::from_str (&key_str, modifier),
-            Action::Launch (split_commandline (&command)),
-          );
-        }
-        Color (element, color_hex) => {
-          log::info! ("config: color: {} -> {}", element, color_hex);
-          color_scheme_config.set (
-            &element,
-            if color_hex.starts_with ('#') {
-              Color_Config::Hex (color_hex)
-            } else {
-              Color_Config::Link (color_hex)
-            },
-          );
-        }
-        Def_Color (name, color_hex) => {
-          log::info! ("config: color definition: {} -> {}", name, color_hex);
-          color_defs.insert (name, unsafe { color::Color::alloc_from_hex (&color_hex) });
-        }
-        Bar_Font (description) => {
-          log::info! ("config: bar font: {}", description);
-          self.bar_font = FontDescription::from_string (&description);
-        }
-        Bar_Opacity (percent) => {
-          log::info! ("config: bar opacity: {}%", percent);
-          self.bar_opacity = percent;
-        }
-        Bar_Time_Format (format) => {
-          log::info! ("config: bar time format: '{}'", format);
-          self.bar_time_format = format;
-        }
-        Bar_Power_Supply (power_supply) => {
-          log::info! ("config: bar power supply: {}", power_supply);
-          self.bar_power_supply = power_supply;
-        }
-        Bar_Height (height) => {
-          log::info! ("config: bar height: {}", height);
-          self.bar_height = height;
-        }
-        Bar_Update_Interval (interval) => {
-          log::info! ("config: bar update interval: {}", interval);
-          self.bar_update_interval = interval;
-        }
-        Title_Font (description) => {
-          log::info! ("config: title bar font: {}", description);
-          self.title_font = FontDescription::from_string (&description);
-        }
-        Title_Height (height) => {
-          log::info! ("config: title bar height: {}", height);
-          self.title_height = height;
-        }
-        Title_Position (position) => {
-          log::info! ("config: title position: {}", position);
-          self.title_alignment = match position.as_str () {
-            "left" => Alignment::Left,
-            "center" => Alignment::Centered,
-            "right" => Alignment::Right,
-            _ => unreachable! (),
-          }
-        }
-        Left_Buttons (buttons) => {
-          log::info! ("config: left buttons: {}", buttons.join (", "));
-          self.left_buttons = buttons;
-        }
-        Right_Buttons (buttons) => {
-          log::info! ("config: right buttons: {}", buttons.join (", "));
-          self.right_buttons = buttons;
-        }
-        Button_Icon_Size (percent) => {
-          log::info! ("config: button icon size: {}%", percent);
-          self.button_icon_size = percent;
-        }
-        Circle_Buttons => {
-          log::info! ("config: circle buttons");
-          self.circle_buttons = true;
-        }
-        Default_Notification_Timeout (millis) => {
-          log::info! ("config: default notification timeout: {}ms", millis);
-          self.default_notification_timeout = millis;
-        }
-        Icon_Theme (theme) => {
-          log::info! ("config: icon theme: {}", theme);
-          self.icon_theme = theme;
-        }
-        Window_Icon_Size (percent) => {
-          log::info! ("config: window icon size: {}%", percent);
-          self.window_icon_size = percent;
-        }
-      }
-    }
-    // Set color scheme
-    self.colors = unsafe { Color_Scheme::new (&color_scheme_config, &color_defs) };
-    // Pre-defined key bindings
-    for ws_idx in 0..self.workspace_count {
-      let sym = XK_1 + ws_idx as u32;
-      self.add (
-        Key::from_sym (sym, self.modifier),
-        Action::WS (action::select_workspace, ws_idx, false),
-      );
-      self.add (
-        Key::from_sym (sym, self.modifier | MOD_SHIFT),
-        Action::WS (action::move_to_workspace, ws_idx, true),
-      );
-    }
-    self.add (
-      Key::from_sym (XK_Tab, MOD_ALT),
-      Action::Generic (action::switch_window),
-    );
-    // Set window area
-    unsafe {
-      window_area = Geometry::from_parts (
-        screen_size.x + self.padding.2,
-        screen_size.y + self.padding.0,
-        screen_size.w - (self.padding.2 + self.padding.3) as u32,
-        screen_size.h - (self.padding.0 + self.padding.1) as u32,
-      );
-    }
   }
 }

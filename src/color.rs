@@ -70,8 +70,9 @@ impl Color_Scheme_Config {
     }
   }
 
-  pub fn set (&mut self, elem: &str, cfg: Color_Config) {
-    self.cfg[unsafe { color_index (elem) }] = cfg;
+  pub fn set (&mut self, elem: &str, cfg: Color_Config) -> Result<(), String> {
+    self.cfg[unsafe { color_index (elem)? }] = cfg;
+    Ok (())
   }
 }
 
@@ -193,18 +194,22 @@ impl std::ops::IndexMut<usize> for Color_Scheme {
 }
 
 impl Color_Scheme {
-  pub unsafe fn new (cfg: &Color_Scheme_Config, defs: &BTreeMap<String, Color>) -> Self {
+  pub unsafe fn new (
+    cfg: &Color_Scheme_Config,
+    defs: &BTreeMap<String, Color>,
+  ) -> Result<Self, String> {
     let mut result: Color_Scheme = uninitialized! ();
     let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
     let mut links = Vec::<(usize, usize)>::new ();
     for i in 0..COLOR_COUNT {
       match &cfg.cfg[i] {
         Color_Config::Default => {
+          log::trace! ("Hello");
           if DEFAULT_CONFIG[i].starts_with ('#') {
             result[i] = Color::alloc_from_hex (DEFAULT_CONFIG[i]);
             set[i] = true;
           } else {
-            links.push ((i, color_index (DEFAULT_CONFIG[i])));
+            links.push ((i, color_index (DEFAULT_CONFIG[i])?));
           }
         }
         Color_Config::Hex (string) => {
@@ -216,7 +221,7 @@ impl Color_Scheme {
             result[i] = *def;
             set[i] = true;
           } else {
-            links.push ((i, color_index (target.as_str ())));
+            links.push ((i, color_index (target.as_str ())?));
           }
         }
       }
@@ -234,25 +239,20 @@ impl Color_Scheme {
         }
       }
     }
+
     if !links.is_empty () {
-      log::error! ("Unresolved links: {:?}", links);
-      my_panic! ("unresolved links");
+      Err ("Unresolved links in color scheme: {}".to_string ())
+    } else {
+      Ok (result)
     }
-
-    result
-  }
-
-  pub fn new_uninit () -> Self {
-    unsafe { uninitialized! () }
   }
 }
 
-unsafe fn color_index (name: &str) -> usize {
+unsafe fn color_index (name: &str) -> Result<usize, String> {
   for (i, color) in COLOR_NAMES.iter ().enumerate () {
     if *color == name {
-      return i;
+      return Ok (i);
     }
   }
-  log::error! ("Invalid color name: {}", name);
-  my_panic! ("invalid color name");
+  Err (format! ("Invalid color name: {}", name))
 }

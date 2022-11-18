@@ -1,0 +1,34 @@
+# TODO: use this
+# It's in this commit because I don't want to delete it again
+
+[Palette]
+DarkText = "#030405"
+LightText = "#E7E8E9"
+Accent = "#428BCA"
+ButtonNormal = "#030405"
+
+[Misc]
+Background = "#111111"
+
+[Window]
+Focused = "Accent"
+FocusedText = "DarkText"
+Normal = "#777777"
+NormalText = "DarkText"
+Selected = "#5CB85C"
+SelectedText = "DarkText"
+Urgent = "#D9534F"
+UrgentText = "FocusedText"
+CloseButton = "ButtonNormal"
+CloseButtonHovered = "#FF3B30"
+MaximizeButton = "ButtonNormal"
+MaximizeButtonHovered = "#28CD41"
+MinimizeButton = "ButtonNormal"
+MinimizeButtonHovered = "#FFCC00"
+
+[Bar]
+Background = "#161514"
+Text = "LightText"
+
+[Notifications]
+Background = "#1F1F1F"

@@ -1,178 +1,98 @@
 # Configuration
 
-The configuration file uses a simple format where each non-blank line contains either a comment or a definition.
+The main configuration is a TOML file in the configuration directory called `config.toml`.
 
-Comment lines start with a `#` and are ignored.
+### `general` Section
 
-## File inclusion
+Key | Description | Default
+---|---|---
+`meta_window_classes` | Classes to use as meta windows; these windows are visible from each workspace, are undecorated, and cannot be interacted with. Additionally, windows with the title `window_manager_bar` are also meta windows. | `[]`
+`default_notification_timeout` | Default time desktop notifications are displayed for if no time is specified, if set to `0` notifications never expire. | `6000`
 
-```
-%include <filename>
+### `layout` section
+
+Key | Description | Default
+---|---|---
+`workspaces` | Number of workspaces. | `1`
+`gaps` | Width of inner gaps for snapped windows. | `0`
+`pad` | Padding from screen edges for snapped windows, values are [Top, Bottom, Left, Right]. | `[0, 0, 0, 0]`
+
+### `window` section
+
+Key | Description | Default
+---|---|---
+`border` | Width of window borders. This value sets the width on the left, right, and bottom. | `0`
+`title_font` | Font used for window titles. | `sans 14`
+`title_bar_height` | Height for the title bar of each window (top border) | `+2`
+`title_alignment` | Window title alignment, `Left`, `Center`, or `Right`. | `Left`
+`right_buttons` | Left [window buttons](#window-buttons), | `[]`
+`left_buttons` | Right [window buttons](#window-buttons). | `[]`
+`icon_size` | Percent size of window icons relative to the title bar, if the percentage is `0` window icons are disabled. | `0`
+`circle_buttons` | Enable circle buttons. | `false`
+`button_icon_size` | Percent size of button icons relative to the title bar height. | `75`
+
+### `theme` section
+
+Key | Description | Default
+---|---|---
+`colors` | [Color scheme](#color-schemes) name | `default`
+`icons` | Icon theme name, must be the name of a directory in `/usr/share/icons` which must have `48x48` subfolder. Both the theme folder and the `48x48` folder mat be symbolic links. | `Papirus`
+
+### `keys`
+
+Key | Description | Default
+---|---|---
+`mod` | User-defined modifier. This is used for mouse key bindings as well as the `Mod` modifier in key bindings. | `Win`
+
+### `keys.bindings`
+
+This is a table where each key is a `+`-separated list of modifiers and a key which is set to the action given in the value.
+The modifiers and key list may contain spaces.
+If the actions starts with a `$`, the rest of the value is used a command to run when the key is pressed.
+The commandline for command-actions may contain strings which are delimited by double or single quotes, a `\` escapes the character after it (only has an effect on other blackslashes, spaces, and string delimiters).
+
+Examples:
+
+```toml
+[keys.bindings]
+'Win+Q' = "close_window"
+'Win+Shift+Q' = "quit"
+'Win+Return' = "$ xterm"
+
+# Escaping examples:
+key = "$ command one\\ argument\\ with\\ spaces"
+#                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Results in: `one argument with spaces`
+key = "$ command 'one argument as a string'"
+#                 ~~~~~~~~~~~~~~~~~~~~~~~~
+# Results in: `one argument as a string`
+key = "$ command \"one argument containing \\\"another string\\\"\""
+#                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Results in: `one argument containing "another string"`
 ```
 
-Replaces the include line with the content of the file `<filename>`.
-The filename is relative to the main config file.
-
-Note: these are expanded before parsing so line numbers in the error message are invalid, this will be addressed when proper error reporting is added.
-
-## Definitions
-
-```
-workspaces <N>
-```
-Sets the number of workspaces.
-
-```
-gaps <N>
-```
-Sets the width of inner gaps for snapped windows.
-
-```
-pad <Top> <Bottom> <Left> <Right>
-```
-Sets the padding from the respective side of the desktop for snapped windows (useful for status bars).
-
-```
-border <N>
-```
-Sets the width of window borders. This value sets the width on the left, right, and bottom.
-
-```
-meta <Class>
-```
-Specifies windows with class `<Class>` to be meta-windows, these windows are visible from each workspace, are undecorated, and cannot be interacted with.
-Additionally, windows with the title `window_manager_bar` are also meta windows.
-
-```
-mod <Mod>
-```
-Specifies `<Mod>` to be the user-defined modifier. This is used for mouse key bindings as well as the `Mod` modifier in `bind` definitions (has to be defined before).
-If this is absent from the config file, the Windows key is used.
-
-Warning: You *can* set this to `Shift` but it will break window moving as the pre-defined key for snap-moving just adds `Shift` to the user-modifier.
-
-```
-bind [<Mod>+...]<Key> <Action>
-bind [<Mod>+...]<Key> $ <Command>
-```
-Bind the given key with the given [modifiers](#modifiers) (i.e. `Win+Up` or `Win+Shift+Q`) to either the given [`<Action>`](#actions), or command.
-In the `<Command>` case, everything after the `$` is the process to launch.
+The underlined sections are each a single argument to the command, notice the double-escaping as TOML strings already have their own escaping.
 
 The key names must adhere to the requirements of `XStringToKeysym`, that is:
+
 ```
 Standard KeySym names are obtained from <X11/keysymdef.h> by removing the XK_ prefix from each name.
 KeySyms that are not part of the Xlib standard also may be obtained with this function.
 The set of KeySyms that are available in this manner and the mechanisms by which Xlib obtains them is implementation-dependent.
 ```
 
-```
-color <Element> #RGB
-color <Element> #RRGGBB
-color <Element> #RRRRGGGGBBBB
-```
-Set the [`<Element>`](#color-elements) to the hex-color.
+This does not include the modifiers, which must be one of `Shift`, `Ctrl`, `Win`, `Alt`, and `Mod` (the user-defined modifier).
 
-```
-color <Element1> <Element2>
-```
-Set the [`<Element1>`](#color-elements) to the same color as `<Element2>`.
-Can be used before `Element2` is defined.
+### `bar`
 
-```
-def_color <Name> #RGB
-def_color <Name> #RRGGBB
-def_color <Name> #RRRRGGGGBBBB
-```
-Define a named color that can be used to set other colors. These cannot contain links.
-
-```
-bar_font <font>
-```
-Set the font of the status bar.
-`<font>` is a pango font description, example: `Noto Sans 16` or `sans bold 18`.
-
-```
-bar_opacity <percentage>
-```
-Set the status bar opacity, `percentage` is a number between 0 and 100.
-
-```
-bar_time_format <format>
-```
-Set the format string for the time widget (man strftime).
-
-```
-bar_power_supply <power supply>
-```
-Set the power supply to use for the battery widget. This should be the name of
-a folder in `/sys/class/power_supply`, if it does not exist the widget is disabled.
-The default value is `BAT0`.
-
-```
-bar_height <height>
-```
-Set the height of the status bar; see [Height values](#height-values).
-
-```
-bar_update_interval <interval>
-```
-Set the interval in milliseconds in which the bar is automatically updated.
-Use `0` to disable automatic updates (it will still get updated by various events).
-The default is to update every 10 seconds.
-
-```
-window_title_font <font>
-```
-Set the font used for window titles.
-
-```
-window_title_height <height>
-```
-Set the height for the title bar of each window (top border); see [Height values](#height-values).
-
-```
-window_title_position left|center|right
-```
-Set the window title alignment.
-
-```
-left_buttons [buttons...]
-```
-Set the left [window buttons](#window-buttons) (not that by default the window title is on the left).
-
-```
-right_buttons [buttons...]
-```
-Set the right [window buttons](#window-buttons).
-
-```
-button_icon_size <percentage>
-```
-Set the relative size of window button icons; the buttons themselves are always the same height as the title bar.
-
-```
-circle_buttons
-```
-Enable circle buttons.
-
-```
-default_notification_timeout <milliseconds>
-```
-Specifies the default time desktop notifications are displayed if no time is specified.
-If not set it defaults to 6 seconds, if set to `0` notifications never expire.
-
-```
-window_icon_size <percentage>
-```
-Set the relative size of window icons, if the percentage is `0%` window icons are disabled.
-The default value is `0%`.
-
-```
-icon_theme <theme>
-```
-Set the icon theme. The given theme must be the name of a folder in `/usr/share/icons` which must have `48x48` subfolder.
-Both the theme folder and the `48x48` folder mat be symbolic links.
-The default value is `Papirus`.
+Key | Description | Default
+---|---|---
+`font` | Font used for the status bar | `sans 14`
+`opacity` | Percentage opacity of the bar. Note that the window manager does not have its own compositor so this only works if one like `picom` is running. | `100`
+`height` | Height of the bar | `+5`
+`time_format` | Format for the date-time widget, uses strftime format. | `%a %b %e %H:%M %Y`
+`power_supply` | Power supply used by the battery widget. This should be the name of a folder in `/sys/class/power_supply`. If the given value does not exist the widget is disabled. | `BAT0`
+`update_interval` | Interval in milliseconds in which the bar is automatically updated. Use `0` to disable automatic updates (it will still get updated by various events). | `10000`
 
 ## Modifiers
 
@@ -182,9 +102,9 @@ The default value is `Papirus`.
 
 - `Shift` Shift
 
-- `Ctrl` Ctrl
+- `Ctrl` Control
 
-- `Mod` The user-modifier
+- `Mod` The user-defined modifier
 
 ## Actions
 
@@ -222,7 +142,7 @@ These are wrappers around the `amixer` command, they all affect the `Master` dev
 
 ## Height values
 
-A height value can be either `<number>` or `+<number>`, the former specifying a absolute value and the letter a value that's added on the font-size of the element.
+A height value can be either `"<number>"` or `"+<number>"`, the former specifying a absolute value and the letter a value that's added on the font-size of the element.
 If the number for the absolute value is 0, the height of the font is used.
 
 ## Window buttons
@@ -232,6 +152,24 @@ If the number for the absolute value is 0, the height of the font is used.
 - `maximize` Toggles between maximized and un-snapped
 
 - `minimize` Minimizes the window
+
+## Color schemes
+
+Color schemes are located at `colors/name` relative to the configuration directory.
+
+They consist of a simple format where every line either sets of defines a color:
+
+```
+# This is a comment
+
+# This defines a named color which can be used when setting a color:
+def_color Name #123456
+
+# This sets the color of an element:
+color Element #123456
+# or with a named color:
+color Element Name
+```
 
 ## Color elements
 

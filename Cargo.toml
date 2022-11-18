@@ -27,6 +27,8 @@ clap = { version = "4.0.23", features = ["derive"] }
 system_shutdown = "3.0.0"
 gio = "0.16.3"
 glib = "0.16.3"
+toml = "0.5.9"
+serde = "1.0.147"
 
 [features]
 default = ["bar"]

@@ -52,6 +52,7 @@ mod paths {
   pub static mut autostartrc: String = String::new ();
   pub static mut logfile: String = String::new ();
   pub static mut resource_dir: String = String::new ();
+  pub static mut colors_dir: String = String::new ();
 
   pub unsafe fn load () {
     let config_dir = if let Ok (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME") {
@@ -65,10 +66,11 @@ mod paths {
     if std::fs::create_dir_all (&config_dir).is_err () {
       my_panic! ("Could not create configuration directory: {}", config_dir);
     }
-    config = format! ("{}/config", config_dir);
+    config = format! ("{}/config.toml", config_dir);
     autostartrc = format! ("{}/autostartrc", config_dir);
     logfile = format! ("{}/log.txt", config_dir);
     resource_dir = format! ("{}/res", config_dir);
+    colors_dir = format! ("{}/colors", config_dir);
   }
 }
 
@@ -498,8 +500,7 @@ fn main () {
     connect ();
     log::info! ("Display size: {}x{}", screen_size.w, screen_size.h);
     log::trace! ("Loading configuration");
-    let mut config_instance = Config::new ();
-    config_instance.load ();
+    let config_instance = Config::load ();
     config = &config_instance;
     let mut drawing_context_instance = Drawing_Context::new ();
     draw = &mut drawing_context_instance;
