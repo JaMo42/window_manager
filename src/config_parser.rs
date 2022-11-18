@@ -4,12 +4,11 @@ use super::core::*;
 use super::error::message_box;
 use super::paths;
 use super::process::split_commandline;
+use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fs::read_to_string;
 use std::os::raw::c_uint;
 use toml::value::Table;
-
-use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct Parsed_Config {
@@ -73,7 +72,7 @@ pub fn parse (pathname: &str) -> Result<Parsed_Config, toml::de::Error> {
   if let Ok (content) = read_to_string (pathname) {
     toml::from_str (&content)
   } else {
-    let default_config = "[keys.bindings]\n'Mod+Shift+Q' = \"quit\"\n'Mod+Return' = \"$xterm\"";
+    let default_config = "[keys.bindings]\n'Mod+Shift+Q' = \"quit\"\n'Mod+Return' = \"$ xterm\"";
     message_box (
       "Config file not found",
       "Win+Shift+Q has been bound to quit.\nWin+Return launches xterm.",
@@ -86,10 +85,10 @@ pub fn parse_key_bindings (table: &Table, cfg: &mut Config, m: u32) {
   for (key, action) in table.iter () {
     let (mods, key) = mods_and_key_from_string (key, m);
     let action = action.as_str ().unwrap ();
-    if action.starts_with ('$') {
+    if let Some (commandline) = action.strip_prefix ('$') {
       cfg.add (
         Key::from_str (&key, mods),
-        Action::Launch (split_commandline (&action[1..])),
+        Action::Launch (split_commandline (commandline)),
       );
     } else {
       cfg.add (Key::from_str (&key, mods), Action::from_str (action));
@@ -115,18 +114,18 @@ pub fn parse_color_scheme (name: String) -> Result<Color_Scheme, String> {
       continue;
     }
     let mut line = l2.split (' ');
-    let op = E! (line.next ().ok_or ("Missing operation".to_string ()));
-    let elem = E! (line.next ().ok_or ("Missing element".to_string ()));
+    let op = E! (line.next ().ok_or ("Missing operation"));
+    let elem = E! (line.next ().ok_or ("Missing element"));
     let color = E! (line
       .next ()
-      .ok_or ("Missing color or link name".to_string ()));
+      .ok_or_else (|| "Missing color or link name".to_string ()));
     match op {
       "def_color" => {
-        color_defs.insert (elem.to_string (), unsafe { Color::alloc_from_hex (&color) });
+        color_defs.insert (elem.to_string (), unsafe { Color::alloc_from_hex (color) });
       }
       "color" => {
         color_scheme_config.set (
-          &elem,
+          elem,
           if color.starts_with ('#') {
             Color_Config::Hex (color.to_string ())
           } else {
@@ -153,7 +152,7 @@ fn str2mod (s: &str, m: c_uint) -> c_uint {
   }
 }
 
-pub fn modifiers_from_string (s: &String) -> c_uint {
+pub fn modifiers_from_string (s: &str) -> c_uint {
   let mut mods = 0;
   for mod_str in s.split ('+') {
     mods |= str2mod (mod_str, 0);
@@ -161,7 +160,7 @@ pub fn modifiers_from_string (s: &String) -> c_uint {
   mods
 }
 
-fn mods_and_key_from_string (s: &String, user_mod: c_uint) -> (c_uint, String) {
+fn mods_and_key_from_string (s: &str, user_mod: c_uint) -> (c_uint, String) {
   let mut mods = 0;
   let mut key = String::new ();
   let mut it = s.split ('+').peekable ();

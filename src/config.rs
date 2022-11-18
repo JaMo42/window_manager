@@ -170,37 +170,43 @@ impl Config {
       gap: layout.gaps.unwrap_or (0),
       border_width: window.border.unwrap_or (0),
       workspace_count: layout.workspaces.unwrap_or (1),
-      meta_window_classes: general.meta_window_classes.unwrap_or (Vec::new ()),
+      meta_window_classes: general.meta_window_classes.unwrap_or_default (),
       colors: if let Some (name) = theme.colors {
         E! (parse_color_scheme (name))
       } else {
         unsafe { Color_Scheme::new (&Color_Scheme_Config::new (), &BTreeMap::new ())? }
       },
-      bar_font: FontDescription::from_string (&bar_.font.unwrap_or ("sans 14".to_string ())),
+      bar_font: FontDescription::from_string (
+        &bar_.font.unwrap_or_else (|| "sans 14".to_string ()),
+      ),
       bar_opacity: bar_.opacity.unwrap_or (100).clamp (0, 100),
       bar_time_format: bar_
         .time_format
-        .unwrap_or ("%a %b %e %H:%M %Y".to_string ()),
-      bar_power_supply: bar_.power_supply.unwrap_or ("BAT0".to_string ()),
+        .unwrap_or_else (|| "%a %b %e %H:%M %Y".to_string ()),
+      bar_power_supply: bar_.power_supply.unwrap_or_else (|| "BAT0".to_string ()),
       bar_height: E! (Height::from_str (
-        &bar_.height.unwrap_or ("+5".to_string ())
+        &bar_.height.unwrap_or_else (|| "+5".to_string ())
       )),
       bar_update_interval: bar_.update_interval.unwrap_or (10000),
       title_font: FontDescription::from_string (
-        &window.title_font.unwrap_or ("sans 14".to_string ()),
+        &window.title_font.unwrap_or_else (|| "sans 14".to_string ()),
       ),
       title_height: E! (Height::from_str (
-        &window.title_bar_height.unwrap_or ("+2".to_string ())
+        &window
+          .title_bar_height
+          .unwrap_or_else (|| "+2".to_string ())
       )),
       title_alignment: E! (Alignment::from_str (
-        &window.title_alignment.unwrap_or ("Left".to_string ())
+        &window
+          .title_alignment
+          .unwrap_or_else (|| "Left".to_string ())
       )),
       left_buttons: window.left_buttons.unwrap_or_default (),
       right_buttons: window.right_buttons.unwrap_or_default (),
       button_icon_size: window.button_icon_size.unwrap_or (75).clamp (0, 100),
       circle_buttons: window.circle_buttons.unwrap_or (false),
       default_notification_timeout: general.default_notification_timeout.unwrap_or (6000) as i32,
-      icon_theme: theme.icons.unwrap_or ("Papirus".to_string ()),
+      icon_theme: theme.icons.unwrap_or_else (|| "Papirus".to_string ()),
       window_icon_size: window.icon_size.unwrap_or (0).clamp (0, 100),
     };
     if let Some (table) = keys.bindings {

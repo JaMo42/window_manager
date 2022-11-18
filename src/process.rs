@@ -71,10 +71,7 @@ pub fn split_commandline (commandline: &str) -> Vec<String> {
 }
 
 pub fn run (cmd: &[&str]) -> Result<()> {
-  Command::new (cmd[0])
-    .args (&cmd[1..])
-    .spawn ()
-    .and_then (|_| Ok (()))
+  Command::new (cmd[0]).args (&cmd[1..]).spawn ().map (|_| ())
 }
 
 pub fn run_and_await (cmd: &[&str]) -> Result<ExitStatus> {
