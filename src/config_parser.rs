@@ -129,7 +129,6 @@ fn parse_color_scheme_walk (
         .as_str ()
         .ok_or_else (|| "Color values must be strings".to_string ())?
         .to_owned ();
-      log::trace! ("{} = {}", elem, color_or_link);
       cfg.set (
         &elem,
         if color_or_link.starts_with ('#') {

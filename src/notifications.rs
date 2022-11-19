@@ -149,7 +149,6 @@ impl Notification {
       } else {
         get_icon (&self.icon)
       } {
-        log::trace! ("Drawing notification icon");
         (*draw).draw_svg (
           icon.as_mut (),
           BORDER as i32,
