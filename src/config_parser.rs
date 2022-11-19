@@ -96,9 +96,55 @@ pub fn parse_key_bindings (table: &Table, cfg: &mut Config, m: u32) {
   }
 }
 
+fn parse_color_scheme_defs (
+  palette: &Table,
+  defs: &mut BTreeMap<String, Color>,
+) -> Result<(), String> {
+  for (name, color) in palette.iter () {
+    defs.insert (name.to_owned (), unsafe {
+      Color::alloc_from_hex (
+        color
+          .as_str ()
+          .ok_or_else (|| "Color values must be strings".to_string ())?,
+      )
+    });
+  }
+  Ok (())
+}
+
+fn parse_color_scheme_walk (
+  table: &Table,
+  path: &mut Vec<String>,
+  cfg: &mut Color_Scheme_Config,
+) -> Result<(), String> {
+  for (key, value) in table.iter () {
+    if key == "palette" {
+      continue;
+    } else if value.is_table () {
+      path.push (key.clone ());
+      parse_color_scheme_walk (value.as_table ().unwrap (), path, cfg)?;
+    } else {
+      let elem = format! ("{}.{}", path.join ("."), key);
+      let color_or_link = value
+        .as_str ()
+        .ok_or_else (|| "Color values must be strings".to_string ())?
+        .to_owned ();
+      log::trace! ("{} = {}", elem, color_or_link);
+      cfg.set (
+        &elem,
+        if color_or_link.starts_with ('#') {
+          Color_Config::Hex (color_or_link)
+        } else {
+          Color_Config::Link (color_or_link)
+        },
+      )?;
+    }
+  }
+  path.pop ();
+  Ok (())
+}
+
 pub fn parse_color_scheme (name: String) -> Result<Color_Scheme, String> {
-  use std::fs::File;
-  use std::io::{BufRead, BufReader};
   macro_rules! E {
     ($result:expr) => {
       $result.map_err (|e| e.to_string ())?
@@ -106,38 +152,21 @@ pub fn parse_color_scheme (name: String) -> Result<Color_Scheme, String> {
   }
   let mut color_scheme_config = Color_Scheme_Config::new ();
   let mut color_defs: BTreeMap<String, Color> = BTreeMap::new ();
-  let pathname = format! ("{}/{}", unsafe { &paths::colors_dir }, name);
-  let file = E! (File::open (pathname));
-  for l1 in BufReader::new (file).lines () {
-    let l2 = E! (l1);
-    if l2.is_empty () || l2.starts_with ('#') {
-      continue;
-    }
-    let mut line = l2.split (' ');
-    let op = E! (line.next ().ok_or ("Missing operation"));
-    let elem = E! (line.next ().ok_or ("Missing element"));
-    let color = E! (line
-      .next ()
-      .ok_or_else (|| "Missing color or link name".to_string ()));
-    match op {
-      "def_color" => {
-        color_defs.insert (elem.to_string (), unsafe { Color::alloc_from_hex (color) });
-      }
-      "color" => {
-        color_scheme_config.set (
-          elem,
-          if color.starts_with ('#') {
-            Color_Config::Hex (color.to_string ())
-          } else {
-            Color_Config::Link (color.to_string ())
-          },
-        )?;
-      }
-      _ => {
-        return Err ("Invalid operation".to_string ());
-      }
-    }
+  let scheme = {
+    let pathname = format! ("{}/{}.toml", unsafe { &paths::colors_dir }, name);
+    let content = E! (read_to_string (&pathname));
+    E! (toml::from_str::<Table> (&content))
+  };
+  if let Some (palette) = scheme.get ("palette") {
+    parse_color_scheme_defs (
+      palette
+        .as_table ()
+        .ok_or_else (|| "Palette must be a table".to_string ())?,
+      &mut color_defs,
+    )?;
   }
+  let mut path = Vec::new ();
+  parse_color_scheme_walk (&scheme, &mut path, &mut color_scheme_config)?;
   unsafe { Color_Scheme::new (&color_scheme_config, &color_defs) }
 }
 

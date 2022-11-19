@@ -106,31 +106,31 @@ pub struct Color_Scheme {
 }
 const COLOR_COUNT: usize = size_of::<Color_Scheme> () / size_of::<Color> ();
 const COLOR_NAMES: [&str; COLOR_COUNT] = [
-  "Focused",
-  "FocusedText",
-  "Normal",
-  "NormalText",
-  "Selected",
-  "SelectedText",
-  "Urgent",
-  "UrgentText",
-  "CloseButton",
-  "CloseButtonHovered",
-  "MaximizeButton",
-  "MaximizeButtonHovered",
-  "MinimizeButton",
-  "MinimizeButtonHovered",
-  "Background",
-  "Bar::Background",
-  "Bar::Text",
-  "Bar::Workspace",
-  "Bar::WorkspaceText",
-  "Bar::ActiveWorkspace",
-  "Bar::ActiveWorkspaceText",
-  "Bar::UrgentWorkspace",
-  "Bar::UrgentWorkspaceText",
-  "NotificationBackground",
-  "NotificationText",
+  "window.focused",
+  "window.focused_text",
+  "window.normal",
+  "window.normal_text",
+  "window.selected",
+  "window.selected_text",
+  "window.urgent",
+  "window.urgent_text",
+  "window.close_button",
+  "window.close_button_hovered",
+  "window.maximize_button",
+  "window.maximize_button_hovered",
+  "window.minimize_button",
+  "window.minimize_button_hovered",
+  "misc.background",
+  "bar.background",
+  "bar.text",
+  "bar.workspace",
+  "bar.workspace_text",
+  "bar.active_workspace",
+  "bar.active_workspace_text",
+  "bar.urgent_workspace",
+  "bar.urgent_workspace_text",
+  "notifications.background",
+  "notifications.text",
 ];
 const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   // Window borders
@@ -151,10 +151,10 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   "#000000",
   "#cc0000",
   // Maximize
-  "CloseButton",
+  "window.close_button",
   "#00cc00",
   // Minimize
-  "CloseButton",
+  "window.close_button",
   "#cccc00",
   // Background
   "#000000",
@@ -164,17 +164,17 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   // Text
   "#eeeeee",
   // Workspaces
-  "Bar::Background",
-  "Bar::Text",
+  "bar.background",
+  "bar.text",
   // Active workspace
-  "Focused",
-  "FocusedText",
+  "window.focused",
+  "window.focused_text",
   // Workspace with urgent client
-  "Urgent",
-  "UrgentText",
+  "window.urgent",
+  "window.urgent_text",
   // Notifications
-  "Bar::Background",
-  "Bar::Text",
+  "bar.background",
+  "bar.text",
 ];
 
 impl std::ops::Index<usize> for Color_Scheme {
