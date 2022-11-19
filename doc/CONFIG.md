@@ -153,56 +153,87 @@ If the number for the absolute value is 0, the height of the font is used.
 
 - `minimize` Minimizes the window
 
+---
+
 ## Color schemes
 
-Color schemes are located at `colors/name` relative to the configuration directory.
+Color schemes are located at `colors/<name>.toml` relative to the configuration directory.
 
-They consist of a simple format where every line either sets of defines a color:
+Colors can be set either to a color in the format `#RRGGBB` or the value of another color.
 
+Example:
+
+```toml
+[palette]
+named_color = "#123456"
+
+[window]
+focused = "#456789"
+urgent = "window.buttons.close"
+#        Links to non-palette elements use dotted paths of the values
+[window.buttons]
+close = "#EE0000"
+
+[bar]
+background = "named_color"
+#            Links to palette colors just use their name
 ```
-# This is a comment
 
-# This defines a named color which can be used when setting a color:
-def_color Name #123456
+### `[palette]` section
 
-# This sets the color of an element:
-color Element #123456
-# or with a named color:
-color Element Name
-```
+This section lets you defined named colors, each key is the name of a color which is set to its value.
 
-## Color elements
+### `[misc]` section
 
-| **Element** | **Description**
-| --- | ---
-| Focused | Border of the focused window
-| FocusedText | Text on the border of the focused window
-| Normal | As `Focused` but for normal windows
-| NormalText |
-| Selected | As `Focused` but for the selected window during window switching
-| SelectedText |
-| Urgent | As `Focused` but for windows that demand attention
-| UrgentText |
-| CloseButton | Default color of the close button
-| CloseButtonHovered | Color of the close button when the mouse is above it
-| MaximizeButton | As `CloseButton` but for the maximize button
-| MaximizeButtonHovered |
-| MinimizeButton | As `CloseButton` but for the minimize button
-| MinimizeButtonHovered |
-| Background | Color of the root window
-| **Colors for the builtin bar** |
-| Bar::Background | Background color
-| Bar::Text | Color of battery and clock widget
-| Bar::Workspace | Color for normal workspace indicators
-| Bar::WorkspaceText | Text color for normal workspace indicators
-| Bar::ActiveWorkspace | As `Bar::Workspace` but for the active workspace
-| Bar::ActiveWorkspaceText |
-| Bar::UrgentWorkspace | as `Bar::Workspace` but for workspaces that contain windows  that demand attention
-| Bar::UrgentWorkspaceText |
-| NotificationBackground | Background color for desktop notifications
-| NotificationText | Text color for desktop notifications
+Element | Description | Default
+---|---|---
+background | Color of the root window, note that if using a compositor like picom this may not be visible. | `#`
+
+### `[window]` section
+
+Element | Description | Default
+---|---|---
+focused | Border color of the focused window | `#EEEEEE`
+focused_text | Text color on the border of the focused window | `#111111`
+normal | As `focused` but for normal windows | `#111111`
+normal_text | | `#EEEEEE`
+selected | As `focused` but the selected window during window switching | `#777777`
+selected_text | | `#111111`
+urgent | As `focused` but for windows that demand attention | `#CC1111`
+urgent_text | | `#111111`
+
+### `[window.buttons]` section
+
+Element | Description | Default
+---|---|---
+close | Normal color of the close button | `#444444`
+close_hovered | Color of the close button when the mouse is above it | `#CC0000`
+maximize | As `close` but for the maximize button | `window.buttons.close`
+maximize_hovered | | `#00CC00`
+minimize | As `minimize` but for the minimize button | `window.buttons.close`
+minimize_hovered | | `#CCCC00`
+
+### `[bar]` section
+
+Element | Description | Default
+---|---|---
+background | Background color | `#111111`
+text | Text and icon color | `#EEEEEE`
+workspace | Color for normal workspace indicators | `bar.background`
+workspace_text | Text color for normal workspace indicators | `bar.text`
+active_workspace | As `workspace` but for the active workspace | `window.focused`
+active_workspace_text | | `window.focused_text`
+urgent_workspace | As `workspace` but for workspaces containing windows that demand attention | `window.urgent`
+urgent_workspace_text | | `window.urgent_text`
+
+### `[notifications]` section
+
+Element | Description | Default
+---|---|---
+background | Background color | `bar.background`
+text | Text color | `bar.text`
 
 ### Circle buttons
 
-If circle buttons are enabled, `<Button>` becomes the circle color for normal windows and `<Button>Hovered` becomes the circle color for focused windows.
-The color of the actual icon gets derived from the `<Button>Hovered` color.
+If circle buttons are enabled, `<button>` becomes the circle color for normal windows and `<button>_hovered` becomes the circle color for focused windows.
+The color of the actual icon gets derived from the `<button>_hovered` color.
