@@ -114,12 +114,12 @@ const COLOR_NAMES: [&str; COLOR_COUNT] = [
   "window.selected_text",
   "window.urgent",
   "window.urgent_text",
-  "window.close_button",
-  "window.close_button_hovered",
-  "window.maximize_button",
-  "window.maximize_button_hovered",
-  "window.minimize_button",
-  "window.minimize_button_hovered",
+  "window.buttons.close",
+  "window.buttons.close_hovered",
+  "window.buttons.maximize",
+  "window.buttons.maximize_hovered",
+  "window.buttons.minimize",
+  "window.buttons.minimize_hovered",
   "misc.background",
   "bar.background",
   "bar.text",
@@ -151,10 +151,10 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   "#000000",
   "#cc0000",
   // Maximize
-  "window.close_button",
+  "window.buttons.close",
   "#00cc00",
   // Minimize
-  "window.close_button",
+  "window.buttons.close",
   "#cccc00",
   // Background
   "#000000",
@@ -204,7 +204,6 @@ impl Color_Scheme {
     for i in 0..COLOR_COUNT {
       match &cfg.cfg[i] {
         Color_Config::Default => {
-          log::trace! ("Hello");
           if DEFAULT_CONFIG[i].starts_with ('#') {
             result[i] = Color::alloc_from_hex (DEFAULT_CONFIG[i]);
             set[i] = true;
