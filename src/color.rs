@@ -135,34 +135,34 @@ const COLOR_NAMES: [&str; COLOR_COUNT] = [
 const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   // Window borders
   // Focused
-  "#005577",
-  "#000000",
+  "#EEEEEE",
+  "#111111",
   // Normal
-  "#444444",
-  "#eeeeee",
+  "#111111",
+  "#EEEEEE",
   // Selected
-  "#007755",
-  "#000000",
+  "#777777",
+  "#111111",
   // Urgent
-  "#770000",
-  "#000000",
+  "#CC1111",
+  "#111111",
   // Buttons
   // Close
-  "#000000",
-  "#cc0000",
+  "#444444",
+  "#CC0000",
   // Maximize
   "window.buttons.close",
-  "#00cc00",
+  "#00CC00",
   // Minimize
   "window.buttons.close",
-  "#cccc00",
+  "#CCCC00",
   // Background
   "#000000",
   // Bar
   // Background
   "#111111",
   // Text
-  "#eeeeee",
+  "#EEEEEE",
   // Workspaces
   "bar.background",
   "bar.text",
