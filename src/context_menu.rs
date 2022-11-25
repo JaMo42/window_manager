@@ -3,6 +3,7 @@ use super::ewmh;
 use super::geometry::Geometry;
 use super::property::Net;
 use super::set_window_kind;
+use crate::draw::Alignment;
 use crate::draw::Svg_Resource;
 use crate::x::{lookup_keysym, Window};
 use x11::xlib::*;
@@ -20,24 +21,19 @@ impl Indicator {
   fn symbol (&self) -> &str {
     match self {
       &Self::Check => "✔",
-      &Self::Diamond => "♦", //"◆",
-      &Self::Circle => "●",
+      &Self::Diamond => "♦",
+      &Self::Circle => "⚫",
     }
   }
 
-  // Determines the with needed for any indicator. The calculation is only done
-  // once.
   fn width () -> u32 {
     use std::sync::Once;
     static once_flag: Once = Once::new ();
     static mut result: u32 = 0;
     once_flag.call_once (|| unsafe {
-      let all_types = [Self::Check, Self::Diamond, Self::Circle];
       (*draw).select_font (&(*config).bar_font);
-      for i in all_types {
-        result = u32::max (result, (*draw).text (i.symbol ()).get_width ());
-      }
-      log::debug! ("Context menu indicator width: {}", result);
+      // Should be widest a normal character can be
+      result = (*draw).text ("가").get_width ();
     });
     unsafe { result }
   }
@@ -196,9 +192,10 @@ impl Context_Menu {
   unsafe fn redraw (&mut self) -> (u32, u32) {
     let show_indicator_column =
       self.has_at_least_one_indicator || self.always_show_indicator_column;
+    let indicator_width = Indicator::width ();
     let action_height = (*draw).font_height (None);
     let content_width = u32::max (
-      self.text_width (action_height) + (2 * Indicator::width () * show_indicator_column as u32),
+      self.text_width (action_height) + (2 * indicator_width * show_indicator_column as u32),
       self.min_width,
     );
     let mut y = Self::PADDING as i32;
@@ -206,7 +203,7 @@ impl Context_Menu {
     let icon_size = action_height * 90 / 100;
     let icon_position = (action_height - icon_size) as i32 / 2;
     let text_x = if show_indicator_column {
-      x + Indicator::width () as i32
+      x + indicator_width as i32
     } else {
       x
     };
@@ -236,7 +233,8 @@ impl Context_Menu {
               .text (indicator.symbol ())
               .at (x, y)
               .color (text_color)
-              .align_vertically (crate::draw::Alignment::Centered, action_height as i32)
+              .align_vertically (Alignment::Centered, action_height as i32)
+              .align_horizontally (Alignment::Centered, indicator_width as i32)
               .draw ();
           }
           let mut text_x = text_x;

@@ -34,6 +34,30 @@ unsafe fn get_icon (maybe_name_or_path: Option<String>) -> Option<Box<Svg_Resour
   }
 }
 
+fn get_title_and_unsaved_changes (client: &Client) -> (String, bool) {
+  // As far as I can tell there is no property or other way for windows to
+  // signal that they have unsaved changes so we look for common indicators
+  // in the window title.
+  // If we find such an indicator it is removed from the returned title.
+  let unsaved_indicators = &["*", "●", "+"];
+  let mut title = unsafe { window_title (client.window) };
+  let mut has_unsaved = false;
+  for indicator in unsaved_indicators {
+    if title.starts_with (indicator) {
+      title.remove (0);
+      title = title.trim_start ().to_string ();
+      has_unsaved = true;
+      break;
+    } else if title.ends_with (indicator) {
+      title.pop ();
+      title = title.trim_end ().to_string ();
+      has_unsaved = true;
+      break;
+    }
+  }
+  (title, has_unsaved)
+}
+
 pub struct Item {
   // Name of the .desktop file, used of the entry does not specify a name
   app_name: String,
@@ -47,6 +71,7 @@ pub struct Item {
   geometry: Geometry,
   is_pinned: bool,
   hovered: bool,
+  focused_instance: usize
 }
 
 impl Item {
@@ -111,6 +136,7 @@ impl Item {
       geometry: Geometry::from_parts (x, y, size, size),
       is_pinned,
       hovered: false,
+      focused_instance: 0
     });
     window.save_context (super::item_context, this.as_mut () as *mut Item as XPointer);
     this.redraw (dc, false);
@@ -216,18 +242,15 @@ impl Item {
         this.new_instance ();
       }
       1 => {
-        if let Some (client) = this.instances.first_mut () {
-          if client.as_ref ().is_minimized {
-            client.as_mut ().focus ();
-          } else {
-            action::minimize (client.as_mut ());
-          }
+        let mut client = this.instances[this.focused_instance];
+        if client.as_ref ().is_minimized {
+          client.as_mut ().focus ();
+        } else {
+          action::minimize (client.as_mut ());
         }
       }
       2 => {
-        if let Some (client) = this.instances.first_mut () {
-          action::close_client (client.as_mut ());
-        }
+        action::close_client (this.instances[this.focused_instance].as_mut ());
       }
       _ => unreachable! (),
     }
@@ -247,10 +270,22 @@ impl Item {
       self
         .instances
         .iter_mut ()
-        .map (|client| {
+        .enumerate ()
+        .map (|(index, client)| {
+          let (title, unsaved) = get_title_and_unsaved_changes (client.as_mut ());
           menu
-            .action (window_title (client.as_ref ().window))
-            .icon (client.as_mut ().icon ());
+            .action (title)
+            .icon (client.as_mut ().icon ())
+            // TODO: should unsaved or active have higher priority?
+            .indicator (if index == self.focused_instance {
+              Some (Indicator::Check)
+            } else if unsaved {
+              Some (Indicator::Circle)
+            } else if client.as_ref ().is_minimized {
+              Some (Indicator::Diamond)
+            } else {
+              None
+            });
         })
         .for_each (drop);
       menu.divider ();
@@ -326,8 +361,14 @@ impl Item {
       .iter ()
       .position (|c| unsafe { c.as_ref () } == client)
     {
-      let instance = self.instances.remove (index);
-      self.instances.insert (0, instance);
+      let active_on_top = false;
+      if active_on_top {
+        let instance = self.instances.remove (index);
+        self.instances.insert (0, instance);
+        // Active instance is always 0
+      } else {
+        self.focused_instance = index;
+      }
     }
   }
 }
