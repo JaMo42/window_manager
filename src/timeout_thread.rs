@@ -12,7 +12,7 @@ impl Timeout_Thread {
     let (tx, rx) = mpsc::channel ();
     let duration = Duration::from_millis (delay);
     let handle = thread::spawn (move || {
-      if let Ok (_) = rx.recv_timeout (duration) {
+      if rx.recv_timeout (duration).is_ok () {
         return;
       }
       function ();

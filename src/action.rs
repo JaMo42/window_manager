@@ -123,6 +123,8 @@ pub unsafe fn center (client: &mut Client) {
   client.modify_saved_geometry (|g| {
     g.center_inside (&window_area);
   });
+  // Need any non-none snap state for the unsnap function
+  client.snap_state = SNAP_MAXIMIZED;
   client.unsnap ();
 }
 
