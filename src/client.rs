@@ -150,12 +150,14 @@ impl Client {
     window.reparent (frame, reparent_x, reparent_y);
 
     // Get the application id:
-    // 1. If the window has _GTK_APPLICATION_ID set, use it
+    // 1. If the window has _GTK_APPLICATION_ID set, use it if there is an
+    //    entry for it.
     // 2. If the window has class hints...
     //     1. Try to use the desktop entry name for the name specified in the class hint
     //     2. If not found or ambiguous, use the name itself
     // 3. Otherwise use the window title and hope that it doesn't change
     let application_id = property::get_string (window, property::Other::GtkApplicationId)
+      .filter (|gtk_id| Desktop_Entry::entry_name (&gtk_id).is_some ())
       .or_else (|| {
         class_hint
           .as_ref ()
