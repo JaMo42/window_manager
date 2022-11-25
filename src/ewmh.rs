@@ -102,6 +102,7 @@ unsafe fn net_wm_state (client: &mut Client, event: &XClientMessageEvent) {
       client.unsnap ();
       set_net_wm_state (client, &[]);
     }
+    workspaces[active_workspace].focus (client.window);
   }
 }
 
