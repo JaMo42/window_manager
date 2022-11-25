@@ -37,8 +37,10 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   // Check for windows for which we have ButtonPressMask set
   if let Some (kind) = get_window_kind (event.window) {
     let mut handled = true;
-    // TODO: fix clicks on root coming through
     match kind {
+      Window_Kind::Root => {
+        handled = false;
+      }
       Window_Kind::Status_Bar => {
         bar.click (event.window, event);
       }
@@ -78,8 +80,10 @@ pub unsafe fn button_press (event: &XButtonEvent) {
       return;
     }
   }
-  mouse_held = event.button;
-  workspaces[active_workspace].focus (event.subwindow);
+  if event.subwindow != x::XNone {
+    mouse_held = event.button;
+    workspaces[active_workspace].focus (event.subwindow);
+  }
 }
 
 pub unsafe fn button_relase () {
