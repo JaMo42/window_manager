@@ -20,11 +20,11 @@ pub enum Indicator {
 
 impl Indicator {
   fn symbol (&self) -> &str {
-    match self {
-      &Self::Check => "✔",
-      &Self::Diamond => "♦",
-      &Self::Circle => "⚫",
-      &Self::Exclamation => "❗",
+    match *self {
+      Self::Check => "✔",
+      Self::Diamond => "♦",
+      Self::Circle => "⚫",
+      Self::Exclamation => "❗",
     }
   }
 
@@ -305,7 +305,7 @@ impl Context_Menu {
     self.select.as_mut () (None);
   }
 
-  fn item_index_at (&self, x: i32, y: i32) -> Option<usize> {
+  fn action_index_at (&self, x: i32, y: i32) -> Option<usize> {
     if !self.content_geometry.contains (x, y) {
       None
     } else {
@@ -323,7 +323,7 @@ impl Context_Menu {
     let x = event.x_root - self.x;
     let y = event.y_root - self.y;
     // Ignore clicks on dividers
-    if let Some (index) = self.item_index_at (x, y) {
+    if let Some (index) = self.action_index_at (x, y) {
       self.select.as_mut () (Some (index));
       close_shown ();
     }
@@ -331,7 +331,7 @@ impl Context_Menu {
 
   pub unsafe fn motion (&mut self, event: &XMotionEvent) {
     let before = self.selected;
-    self.selected = self.item_index_at (event.x, event.y);
+    self.selected = self.action_index_at (event.x, event.y);
     if self
       .selected
       .zip (before)
@@ -376,11 +376,11 @@ impl Context_Menu {
 }
 
 pub unsafe fn close_shown () {
-  shown.take ().map (|menu| {
+  if let Some (menu) = shown.take () {
     menu.destroy ();
     display.ungrab_button (1, 0);
     focused_client! ().map (|client| client.focus ());
-  });
+  }
 }
 
 pub unsafe fn click (event: &XButtonEvent) -> bool {
@@ -388,7 +388,7 @@ pub unsafe fn click (event: &XButtonEvent) -> bool {
     if mouse_on_shown {
       menu.click (event);
     } else {
-      shown.as_mut ().map (|menu| menu.cancel ());
+      shown.as_mut ().unwrap ().cancel ();
       close_shown ();
     }
     true
@@ -398,7 +398,7 @@ pub unsafe fn click (event: &XButtonEvent) -> bool {
 }
 
 pub unsafe fn motion (event: &XMotionEvent) {
-  if let Some (menu) = shown.as_mut () {
+  if let Some (menu) = &mut shown {
     menu.motion (event);
   }
 }
@@ -407,16 +407,14 @@ pub unsafe fn cross (event: &XCrossingEvent) {
   // Since we handle button presses on the root window we get leave and enter
   // events before and after a button press so we need to check if leave events
   // actually left the window. For enter events this does not matter.
-  if event.type_ == EnterNotify {
-    mouse_on_shown = true;
-    raise ();
-  } else if shown
-    .as_ref ()
-    .map (|menu| !menu.window_geometry.contains (event.x, event.y))
-    .unwrap_or (false)
-  {
-    mouse_on_shown = false;
-    shown.as_mut ().map (|menu| menu.selected = None);
+  if let Some (menu) = &mut shown {
+    if event.type_ == EnterNotify {
+      mouse_on_shown = true;
+      raise ();
+    } else if !menu.window_geometry.contains (event.x, event.y) {
+      mouse_on_shown = false;
+      menu.selected = None;
+    }
   }
 }
 
@@ -434,19 +432,21 @@ pub unsafe fn key_press (event: &XKeyEvent) {
     }
     _ => {
       // TODO: should key be put back into event queue?
-      shown.as_mut ().map (|menu| menu.cancel ());
+      if let Some (menu) = &mut shown {
+        menu.cancel ();
+      }
       close_shown ();
       return;
     }
   }
-  shown.as_mut ().map (|menu| {
+  if let Some (menu) = &mut shown {
     let (width, height) = menu.redraw ();
     (*draw).render (menu.window, 0, 0, width, height);
-  });
+  }
 }
 
 pub fn raise () {
-  unsafe {
-    shown.as_ref ().map (|menu| menu.window.raise ());
+  if let Some (menu) = unsafe { &shown } {
+    menu.window.raise ();
   }
 }

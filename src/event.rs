@@ -475,7 +475,7 @@ pub unsafe fn expose (event: &XExposeEvent) {
 }
 
 pub unsafe fn crossing (event: &XCrossingEvent) {
-  get_window_kind (event.window).map (|kind| {
+  if let Some (kind) = get_window_kind (event.window) {
     use Window_Kind::*;
     match kind {
       Frame_Button => {
@@ -508,7 +508,7 @@ pub unsafe fn crossing (event: &XCrossingEvent) {
       }
       _ => {}
     }
-  });
+  }
 }
 
 pub unsafe fn map_notify (event: &XMapEvent) {

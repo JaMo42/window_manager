@@ -129,6 +129,10 @@ unsafe fn create_windows_and_drawing_context (
 
 pub struct Dock {
   window: Window,
+  // Similar to clients, items store a pointer to themselves as context on the
+  // window so we need to box them so they keep the same pointer through their
+  // lifetime.
+  #[allow(clippy::vec_box)]
   items: Vec<Box<Item>>,
   drawing_context: Drawing_Context,
   // Invisible window at the bottom of the screen which is used to show the dock
@@ -290,15 +294,14 @@ impl Dock {
         this.hide ();
       }
       this.cancel_hide ();
-      unsafe {
-        display.flush ();
-      }
     }));
   }
 
   /// Cancels a `hide_after` request.
   pub fn cancel_hide (&mut self) {
-    self.hide_thread.take ().map (|t| t.stop ());
+    if let Some (t) = self.hide_thread.take () {
+      t.stop ();
+    }
   }
 
   pub fn keep_open (&mut self, yay_or_nay: bool) {
@@ -335,30 +338,28 @@ impl Dock {
       // error message boxes
       return;
     }
-    if let Some (index) = self.find_item (&name) {
+    if let Some (index) = self.find_item (name) {
       self.items[index].add_instance (client);
-    } else {
-      if let Some (mut item) = Item::create (
-        self.window.handle (),
-        &name,
-        false,
-        self.item_size,
-        Self::item_position (self.items.len (), self.item_size),
-        Self::PADDING as i32,
-        self.drawing_context (),
-      ) {
-        item.add_instance (client);
-        self.resize_window (self.items.len () + 1);
-        self.items.push (item);
-        self.redraw ();
-      }
+    } else if let Some (mut item) = Item::create (
+      self.window.handle (),
+      name,
+      false,
+      self.item_size,
+      Self::item_position (self.items.len (), self.item_size),
+      Self::PADDING as i32,
+      self.drawing_context (),
+    ) {
+      item.add_instance (client);
+      self.resize_window (self.items.len () + 1);
+      self.items.push (item);
+      self.redraw ();
     }
   }
 
   fn find_client_item (&mut self, client: &Client) -> Option<usize> {
     // TODO: just searching through all instances of all items for the window
     //       of the client may be faster the getting its name.
-    self.find_item (&client.application_id ())
+    self.find_item (client.application_id ())
   }
 
   pub unsafe fn remove_client (&mut self, client: &Client) {

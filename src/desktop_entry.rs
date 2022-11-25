@@ -30,15 +30,16 @@ impl Desktop_Entry {
       // matches return none
       let mut found = None;
       let look_for = format! ("{}.desktop", application_name);
-      for maybe_entry in fs::read_dir ("/usr/share/applications").unwrap () {
-        if let Ok (entry) = maybe_entry {
-          if entry.file_name ().to_str ()?.ends_with (&look_for) {
-            if found.is_some () {
-              // Ambiguous match
-              return None;
-            } else {
-              found = Some (entry.path ().to_str ()?.to_owned ());
-            }
+      for entry in fs::read_dir ("/usr/share/applications")
+        .unwrap ()
+        .flatten ()
+      {
+        if entry.file_name ().to_str ()?.ends_with (&look_for) {
+          if found.is_some () {
+            // Ambiguous match
+            return None;
+          } else {
+            found = Some (entry.path ().to_str ()?.to_owned ());
           }
         }
       }

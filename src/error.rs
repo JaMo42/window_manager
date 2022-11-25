@@ -1,6 +1,7 @@
 use crate::color::Color;
 use crate::core::*;
 use crate::draw::{Alignment, Drawing_Context};
+use crate::process::run;
 use crate::x::Window;
 use pango::FontDescription;
 use x11::xlib::*;
@@ -51,9 +52,14 @@ pub unsafe fn fatal_error (text: &str) -> ! {
 }
 
 pub fn message_box (title: &str, body: &str) {
-  // TODO: use run_process once it's commandline parsing is fixed
-  std::process::Command::new ("window_manager_message_box")
-    .args ([title, body, "--kind", "Error", "--font-size", "20"])
-    .spawn ()
-    .ok ();
+  run (&[
+    "window_manager_message_box",
+    title,
+    body,
+    "--kind",
+    "Error",
+    "--font-size",
+    "20",
+  ])
+  .ok ();
 }
