@@ -38,13 +38,13 @@ Key | Description | Default
 `colors` | [Color scheme](#color-schemes) name | `default`
 `icons` | Icon theme name, must be the name of a directory in `/usr/share/icons` which must have `48x48` subfolder. Both the theme folder and the `48x48` folder mat be symbolic links. | `Papirus`
 
-### `keys`
+### `keys` section
 
 Key | Description | Default
 ---|---|---
 `mod` | User-defined modifier. This is used for mouse key bindings as well as the `Mod` modifier in key bindings. | `Win`
 
-### `keys.bindings`
+### `keys.bindings` section
 
 This is a table where each key is a `+`-separated list of modifiers and a key which is set to the action given in the value.
 The modifiers and key list may contain spaces.
@@ -83,7 +83,7 @@ The set of KeySyms that are available in this manner and the mechanisms by which
 
 This does not include the modifiers, which must be one of `Shift`, `Ctrl`, `Win`, `Alt`, and `Mod` (the user-defined modifier).
 
-### `bar`
+### `bar` section
 
 Key | Description | Default
 ---|---|---
@@ -93,6 +93,16 @@ Key | Description | Default
 `time_format` | Format for the date-time widget, uses strftime format. | `%a %b %e %H:%M %Y`
 `power_supply` | Power supply used by the battery widget. This should be the name of a folder in `/sys/class/power_supply`. If the given value does not exist the widget is disabled. | `BAT0`
 `update_interval` | Interval in milliseconds in which the bar is automatically updated. Use `0` to disable automatic updates (it will still get updated by various events). | `10000`
+
+### `dock` section
+
+Key | Description | Default
+---|---|---
+`pinned` | List of pinned applications, these should be the names of `.desktop` files in `/usr/share/applications` without the `.desktop` extension. | `[]`
+`focused_client_on_top` | Move the focused instance of an application to the top of the list in the context menu | `false`
+`focus_urgent` | Clicking an item focuses the urgent instance instead of the focused instance uf there is a urgent instance | `false`
+`item_size` | Size of the items, the size of the dock is derived from this | `80`
+`icon_size` | Size of application icons of items in percent. Note that the indicator for items with open instances gets drawn into the same square as the icon and may overlap with large icon sizes. | `85`
 
 ## Modifiers
 
@@ -187,51 +197,75 @@ This section lets you defined named colors, each key is the name of a color whic
 
 Element | Description | Default
 ---|---|---
-background | Color of the root window, note that if using a compositor like picom this may not be visible. | `#`
+`background` | Color of the root window, note that if using a compositor like picom this may not be visible. | `#`
 
 ### `[window]` section
 
 Element | Description | Default
 ---|---|---
-focused | Border color of the focused window | `#EEEEEE`
-focused_text | Text color on the border of the focused window | `#111111`
-normal | As `focused` but for normal windows | `#111111`
-normal_text | | `#EEEEEE`
-selected | As `focused` but the selected window during window switching | `#777777`
-selected_text | | `#111111`
-urgent | As `focused` but for windows that demand attention | `#CC1111`
-urgent_text | | `#111111`
+`focused` | Border color of the focused window | `#EEEEEE`
+`focused_text` | Text color on the border of the focused window | `#111111`
+`normal` | As `focused` but for normal windows | `#111111`
+`normal_text` | | `#EEEEEE`
+`selected` | As `focused` but the selected window during window switching | `#777777`
+`selected_text` | | `#111111`
+`urgent` | As `focused` but for windows that demand attention | `#CC1111`
+`urgent_text` | | `#111111`
 
 ### `[window.buttons]` section
 
 Element | Description | Default
 ---|---|---
-close | Normal color of the close button | `#444444`
-close_hovered | Color of the close button when the mouse is above it | `#CC0000`
-maximize | As `close` but for the maximize button | `window.buttons.close`
-maximize_hovered | | `#00CC00`
-minimize | As `minimize` but for the minimize button | `window.buttons.close`
-minimize_hovered | | `#CCCC00`
+`close` | Normal color of the close button | `#444444`
+`close_hovered` | Color of the close button when the mouse is above it | `#CC0000`
+`maximize` | As `close` but for the maximize button | `window.buttons.close`
+`maximize_hovered` | | `#00CC00`
+`minimize` | As `minimize` but for the minimize button | `window.buttons.close`
+`minimize_hovered` | | `#CCCC00`
 
 ### `[bar]` section
 
 Element | Description | Default
 ---|---|---
-background | Background color | `#111111`
-text | Text and icon color | `#EEEEEE`
-workspace | Color for normal workspace indicators | `bar.background`
-workspace_text | Text color for normal workspace indicators | `bar.text`
-active_workspace | As `workspace` but for the active workspace | `window.focused`
-active_workspace_text | | `window.focused_text`
-urgent_workspace | As `workspace` but for workspaces containing windows that demand attention | `window.urgent`
-urgent_workspace_text | | `window.urgent_text`
+`background` | Background color | `#111111`
+`text` | Text and icon color | `#EEEEEE`
+`workspace` | Color for normal workspace indicators | `bar.background`
+`workspace_text` | Text color for normal workspace indicators | `bar.text`
+`active_workspace` | As `workspace` but for the active workspace | `window.focused`
+`active_workspace_text` | | `window.focused_text`
+`urgent_workspace` | As `workspace` but for workspaces containing windows that demand attention | `window.urgent`
+`urgent_workspace_text` | | `window.urgent_text`
 
 ### `[notifications]` section
 
 Element | Description | Default
 ---|---|---
-background | Background color | `bar.background`
-text | Text color | `bar.text`
+`background` | Background color | `bar.background`
+`text` | Text color | `bar.text`
+
+### `[tooltip]` section
+
+Element | Description | Default
+---|---|---
+`background` | Background color | `bar.background`
+`text` | Text color | `bar.text`
+
+### `[dock]` section
+
+Element | Description | Default
+---|---|---
+`background` | Background color | `bar.background`
+`hovered` | Background of hovered items | `window.focused`
+`urgent` | Background of items with instances that demand attention | `window.urgent`
+`indicator` | Color of the indicator for items with open instances | `bar.text`
+
+### `[context_menu]` section
+
+Element | Description | Default
+---|---|---
+`background` | Background color | `bar.background`
+`text` | Text color | `bar.text`
+`divider` | Divider color | `bar.text`
 
 ### Circle buttons
 
