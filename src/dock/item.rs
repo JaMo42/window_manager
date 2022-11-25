@@ -71,7 +71,8 @@ pub struct Item {
   geometry: Geometry,
   is_pinned: bool,
   hovered: bool,
-  focused_instance: usize
+  focused_instance: usize,
+  has_urgent: bool
 }
 
 impl Item {
@@ -136,7 +137,8 @@ impl Item {
       geometry: Geometry::from_parts (x, y, size, size),
       is_pinned,
       hovered: false,
-      focused_instance: 0
+      focused_instance: 0,
+      has_urgent: false
     });
     window.save_context (super::item_context, this.as_mut () as *mut Item as XPointer);
     this.redraw (dc, false);
@@ -173,11 +175,16 @@ impl Item {
     dc.square (0, 0, self.size)
       .color ((*config).colors.bar_background)
       .draw ();
-    if hovered {
+    if hovered || self.has_urgent {
+      let color = if self.has_urgent {
+        (*config).colors.urgent
+      } else {
+        Color::from_rgb (0.2, 0.2, 0.2)
+      };
       dc.square (0, 0, self.size)
         .corner_radius (0.1)
-        .color (Color::from_rgb (0.2, 0.2, 0.2))
-        .stroke (1, Color::from_rgb (0.2667, 0.2667, 0.2667))
+        .color (color)
+        .stroke (1, color.scale (4.0 / 3.0))
         .draw ();
     }
     dc.draw_svg (
@@ -201,7 +208,17 @@ impl Item {
 
   pub unsafe fn click (&self) {
     if !self.instances.is_empty () {
-      self.focus_instance_client (0);
+      let focus_urgent = false;
+      if self.has_urgent && focus_urgent {
+        for (index, instance) in self.instances.iter ().enumerate () {
+          if instance.as_ref ().is_urgent {
+            self.focus_instance_client (index);
+            return;
+          }
+        }
+      } else {
+        self.focus_instance_client (self.focused_instance);
+      }
     } else {
       self.new_instance ();
     }
@@ -279,6 +296,8 @@ impl Item {
             // TODO: should unsaved or active have higher priority?
             .indicator (if index == self.focused_instance {
               Some (Indicator::Check)
+            } else if client.as_ref ().is_urgent {
+              Some (Indicator::Exclamation)
             } else if unsaved {
               Some (Indicator::Circle)
             } else if client.as_ref ().is_minimized {
@@ -339,7 +358,7 @@ impl Item {
     }
   }
 
-  pub fn remove_instance (&mut self, client: &mut Client) -> bool {
+  pub fn remove_instance (&mut self, client: &Client) -> bool {
     if let Some (index) = self
       .instances
       .iter ()
@@ -355,7 +374,7 @@ impl Item {
     self.instances.is_empty () && !self.is_pinned
   }
 
-  pub fn focus (&mut self, client: &mut Client) {
+  pub fn focus (&mut self, client: &Client) {
     if let Some (index) = self
       .instances
       .iter ()
@@ -370,5 +389,9 @@ impl Item {
         self.focused_instance = index;
       }
     }
+  }
+
+  pub fn urgent (&mut self, is_urgent: bool) {
+    self.has_urgent = is_urgent;
   }
 }

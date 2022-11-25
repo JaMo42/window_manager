@@ -355,13 +355,15 @@ impl Dock {
     }
   }
 
-  // TODO: just searching through all instances of all items for the window
-  //       of the client may be faster the getting its name for `remove_client`
-  //       and `update_focus`.
 
-  pub unsafe fn remove_client (&mut self, client: &mut Client) {
-    let name = client.application_id ();
-    if let Some (index) = self.find_item (&name) {
+  fn find_client_item (&mut self, client: &Client) -> Option<usize> {
+    // TODO: just searching through all instances of all items for the window
+    //       of the client may be faster the getting its name.
+    self.find_item (&client.application_id ())
+  }
+
+  pub unsafe fn remove_client (&mut self, client: &Client) {
+    if let Some (index) = self.find_client_item (client) {
       if self.items[index].remove_instance (client) {
         self.items.remove (index).destroy ();
         self.resize_window (usize::max (self.items.len (), 1));
@@ -370,10 +372,16 @@ impl Dock {
     }
   }
 
-  pub unsafe fn update_focus (&mut self, client: &mut Client) {
-    let name = client.application_id ();
-    if let Some (index) = self.find_item (&name) {
+  pub unsafe fn update_focus (&mut self, client: &Client) {
+    if let Some (index) = self.find_client_item (client) {
       self.items[index].focus (client);
+    }
+  }
+
+  pub unsafe fn update_urgency (&mut self, client: &Client) {
+    if let Some (index) = self.find_client_item (client) {
+      self.items[index].urgent (client.is_urgent);
+      self.items[index].redraw (&mut self.drawing_context, false);
     }
   }
 }

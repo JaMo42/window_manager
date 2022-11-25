@@ -15,6 +15,7 @@ pub enum Indicator {
   Check,
   Diamond,
   Circle,
+  Exclamation
 }
 
 impl Indicator {
@@ -23,6 +24,7 @@ impl Indicator {
       &Self::Check => "✔",
       &Self::Diamond => "♦",
       &Self::Circle => "⚫",
+      &Self::Exclamation => "❗",
     }
   }
 

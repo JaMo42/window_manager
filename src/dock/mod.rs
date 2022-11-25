@@ -97,13 +97,17 @@ pub unsafe fn add_client (client: &mut Client) {
   the ().add_client (NonNull::new_unchecked (client as *mut Client));
 }
 
-pub unsafe fn remove_client (client: &mut Client) {
+pub unsafe fn remove_client (client: &Client) {
   the ().remove_client (client);
 }
 
 /// Moves the client to the top of the instances of its item.
 /// This means the given client becomes affected by the `Hide` and `Close`
 /// actions of the context menu.
-pub unsafe fn focus (client: &mut Client) {
+pub unsafe fn focus (client: &Client) {
   the ().update_focus (client);
+}
+
+pub unsafe fn update_urgency (client: &mut Client) {
+  the ().update_urgency (client);
 }

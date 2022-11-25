@@ -504,6 +504,7 @@ impl Client {
     }
     bar.invalidate_widgets ();
     bar.draw ();
+    dock::update_urgency (self);
   }
 
   pub unsafe fn update_hints (&mut self) {
