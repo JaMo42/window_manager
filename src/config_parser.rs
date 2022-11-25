@@ -76,6 +76,7 @@ pub struct Dock {
   pub focus_urgent: Option<bool>,
   pub item_size: Option<u32>,
   pub icon_size: Option<u32>,
+  pub context_show_workspaces: Option<bool>,
 }
 
 pub fn parse (pathname: &str) -> Result<Parsed_Config, toml::de::Error> {

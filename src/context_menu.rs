@@ -43,6 +43,7 @@ impl Indicator {
 
 pub struct Action {
   name: String,
+  info: String,
   index: usize,
   icon: Option<&'static mut Svg_Resource>,
   indicator: Option<Indicator>,
@@ -52,6 +53,7 @@ impl Action {
   fn new (name: String, index: usize) -> Self {
     Self {
       name,
+      info: String::new (),
       index,
       icon: None,
       indicator: None,
@@ -65,6 +67,13 @@ impl Action {
 
   pub fn indicator (&mut self, indicator: Option<Indicator>) -> &mut Self {
     self.indicator = indicator;
+    self
+  }
+
+  // Note: `info` is printed right after the name so it should likely start
+  //       with a space.
+  pub fn info (&mut self, info: String) -> &mut Self {
+    self.info = info;
     self
   }
 }
@@ -98,6 +107,7 @@ pub struct Context_Menu {
   action_count: usize,
   has_at_least_one_indicator: bool,
   always_show_indicator_column: bool,
+  text_width: u32,
   x: i32,
   y: i32,
 }
@@ -121,6 +131,7 @@ impl Context_Menu {
       action_count: 0,
       has_at_least_one_indicator: false,
       always_show_indicator_column: false,
+      text_width: 0,
       x: 0,
       y: 0,
     }
@@ -183,8 +194,12 @@ impl Context_Menu {
     (*draw).select_font (&(*config).bar_font);
     for item in self.items.iter () {
       if let Item::Action (action) = item {
-        let width = (*draw).text (&action.name).get_width ()
-          + if action.icon.is_some () { height } else { 0 };
+        let width = if action.info.is_empty () {
+          (*draw).text (&action.name).get_width ()
+        } else {
+          let full_text = format! ("{}{}", action.name, action.info);
+          (*draw).text (&full_text).get_width ()
+        } + if action.icon.is_some () { height } else { 0 };
         widest = u32::max (widest, width);
       }
     }
@@ -196,8 +211,11 @@ impl Context_Menu {
       self.has_at_least_one_indicator || self.always_show_indicator_column;
     let indicator_width = Indicator::width ();
     let action_height = (*draw).font_height (None);
+    if self.text_width == 0 {
+      self.text_width = self.text_width (action_height);
+    }
     let content_width = u32::max (
-      self.text_width (action_height) + (2 * indicator_width * show_indicator_column as u32),
+      self.text_width + (2 * indicator_width * show_indicator_column as u32),
       self.min_width,
     );
     let mut y = Self::PADDING as i32;
@@ -250,12 +268,23 @@ impl Context_Menu {
             );
             text_x += action_height as i32;
           }
-          (*draw)
-            .text (&action.name)
-            .at (text_x, y)
-            .color (text_color)
-            .align_vertically (crate::draw::Alignment::Centered, action_height as i32)
-            .draw ();
+          let info_x = text_x
+            + (*draw)
+              .text (&action.name)
+              .at (text_x, y)
+              .color (text_color)
+              .align_vertically (crate::draw::Alignment::Centered, action_height as i32)
+              .draw ()
+              .w as i32;
+          if !action.info.is_empty () {
+            let info_color = text_color.scale (if action_index == selected { 2.0 } else { 0.5 });
+            (*draw)
+              .text (&action.info)
+              .at (info_x, y)
+              .color (info_color)
+              .align_vertically (crate::draw::Alignment::Centered, action_height as i32)
+              .draw ();
+          }
           h = action_height + 2 * Self::BUTTON_PADDING;
           action_index += 1;
         }

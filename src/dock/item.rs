@@ -300,6 +300,11 @@ impl Item {
               Some (Indicator::Diamond)
             } else {
               None
+            })
+            .info (if (*config).dock_context_show_workspaces {
+              format! (" ({})", client.as_ref ().workspace + 1)
+            } else {
+              String::new ()
             });
         })
         .for_each (drop);

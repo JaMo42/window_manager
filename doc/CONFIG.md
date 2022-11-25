@@ -103,6 +103,7 @@ Key | Description | Default
 `focus_urgent` | Clicking an item focuses the urgent instance instead of the focused instance uf there is a urgent instance | `false`
 `item_size` | Size of the items, the size of the dock is derived from this | `80`
 `icon_size` | Size of application icons of items in percent. Note that the indicator for items with open instances gets drawn into the same square as the icon and may overlap with large icon sizes. | `85`
+`context_show_workspaces` | Show the workspace of client in the context menu. | `true`
 
 ## Modifiers
 

@@ -147,6 +147,7 @@ pub struct Config {
   pub dock_focus_urgent: bool,
   pub dock_item_size: u32,
   pub dock_icon_size: u32,
+  pub dock_context_show_workspaces: bool,
 }
 
 impl Config {
@@ -219,6 +220,7 @@ impl Config {
       dock_focus_urgent: dock.focus_urgent.unwrap_or (false),
       dock_item_size: dock.item_size.unwrap_or (80),
       dock_icon_size: dock.icon_size.unwrap_or (85),
+      dock_context_show_workspaces: dock.context_show_workspaces.unwrap_or (true),
     };
     if let Some (table) = keys.bindings {
       let m = this.modifier;
