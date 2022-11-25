@@ -9,7 +9,7 @@ use rand::{prelude::ThreadRng, Rng};
 use std::os::raw::*;
 use x11::xlib::*;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Geometry {
   pub x: c_int,
   pub y: c_int,
@@ -257,10 +257,17 @@ impl Preview {
   pub unsafe fn finish (&mut self, client: &mut Client, snap: bool) {
     self.window.destroy ();
     if snap {
+      let flags = move_snap_flags (self.geometry.x as u32, self.geometry.y as u32);
+      if flags == client.snap_state {
+        return;
+      }
       client.save_geometry ();
-      client.snap_state = move_snap_flags (self.geometry.x as u32, self.geometry.y as u32);
+      client.snap_state = flags;
       client.move_and_resize (Client_Geometry::Snap (self.snap_geometry));
     } else {
+      if self.final_geometry == self.original_geometry {
+        return;
+      }
       client.snap_state = SNAP_NONE;
       client.move_and_resize (Client_Geometry::Frame (self.final_geometry));
       client.save_geometry ();
