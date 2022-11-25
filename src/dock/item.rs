@@ -168,8 +168,7 @@ impl Item {
 
   pub unsafe fn redraw (&mut self, dc: &mut Drawing_Context, hovered: bool) {
     self.hovered = true;
-    // TODO: config value for icon size
-    let icon_size = self.size * 85 / 100;
+    let icon_size = self.size * (*config).dock_icon_size / 100;
     let icon_position = (self.size - icon_size) as i32 / 2;
     dc.square (0, 0, self.size)
       .color ((*config).colors.bar_background)

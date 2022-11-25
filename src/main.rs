@@ -454,9 +454,9 @@ unsafe fn is_kind<W: To_XWindow> (window: W, kind: Window_Kind) -> bool {
 /// Sets the `_NET_WM_WINDOW_OPACITY` property. This has no effect on the
 /// window manager but a compositor may use this to set the opacity of the
 /// entire window.
-unsafe fn set_window_opacity (window: Window, percent: u8) {
+unsafe fn set_window_opacity (window: Window, percent: u32) {
   if percent != 100 {
-    let value = 42949672u32 * percent as u32;
+    let value = 42949672u32 * percent;
     property::set (window, Net::WMWindowOpacity, XA_CARDINAL, 32, &value, 1);
   }
 }

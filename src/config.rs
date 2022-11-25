@@ -127,7 +127,7 @@ pub struct Config {
   pub meta_window_classes: Vec<String>,
   pub colors: Color_Scheme,
   pub bar_font: FontDescription,
-  pub bar_opacity: u8,
+  pub bar_opacity: u32,
   pub bar_time_format: String,
   pub bar_power_supply: String,
   pub bar_height: Height,
@@ -137,14 +137,16 @@ pub struct Config {
   pub title_alignment: Alignment,
   pub left_buttons: Vec<String>,
   pub right_buttons: Vec<String>,
-  pub button_icon_size: u8,
+  pub button_icon_size: u32,
   pub circle_buttons: bool,
   pub default_notification_timeout: i32,
   pub icon_theme: String,
-  pub window_icon_size: u8,
+  pub window_icon_size: u32,
   pub dock_pinned: Vec<String>,
   pub dock_focused_client_on_top: bool,
   pub dock_focus_urgent: bool,
+  pub dock_item_size: u32,
+  pub dock_icon_size: u32
 }
 
 impl Config {
@@ -215,6 +217,8 @@ impl Config {
       dock_pinned: dock.pinned.unwrap_or_default (),
       dock_focused_client_on_top: dock.focused_client_on_top.unwrap_or (false),
       dock_focus_urgent: dock.focus_urgent.unwrap_or (false),
+      dock_item_size: dock.item_size.unwrap_or (80),
+      dock_icon_size: dock.icon_size.unwrap_or (85)
     };
     if let Some (table) = keys.bindings {
       let m = this.modifier;

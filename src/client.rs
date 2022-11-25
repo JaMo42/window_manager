@@ -157,7 +157,7 @@ impl Client {
     //     2. If not found or ambiguous, use the name itself
     // 3. Otherwise use the window title and hope that it doesn't change
     let application_id = property::get_string (window, property::Other::GtkApplicationId)
-      .filter (|gtk_id| Desktop_Entry::entry_name (&gtk_id).is_some ())
+      .filter (|gtk_id| Desktop_Entry::entry_name (gtk_id).is_some ())
       .or_else (|| {
         class_hint
           .as_ref ()
@@ -641,6 +641,6 @@ pub unsafe fn set_border_info () {
   right_buttons_width = (*config).right_buttons.len () as u32 * title_height;
   title_x = left_buttons_width as i32 + b;
   buttons::set_size (title_height);
-  icon_size = decorated_frame_offset.y as u32 * (*config).window_icon_size as u32 / 100;
+  icon_size = decorated_frame_offset.y as u32 * (*config).window_icon_size / 100;
   icon_position = (decorated_frame_offset.y - icon_size as i32) / 2;
 }

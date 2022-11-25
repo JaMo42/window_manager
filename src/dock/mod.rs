@@ -21,7 +21,7 @@ fn the () -> &'static mut Dock {
 }
 
 pub unsafe fn create () {
-  instance = Some (Dock::create (80));
+  instance = Some (Dock::create ((*config).dock_item_size));
   // This is called before we have any clients
   the ().keep_open (true);
 }

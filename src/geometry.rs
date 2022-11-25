@@ -9,7 +9,7 @@ use rand::{prelude::ThreadRng, Rng};
 use std::os::raw::*;
 use x11::xlib::*;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Geometry {
   pub x: c_int,
   pub y: c_int,

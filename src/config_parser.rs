@@ -42,9 +42,9 @@ pub struct Window {
   pub title_alignment: Option<String>,
   pub right_buttons: Option<Vec<String>>,
   pub left_buttons: Option<Vec<String>>,
-  pub icon_size: Option<u8>,
+  pub icon_size: Option<u32>,
   pub circle_buttons: Option<bool>,
-  pub button_icon_size: Option<u8>,
+  pub button_icon_size: Option<u32>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -62,7 +62,7 @@ pub struct Keys {
 #[derive(Deserialize, Debug, Default)]
 pub struct Bar {
   pub font: Option<String>,
-  pub opacity: Option<u8>,
+  pub opacity: Option<u32>,
   pub height: Option<String>,
   pub time_format: Option<String>,
   pub power_supply: Option<String>,
@@ -74,6 +74,8 @@ pub struct Dock {
   pub pinned: Option<Vec<String>>,
   pub focused_client_on_top: Option<bool>,
   pub focus_urgent: Option<bool>,
+  pub item_size: Option<u32>,
+  pub icon_size: Option<u32>,
 }
 
 pub fn parse (pathname: &str) -> Result<Parsed_Config, toml::de::Error> {
