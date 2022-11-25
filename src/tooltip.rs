@@ -67,7 +67,6 @@ impl Tooltip {
     let height = text.get_height () + 2 * Self::BORDER + 1;
     self.move_and_resize (x, y, width, height);
     (*draw).fill_rect (0, 0, width, height, (*config).colors.bar_background);
-    //text = (*draw).text (string);
     text
       .at (Self::BORDER as i32, Self::BORDER as i32)
       .color ((*config).colors.bar_text)
@@ -81,6 +80,7 @@ impl Tooltip {
     if self.active {
       self.window.unmap ();
       self.active = false;
+      display.sync (false);
     }
   }
 
@@ -88,6 +88,11 @@ impl Tooltip {
     if self.window.is_some () {
       self.window.destroy ();
     }
+  }
+
+  // Calculates the height for a single line of text.
+  pub unsafe fn height () -> u32 {
+    (*draw).font_height (Some (&(*config).bar_font)) + 2 * Self::BORDER
   }
 }
 

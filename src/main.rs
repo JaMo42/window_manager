@@ -24,8 +24,10 @@ mod workspace;
 mod property;
 mod bar;
 mod buttons;
+mod context_menu;
 mod cursor;
 mod desktop_entry;
+mod dock;
 mod draw;
 mod error;
 mod ewmh;
@@ -137,8 +139,8 @@ unsafe fn select_input (mut mask: c_long) {
       | ButtonPressMask
       | ButtonReleaseMask
       | PointerMotionMask
-      | EnterWindowMask
-      | LeaveWindowMask
+      /*| EnterWindowMask
+      | LeaveWindowMask*/
       | StructureNotifyMask
       | PropertyChangeMask;
   }
@@ -191,6 +193,7 @@ unsafe fn init () {
       ));
     }
   }
+  dock::create ();
   client::set_border_info ();
   notifications::init ();
   session_manager::init ();
@@ -273,7 +276,7 @@ unsafe fn run () {
       MapNotify => event::map_notify (&event.map),
       MappingNotify => event::mapping_notify (&event.mapping),
       MapRequest => event::map_request (&event.map_request),
-      MotionNotify => event::motion (&event.button),
+      MotionNotify => event::motion (&event.motion),
       PropertyNotify => event::property_notify (&event.property),
       UnmapNotify => event::unmap_notify (&event.unmap),
       SessionManagerEvent => session_manager::manager ().process (),
@@ -323,12 +326,14 @@ unsafe fn cleanup () {
   log::trace! ("Destroying tooltip window");
   tooltip::tooltip.destroy ();
   log::trace! ("Destroying bar");
-  bar.destroy ();
-  log::trace! ("Destroying drawing context");
   if let Some (t) = bar::update_thread.take () {
     t.stop ();
   }
+  bar.destroy ();
+  log::trace! ("Destroying drawing context");
   (*draw).destroy ();
+  log::trace! ("Destroying dock");
+  dock::destroy ();
 }
 
 fn get_window_geometry (window: Window) -> Geometry {
@@ -408,6 +413,10 @@ unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
     const kind_notification: usize = Window_Kind::Notification as usize;
     const kind_meta_or_unmanaged: usize = Window_Kind::Meta_Or_Unmanaged as usize;
     const kind_tray_client: usize = Window_Kind::Tray_Client as usize;
+    const kind_dock: usize = Window_Kind::Dock as usize;
+    const kind_dock_item: usize = Window_Kind::Dock_Item as usize;
+    const kind_dock_show: usize = Window_Kind::Dock_Show as usize;
+    const kind_context_menu: usize = Window_Kind::Context_Menu as usize;
     Some (match data as usize {
       kind_root => Window_Kind::Root,
       kind_client => Window_Kind::Client,
@@ -417,6 +426,10 @@ unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
       kind_notification => Window_Kind::Notification,
       kind_meta_or_unmanaged => Window_Kind::Meta_Or_Unmanaged,
       kind_tray_client => Window_Kind::Tray_Client,
+      kind_dock => Window_Kind::Dock,
+      kind_dock_item => Window_Kind::Dock_Item,
+      kind_dock_show => Window_Kind::Dock_Show,
+      kind_context_menu => Window_Kind::Context_Menu,
       _ => {
         my_panic! ("Invalid Window_Kind value on {}: {}", window, data as usize);
       }
@@ -448,7 +461,6 @@ unsafe fn set_window_opacity (window: Window, percent: u8) {
   }
 }
 
-#[cfg(debug)]
 #[allow(dead_code)]
 unsafe fn list_properties (window: Window) {
   log::info! ("Properties for {} ({})", window_title (window), window);

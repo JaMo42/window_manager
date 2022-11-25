@@ -18,6 +18,7 @@ pub struct Parsed_Config {
   pub theme: Option<Theme>,
   pub keys: Option<Keys>,
   pub bar: Option<Bar>,
+  pub dock: Option<Dock>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -66,6 +67,11 @@ pub struct Bar {
   pub time_format: Option<String>,
   pub power_supply: Option<String>,
   pub update_interval: Option<u64>,
+}
+
+#[derive(Deserialize, Debug, Default)]
+pub struct Dock {
+  pub pinned: Option<Vec<String>>,
 }
 
 pub fn parse (pathname: &str) -> Result<Parsed_Config, toml::de::Error> {

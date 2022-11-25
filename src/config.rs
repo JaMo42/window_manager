@@ -142,6 +142,7 @@ pub struct Config {
   pub default_notification_timeout: i32,
   pub icon_theme: String,
   pub window_icon_size: u8,
+  pub dock_pinned: Vec<String>,
 }
 
 impl Config {
@@ -159,6 +160,7 @@ impl Config {
     let theme = c.theme.unwrap_or_default ();
     let keys = c.keys.unwrap_or_default ();
     let bar_ = c.bar.unwrap_or_default ();
+    let dock = c.dock.unwrap_or_default ();
 
     let mut this = Config {
       modifier: keys
@@ -208,6 +210,7 @@ impl Config {
       default_notification_timeout: general.default_notification_timeout.unwrap_or (6000) as i32,
       icon_theme: theme.icons.unwrap_or_else (|| "Papirus".to_string ()),
       window_icon_size: window.icon_size.unwrap_or (0).clamp (0, 100),
+      dock_pinned: dock.pinned.unwrap_or_default (),
     };
     if let Some (table) = keys.bindings {
       let m = this.modifier;

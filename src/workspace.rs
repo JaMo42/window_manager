@@ -1,6 +1,7 @@
 use super::client::Client;
 use super::core::*;
 use super::property;
+use crate::dock;
 use crate::x::{window::To_XWindow, Window, XNone, XWindow};
 use std::ops::{Deref, DerefMut};
 use x11::xlib::*;
@@ -37,6 +38,7 @@ impl Workspace {
     }
     self.clients.insert (0, client);
     self.clients[0].focus ();
+    dock::keep_open (false);
   }
 
   pub unsafe fn remove (&mut self, client: &Client) -> Box<Client> {
@@ -51,6 +53,7 @@ impl Workspace {
       } else {
         property::delete (root, property::Net::ActiveWindow);
         display.set_input_focus (PointerRoot as XWindow);
+        dock::keep_open (true);
       }
       return c;
     }

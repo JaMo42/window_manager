@@ -1,0 +1,332 @@
+use crate::action;
+use crate::client::Client;
+use crate::color::Color;
+use crate::context_menu::Context_Menu;
+use crate::desktop_entry::Desktop_Entry;
+use crate::draw::{self, Drawing_Context, Svg_Resource};
+use crate::error::message_box;
+use crate::geometry::Geometry;
+use crate::process::{run_or_message_box, split_commandline};
+use crate::set_window_kind;
+use crate::x::{Window, XWindow};
+use crate::{core::*, window_title};
+use std::ptr::NonNull;
+use x11::xlib::*;
+
+unsafe fn get_icon (maybe_name_or_path: Option<String>) -> Option<Box<Svg_Resource>> {
+  if let Some (app_icon) = maybe_name_or_path.and_then (|name| {
+    // Same as `draw::get_app_icon` but we already have the desktop entry so
+    // we don't want to use that
+    let icon_path = if name.starts_with ('/') {
+      name
+    } else {
+      format! (
+        "/usr/share/icons/{}/48x48/apps/{}.svg",
+        (*config).icon_theme,
+        name
+      )
+    };
+    Svg_Resource::open (&icon_path)
+  }) {
+    Some (app_icon)
+  } else {
+    draw::get_icon ("applications-system")
+  }
+}
+
+pub struct Item {
+  // Name of the .desktop file, used of the entry does not specify a name
+  app_name: String,
+  desktop_entry: Desktop_Entry,
+  action_icons: Vec<Option<Box<Svg_Resource>>>,
+  instances: Vec<NonNull<Client>>,
+  window: Window,
+  icon: Box<Svg_Resource>,
+  size: u32,
+  command: Vec<String>,
+  geometry: Geometry,
+  is_pinned: bool,
+  hovered: bool,
+}
+
+impl Item {
+  pub unsafe fn create (
+    dock_window: XWindow,
+    app_name: &str,
+    is_pinned: bool,
+    size: u32,
+    x: i32,
+    y: i32,
+    dc: &mut Drawing_Context,
+  ) -> Option<Box<Self>> {
+    let de = if let Some (entry) = Desktop_Entry::new (app_name) {
+      entry
+    } else {
+      if is_pinned {
+        message_box (
+          "Application not found",
+          &format! ("'{}' was not found and got removed from the dock", app_name),
+        );
+      }
+      return None;
+    };
+    let window = Window::builder (&display)
+      .size (size, size)
+      .position (x, y)
+      .parent (dock_window)
+      .attributes (|attributes| {
+        attributes.event_mask (EnterWindowMask | LeaveWindowMask | ButtonPressMask);
+      })
+      .build ();
+    let icon = if let Some (icon) = get_icon (de.icon.clone ()) {
+      icon
+    } else {
+      message_box (
+        &format! ("No suitable icon found for '{}'", app_name),
+        "It got removed from the dock",
+      );
+      return None;
+    };
+    let mut action_icons = Vec::new ();
+    for action in de.actions.iter () {
+      if let Some (icon_name_or_path) = action.icon.as_ref () {
+        action_icons.push (draw::get_app_icon (icon_name_or_path));
+      } else {
+        action_icons.push (None);
+      }
+    }
+    set_window_kind (window, Window_Kind::Dock_Item);
+    window.map ();
+    window.clear ();
+    let command = split_commandline (de.exec.as_ref ().unwrap ());
+    let mut this = Box::new (Self {
+      app_name: app_name.to_owned (),
+      desktop_entry: de,
+      action_icons,
+      instances: Vec::new (),
+      window,
+      icon,
+      size,
+      command,
+      geometry: Geometry::from_parts (x, y, size, size),
+      is_pinned,
+      hovered: false,
+    });
+    window.save_context (super::item_context, this.as_mut () as *mut Item as XPointer);
+    this.redraw (dc, false);
+    Some (this)
+  }
+
+  pub fn destroy (&self) {
+    self.window.destroy ();
+  }
+
+  pub fn geometry (&self) -> &Geometry {
+    &self.geometry
+  }
+
+  unsafe fn draw_indicator (&self, dc: &mut Drawing_Context) {
+    if !self.instances.is_empty () {
+      let h = self.geometry.h / 16;
+      let w = self.geometry.w / 4;
+      let x = (self.geometry.w - w) as i32 / 2;
+      let y = (self.geometry.h - h) as i32;
+      dc.rect (x, y, w, h)
+        .color (Color::from_rgb (0.68, 0.7, 0.72))
+        .corner_radius (0.5)
+        .draw ();
+      dc.render (self.window, x, y, w, h);
+    }
+  }
+
+  pub unsafe fn redraw (&mut self, dc: &mut Drawing_Context, hovered: bool) {
+    self.hovered = true;
+    // TODO: config value for icon size
+    let icon_size = self.size * 85 / 100;
+    let icon_position = (self.size - icon_size) as i32 / 2;
+    dc.square (0, 0, self.size)
+      .color ((*config).colors.bar_background)
+      .draw ();
+    if hovered {
+      dc.square (0, 0, self.size)
+        .corner_radius (0.1)
+        .color (Color::from_rgb (0.2, 0.2, 0.2))
+        .stroke (1, Color::from_rgb (0.2667, 0.2667, 0.2667))
+        .draw ();
+    }
+    dc.draw_svg (
+      self.icon.as_mut (),
+      icon_position,
+      icon_position,
+      icon_size,
+      icon_size,
+    );
+    self.draw_indicator (dc);
+    dc.render (self.window, 0, 0, self.size, self.size);
+  }
+
+  pub unsafe fn focus_instance_client (&self, index: usize) {
+    let client = &mut *self.instances[index].as_ptr ();
+    if client.workspace != active_workspace {
+      action::select_workspace (client.workspace, None);
+    }
+    workspaces[active_workspace].focus (client.window);
+  }
+
+  pub unsafe fn click (&self) {
+    if !self.instances.is_empty () {
+      self.focus_instance_client (0);
+    } else {
+      self.new_instance ();
+    }
+  }
+
+  pub fn name (&self) -> &str {
+    &self.app_name
+  }
+
+  pub fn display_name (&self) -> &str {
+    &self.desktop_entry.name
+  }
+
+  pub fn new_instance (&self) {
+    run_or_message_box (&self.command);
+  }
+
+  unsafe fn context_action (this: &mut Self, mut choice: usize) {
+    // Instances
+    if choice < this.instances.len () {
+      this.focus_instance_client (choice);
+      return;
+    }
+    choice -= this.instances.len ();
+    // Actions
+    if choice < this.desktop_entry.actions.len () {
+      let action = &this.desktop_entry.actions[choice];
+      if let Some (command) = action.exec.clone () {
+        let command: Vec<String> = split_commandline (&command);
+        run_or_message_box (&command);
+      }
+      return;
+    }
+    choice -= this.desktop_entry.actions.len ();
+    // Default operations
+    match choice {
+      0 => {
+        this.new_instance ();
+      }
+      1 => {
+        if let Some (client) = this.instances.first_mut () {
+          if client.as_ref ().is_minimized {
+            client.as_mut ().focus ();
+          } else {
+            action::minimize (client.as_mut ());
+          }
+        }
+      }
+      2 => {
+        if let Some (client) = this.instances.first_mut () {
+          action::close_client (client.as_mut ());
+        }
+      }
+      _ => unreachable! (),
+    }
+  }
+
+  pub unsafe fn context_menu (&mut self) {
+    let this = self as *mut Self;
+    let mut menu = Context_Menu::new (Box::new (move |selection| {
+      if let Some (choice) = selection {
+        Self::context_action (&mut *this, choice);
+      }
+      if !workspaces[active_workspace].clients.is_empty () {
+        super::the ().keep_open (false);
+      }
+    }));
+    if !self.instances.is_empty () {
+      self
+        .instances
+        .iter_mut ()
+        .map (|client| {
+          menu.action (
+            client.as_mut ().icon (),
+            window_title (client.as_ref ().window),
+          );
+        })
+        .for_each (drop);
+      menu.divider ();
+    }
+    if !self.desktop_entry.actions.is_empty () {
+      self
+        .desktop_entry
+        .actions
+        .iter ()
+        .enumerate ()
+        .map (|(index, action)| {
+          let icon = self.action_icons[index]
+            .as_mut ()
+            .map (|icon| &mut *(icon.as_mut () as *mut Svg_Resource));
+          menu.action (icon, action.name.clone ());
+        })
+        .for_each (drop);
+      menu.divider ();
+    }
+
+    menu.action (None, "Launch".to_string ());
+
+    if let Some (active) = self.instances.first () {
+      menu
+        .action (
+          None,
+          if active.as_ref ().is_minimized {
+            "Show"
+          } else {
+            "Hide"
+          }
+          .to_string (),
+        )
+        .action (None, "Quit".to_string ());
+    }
+
+    menu.min_width (240).build ();
+
+    let dock = super::the ();
+    let x = dock.geometry ().x + self.geometry.x + self.geometry.w as i32 / 2;
+    let y = dock.geometry ().y + self.geometry.y - 5;
+    menu.show_at (x, y);
+  }
+
+  pub fn add_instance (&mut self, client: NonNull<Client>) {
+    self.instances.push (client);
+    unsafe {
+      self.redraw (super::the ().drawing_context (), self.hovered);
+    }
+  }
+
+  pub fn remove_instance (&mut self, client: &mut Client) -> bool {
+    if let Some (index) = self
+      .instances
+      .iter ()
+      .position (|c| unsafe { c.as_ref () } == client)
+    {
+      self.instances.remove (index);
+    }
+    if self.instances.is_empty () {
+      unsafe {
+        self.redraw (super::the ().drawing_context (), self.hovered);
+      }
+    }
+    self.instances.is_empty () && !self.is_pinned
+  }
+
+  pub fn focus (&mut self, client: &mut Client) {
+    if let Some (index) = self
+      .instances
+      .iter ()
+      .position (|c| unsafe { c.as_ref () } == client)
+    {
+      let instance = self.instances.remove (index);
+      self.instances.insert (0, instance);
+    }
+  }
+}

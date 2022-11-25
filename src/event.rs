@@ -1,4 +1,5 @@
 use super::config::*;
+use super::context_menu;
 use super::core::*;
 use super::process;
 use super::property::{atom, Net, Normal_Hints};
@@ -27,31 +28,47 @@ pub unsafe fn win2client<W: To_XWindow> (window: W) -> Option<&'static mut Clien
 }
 
 pub unsafe fn button_press (event: &XButtonEvent) {
+  if context_menu::click (event) {
+    return;
+  }
   if is_kind (event.subwindow, Window_Kind::Meta_Or_Unmanaged) {
     return;
   }
-  if is_kind (event.window, Window_Kind::Status_Bar) {
-    bar.click (event.window, event);
-    return;
+  // Check for windows for which we have ButtonPressMask set
+  if let Some (kind) = get_window_kind (event.window) {
+    let mut handled = true;
+    // TODO: fix clicks on root coming through
+    match kind {
+      Window_Kind::Status_Bar => {
+        bar.click (event.window, event);
+      }
+      Window_Kind::Dock_Item => {
+        dock::click_item (event);
+      }
+      // See `dock::create_show_window` as to why we need handle these
+      Window_Kind::Dock_Show | Window_Kind::Dock => {}
+      Window_Kind::Frame_Button => {
+        if let Some (client) = win2client (event.window) {
+          client.click (event.window);
+        }
+      }
+      Window_Kind::Notification => {
+        notifications::maybe_close (event.window);
+      }
+      _ => {
+        log::warn! (
+          "Ignoring click on window with ButtonPressMask: {}",
+          event.window
+        );
+        handled = false;
+      }
+    }
+    if handled {
+      return;
+    }
   }
   if is_kind (event.subwindow, Window_Kind::Status_Bar) {
     bar.click (event.subwindow, event);
-    return;
-  }
-  if event.subwindow == XNone {
-    if let Some (kind) = get_window_kind (event.window) {
-      match kind {
-        Window_Kind::Frame_Button => {
-          if let Some (client) = win2client (event.window) {
-            client.click (event.window);
-          }
-        }
-        Window_Kind::Notification => {
-          notifications::maybe_close (event.window);
-        }
-        _ => {}
-      }
-    }
     return;
   }
   if let Some (client) = win2client (event.subwindow) {
@@ -69,7 +86,7 @@ pub unsafe fn button_relase () {
   mouse_held = 0;
 }
 
-pub unsafe fn motion (event: &XButtonEvent) {
+pub unsafe fn motion (event: &XMotionEvent) {
   if mouse_held != 0 {
     if let Some (c) = win2client (event.subwindow) {
       let mut lock_width = false;
@@ -95,6 +112,8 @@ pub unsafe fn motion (event: &XButtonEvent) {
       }
     }
     mouse_held = 0;
+  } else if is_kind (event.window, Window_Kind::Context_Menu) {
+    crate::context_menu::motion (event);
   } else {
     // Ignore all subsequent MotionNotify events
     let mut my_event: XEvent = uninitialized! ();
@@ -228,6 +247,9 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
 }
 
 pub unsafe fn key_press (event: &XKeyEvent) {
+  if is_kind (event.window, Window_Kind::Context_Menu) {
+    context_menu::key_press (event);
+  }
   if let Some (action) = (*config).get (event.keycode, event.state) {
     match action {
       Action::WM (f) => {
@@ -313,6 +335,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
       c.map ();
       c.draw_border ();
     }
+    dock::add_client (&mut c);
     workspaces[target_workspace].push (c);
     property::append (root, Net::ClientList, XA_WINDOW, 32, &window, 1);
     log::info! ("Mapped new client: '{}' ({})", name, window);
@@ -429,6 +452,9 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
     bar::tray.maybe_remove_client (event.window);
     return;
   }
+  if let Some (client) = win2client (event.window) {
+    dock::remove_client (client);
+  }
   for workspace in &mut workspaces {
     if workspace.contains (window) {
       workspace.remove (&Client::dummy (window)).destroy ();
@@ -449,21 +475,40 @@ pub unsafe fn expose (event: &XExposeEvent) {
 }
 
 pub unsafe fn crossing (event: &XCrossingEvent) {
-  if is_kind (event.window, Window_Kind::Frame_Button) {
-    if let Some (client) = win2client (event.window) {
-      for b in client.buttons_mut () {
-        if b.window == event.window {
-          b.draw (event.type_ == EnterNotify);
+  get_window_kind (event.window).map (|kind| {
+    use Window_Kind::*;
+    match kind {
+      Frame_Button => {
+        if let Some (client) = win2client (event.window) {
+          for b in client.buttons_mut () {
+            if b.window == event.window {
+              b.draw (event.type_ == EnterNotify);
+            }
+          }
         }
       }
+      Status_Bar => {
+        if event.type_ == EnterNotify {
+          bar.enter (event.window);
+        } else {
+          bar.leave (event.window);
+        }
+      }
+      Dock => {
+        dock::cross (event);
+      }
+      Dock_Item => {
+        dock::cross_item (event);
+      }
+      Dock_Show => {
+        dock::cross_show (event);
+      }
+      Context_Menu => {
+        context_menu::cross (event);
+      }
+      _ => {}
     }
-  } else if is_kind (event.window, Window_Kind::Status_Bar) {
-    if event.type_ == EnterNotify {
-      bar.enter (event.window);
-    } else {
-      bar.leave (event.window);
-    }
-  }
+  });
 }
 
 pub unsafe fn map_notify (event: &XMapEvent) {

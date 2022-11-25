@@ -174,6 +174,7 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
   active_workspace = idx;
   if let Some (focused) = focused_client! () {
     focused.focus ();
+    dock::keep_open (false);
   } else {
     property::set (
       root,
@@ -183,6 +184,7 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
       std::ptr::null_mut::<c_uchar> (),
       0,
     );
+    dock::keep_open (true);
   }
   set_cardinal! (root, property::atom (Net::CurrentDesktop), active_workspace);
   bar.draw ();

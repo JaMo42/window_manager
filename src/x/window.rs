@@ -245,6 +245,18 @@ impl Window {
       }
     }
   }
+
+  pub fn set_class_hint (&self, class: &str, name: &str) {
+    unsafe {
+      let class_cstr = std::ffi::CString::new (class).unwrap ();
+      let name_cstr = std::ffi::CString::new (name).unwrap ();
+      let mut h = XClassHint {
+        res_class: class_cstr.as_ptr () as *mut i8,
+        res_name: name_cstr.as_ptr () as *mut i8,
+      };
+      XSetClassHint (self.display (), self.handle, &mut h);
+    }
+  }
 }
 
 pub trait To_XWindow {

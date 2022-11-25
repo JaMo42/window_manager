@@ -179,7 +179,10 @@ impl Window_Builder {
     self
   }
 
-  pub fn attributes (&mut self, f: fn (&mut Window_Attributes)) -> &mut Self {
+  pub fn attributes<F> (&mut self, f: F) -> &mut Self
+  where
+    F: FnOnce(&mut Window_Attributes),
+  {
     f (&mut self.attributes);
     self
   }

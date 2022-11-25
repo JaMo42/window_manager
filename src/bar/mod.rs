@@ -25,7 +25,7 @@ pub struct Bar {
   last_scroll_time: Time,
   left_widgets: Vec<Box<dyn Widget>>,
   right_widgets: Vec<Box<dyn Widget>>,
-  // The widget under the mouse, gets set on enter/leave events we don't need
+  // The widget under the mouse, gets set on enter/leave events so we don't need
   // to resolve it for clicks
   mouse_widget: *mut dyn Widget,
 }
@@ -66,6 +66,7 @@ impl Bar {
     // We don't want to interact with the blank part, instead the widgets
     // use `Window_Kind::Status_Bar`.
     set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
+    window.set_class_hint ("Window_manager_bar", "window_manager_bar");
     window.map_raised ();
     Self {
       width,

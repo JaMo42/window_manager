@@ -2,6 +2,8 @@ use libc::{signal, SIGCHLD, SIG_DFL, SIG_IGN};
 use std::io::Result;
 use std::process::{Command, ExitStatus, Stdio};
 
+use crate::error::message_box;
+
 pub fn ignore_sigchld (cfg: bool) {
   unsafe {
     signal (SIGCHLD, if cfg { SIG_IGN } else { SIG_DFL });
@@ -26,7 +28,10 @@ impl Drop for Scoped_Default_SigChld {
 /// Splits a commandline into it's elements, handling strings and escaped
 /// characters. Strings are delimited by either `'` or `"`, any character after
 /// a `\` is ignored.
-pub fn split_commandline (commandline: &str) -> Vec<String> {
+pub fn split_commandline<S> (commandline: &str) -> Vec<S>
+where
+  S: std::str::FromStr,
+{
   let mut result = Vec::new ();
   let mut elem = String::new ();
   let mut in_string: char = '\0';
@@ -52,7 +57,7 @@ pub fn split_commandline (commandline: &str) -> Vec<String> {
       ' ' => {
         if in_string == '\0' {
           if !elem.is_empty () {
-            result.push (elem);
+            result.push (unsafe { S::from_str (&elem).unwrap_unchecked () });
             elem = String::new ();
           }
         } else {
@@ -65,13 +70,26 @@ pub fn split_commandline (commandline: &str) -> Vec<String> {
     }
   }
   if !elem.is_empty () {
-    result.push (elem);
+    result.push (unsafe { S::from_str (&elem).unwrap_unchecked () });
   }
   result
 }
 
-pub fn run (cmd: &[&str]) -> Result<()> {
-  Command::new (cmd[0]).args (&cmd[1..]).spawn ().map (|_| ())
+pub fn run (cmd: &[impl AsRef<str>]) -> Result<()> {
+  Command::new (cmd[0].as_ref ())
+    .args (cmd[1..].iter ().map (|a| a.as_ref ()))
+    .spawn ()
+    .map (|_| ())
+}
+
+pub fn run_or_message_box (cmd: &[impl AsRef<str>]) {
+  if let Err (error) = run (cmd) {
+    let commandline = cmd
+      .iter ()
+      .fold (String::new (), |a, b| a + " " + b.as_ref ());
+    let body = format! ("{}\n{}", commandline, error);
+    message_box ("Failed to run process:", &body);
+  }
 }
 
 pub fn run_and_await (cmd: &[&str]) -> Result<ExitStatus> {

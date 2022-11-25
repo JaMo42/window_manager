@@ -84,6 +84,10 @@ pub enum Window_Kind {
   Notification,
   Meta_Or_Unmanaged,
   Tray_Client,
+  Dock,
+  Dock_Item,
+  Dock_Show,
+  Context_Menu,
 }
 
 pub static mut display: Display = Display::uninit ();

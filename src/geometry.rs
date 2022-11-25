@@ -1,3 +1,4 @@
+use super::error::fatal_error;
 use crate::action::{move_snap_flags, snap_geometry};
 use crate::client::{decorated_frame_offset, Client, Client_Geometry};
 use crate::core::*;
@@ -108,6 +109,10 @@ impl Geometry {
       self.h - decorated_frame_offset.h,
     )
   }
+
+  pub fn contains (&self, x: i32, y: i32) -> bool {
+    x >= self.x && x < (self.x + self.w as i32) && y >= self.y && y < (self.y + self.h as i32)
+  }
 }
 
 pub struct Preview {
@@ -130,15 +135,12 @@ impl Preview {
   const RESIZE_INCREMENT_THRESHHOLD: i32 = 5;
 
   pub unsafe fn create (initial_geometry: Geometry) -> Self {
-    let mut vi: XVisualInfo = uninitialized! ();
-    XMatchVisualInfo (
-      display.as_raw (),
-      display.default_screen (),
-      32,
-      TrueColor,
-      &mut vi,
-    );
-    let colormap = XCreateColormap (display.as_raw (), root.handle (), vi.visual, AllocNone);
+    let vi = display
+      .match_visual_info (32, TrueColor)
+      .unwrap_or_else (|| {
+        fatal_error ("Could not create colormap");
+      });
+    let colormap = display.create_colormap (vi.visual, AllocNone);
     let window = Window::builder (&display)
       .position (
         initial_geometry.x - Self::BORDER_WIDTH,

@@ -117,6 +117,8 @@ unsafe fn net_wm_moveresize (client: &mut Client, event: &XClientMessageEvent) {
   //       bottom and/or right direction, we could just ignore them but it's
   //       probably nicer to have them anyways.
 
+  // TODO: should focus window
+
   if direction == _NET_WM_MOVERESIZE_MOVE && client.may_move () {
     mouse_move (client);
   } else if (direction == _NET_WM_MOVERESIZE_SIZE_LEFT

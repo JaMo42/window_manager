@@ -1,8 +1,9 @@
 use super::buttons::Button;
 use super::core::*;
 use super::geometry::*;
-use super::property::{Motif_Hints, MWM_HINTS_DECORATIONS, WM};
+use super::property::{Class_Hints, Motif_Hints, MWM_HINTS_DECORATIONS, WM};
 use super::*;
+use crate::desktop_entry::Desktop_Entry;
 use crate::x::*;
 
 pub static mut decorated_frame_offset: Geometry = Geometry::new ();
@@ -110,6 +111,7 @@ pub struct Client {
   title_space: i32,
   frame_kind: Frame_Kind,
   icon: Option<Box<draw::Svg_Resource>>,
+  application_id: String,
 }
 
 impl Client {
@@ -118,6 +120,7 @@ impl Client {
 
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
+    let class_hint = Class_Hints::new (window);
 
     window.change_attributes (|attributes| {
       attributes
@@ -146,8 +149,22 @@ impl Client {
     let (reparent_x, reparent_y) = frame_kind.parent_offset ();
     window.reparent (frame, reparent_x, reparent_y);
 
+    // Get the application id:
+    // 1. If the window has _GTK_APPLICATION_ID set, use it
+    // 2. If the window has class hints...
+    //     1. Try to use the desktop entry name for the name specified in the class hint
+    //     2. If not found or ambiguous, use the name itself
+    // 3. Otherwise use the window title and hope that it doesn't change
+    let application_id = property::get_string (window, property::Other::GtkApplicationId)
+      .or_else (|| {
+        class_hint
+          .as_ref ()
+          .map (|h| Desktop_Entry::entry_name (&h.name).unwrap_or_else (|| h.name.clone ()))
+      })
+      .unwrap_or_else (|| window_title (window));
+
     let icon = if (*config).window_icon_size > 0 && frame_kind.should_draw_decorations () {
-      property::Class_Hints::new (window).and_then (|h| draw::get_app_icon (&h.name))
+      draw::get_app_icon (&application_id)
     } else {
       None
     };
@@ -171,6 +188,7 @@ impl Client {
       title_space: 0,
       frame_kind,
       icon,
+      application_id,
     });
     let this = result.as_mut () as *mut Client as XPointer;
     window.save_context (wm_context, this);
@@ -224,6 +242,7 @@ impl Client {
       title_space: 0,
       frame_kind: Frame_Kind::Decorated,
       icon: None,
+      application_id: String::new (),
     }
   }
 
@@ -237,6 +256,17 @@ impl Client {
 
   pub fn may_resize (&self) -> bool {
     !(self.is_fullscreen || self.is_dialog)
+  }
+
+  pub fn icon (&mut self) -> Option<&'static mut draw::Svg_Resource> {
+    self.icon.as_mut ().map (|icon| unsafe {
+      let p: *mut draw::Svg_Resource = icon.as_mut () as *mut draw::Svg_Resource;
+      &mut *p
+    })
+  }
+
+  pub fn application_id (&self) -> &str {
+    &self.application_id
   }
 
   pub unsafe fn map (&mut self) {
@@ -443,6 +473,7 @@ impl Client {
     self.send_event (property::atom (WM::TakeFocus));
     property::set (root, Net::ActiveWindow, XA_WINDOW, 32, &self.window, 1);
     display.sync (false);
+    dock::focus (self);
   }
 
   pub unsafe fn raise (&self) {

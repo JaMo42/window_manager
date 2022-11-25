@@ -54,6 +54,7 @@ pub enum Net {
   WMWindowTypeDialog,
   WMWindowTypeDock,
   WMWindowTypeNotification,
+  WMWindowTypePopupMenu,
   WMWindowTypeTooltip,
   Last,
 }
@@ -83,6 +84,7 @@ pub enum XEmbed {
 pub enum Other {
   Manager,
   MotfifWMHints,
+  GtkApplicationId,
   Last,
 }
 
@@ -204,6 +206,7 @@ pub unsafe fn load_atoms () {
   N! (WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG");
   N! (WMWindowTypeDock, "_NET_WM_WINDOW_TYPE_DOCK");
   N! (WMWindowTypeNotification, "_NET_WM_WINDOW_TYPE_NOTIFICATION");
+  N! (WMWindowTypePopupMenu, "_NET_WM_WINDOW_TYPE_POPUP_MENU");
   N! (WMWindowTypeTooltip, "_NET_WM_WINDOW_TYPE_TOOLTIP");
 
   xembed[XEmbed::XEmbed as usize] = display.intern_atom ("_XEMBED");
@@ -211,6 +214,7 @@ pub unsafe fn load_atoms () {
 
   other[Other::Manager as usize] = display.intern_atom ("MANAGER");
   other[Other::MotfifWMHints as usize] = display.intern_atom ("_MOTIF_WM_HINTS");
+  other[Other::GtkApplicationId as usize] = display.intern_atom ("_GTK_APPLICATION_ID");
 }
 
 pub unsafe fn init_set_root_properties () {
@@ -311,6 +315,10 @@ pub struct Property_Data {
 
 #[allow(dead_code)]
 impl Property_Data {
+  pub fn actual_type (&self) -> Atom {
+    self.actual_type
+  }
+
   pub fn length (&self) -> usize {
     self.nitems as usize
   }

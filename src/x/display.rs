@@ -202,13 +202,13 @@ impl Display {
     }
   }
 
-  pub fn grab_button (&self, button: u32, mods: u32) {
+  pub fn grab_button_for (&self, button: u32, mods: u32, window: impl To_XWindow) {
     unsafe {
       XGrabButton (
         self.connection,
         button,
         mods,
-        self.root,
+        window.to_xwindow (),
         XTrue,
         (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
         GrabModeAsync,
@@ -219,10 +219,18 @@ impl Display {
     }
   }
 
-  pub fn ungrab_button (&self, button: u32, mods: u32) {
+  pub fn grab_button (&self, button: u32, mods: u32) {
+    self.grab_button_for (button, mods, self.root);
+  }
+
+  pub fn ungrab_button_for (&self, button: u32, mods: u32, window: impl To_XWindow) {
     unsafe {
-      XUngrabButton (self.connection, button, mods, self.root);
+      XUngrabButton (self.connection, button, mods, window.to_xwindow ());
     }
+  }
+
+  pub fn ungrab_button (&self, button: u32, mods: u32) {
+    self.ungrab_button_for (button, mods, self.root);
   }
 
   pub fn grab_pointer (&self, mask: i64, cursor: Cursor) -> bool {
@@ -244,6 +252,12 @@ impl Display {
   pub fn ungrab_pointer (&self) {
     unsafe {
       XUngrabPointer (self.connection, CurrentTime);
+    }
+  }
+
+  pub fn allow_events (&self, mode: i32) {
+    unsafe {
+      XAllowEvents (self.connection, mode, CurrentTime);
     }
   }
 
@@ -330,6 +344,21 @@ impl Display {
     unsafe {
       XFreeCursor (self.connection, cursor);
     }
+  }
+
+  pub fn match_visual_info (&self, depth: i32, class: i32) -> Option<XVisualInfo> {
+    unsafe {
+      let mut vi: XVisualInfo = std::mem::MaybeUninit::zeroed ().assume_init ();
+      if XMatchVisualInfo (self.connection, self.screen, depth, class, &mut vi) != 0 {
+        Some (vi)
+      } else {
+        None
+      }
+    }
+  }
+
+  pub fn create_colormap (&self, visual: *mut Visual, alloc: i32) -> Colormap {
+    unsafe { XCreateColormap (self.connection, self.root, visual, alloc) }
   }
 }
 

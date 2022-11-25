@@ -92,7 +92,7 @@ fn send_choice (choice: &'static str) {
 
 fn build () -> Application {
   let app = Application::builder ()
-    .application_id ("org.window_manager.quit")
+    .application_id ("com.github.JaMo42.window_manager.quit")
     .build ();
 
   let margin = 10;

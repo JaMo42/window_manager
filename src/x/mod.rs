@@ -34,3 +34,8 @@ pub fn string_to_keysym (string: &str) -> KeySym {
     XStringToKeysym (c_str.as_ptr ())
   }
 }
+
+pub fn lookup_keysym (event: &XKeyEvent) -> KeySym {
+  // TODO: is casting away the const here ok?
+  unsafe { XLookupKeysym (event as *const XKeyEvent as *mut XKeyEvent, 0) }
+}

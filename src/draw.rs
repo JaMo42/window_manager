@@ -86,6 +86,22 @@ pub struct Drawing_Context {
 }
 
 impl Drawing_Context {
+  pub unsafe fn from_parts (
+    drawable: Drawable,
+    gc: GC,
+    surface: cairo::Surface,
+    context: cairo::Context,
+    layout: pango::Layout,
+  ) -> Self {
+    Self {
+      drawable,
+      gc,
+      cairo_surface: surface,
+      cairo_context: context,
+      pango_layout: layout,
+    }
+  }
+
   pub unsafe fn new () -> Self {
     let width = screen_size.w as u32;
     let height = screen_size.h as u32;
@@ -117,6 +133,10 @@ impl Drawing_Context {
       cairo_context,
       pango_layout,
     }
+  }
+
+  pub fn cairo_context (&mut self) -> &mut cairo::Context {
+    &mut self.cairo_context
   }
 
   pub unsafe fn destroy (&mut self) {
@@ -546,11 +566,16 @@ pub unsafe fn load_resources () {
 /// resources need to have static lifetime and this is sufficient.
 pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
   let desktop_entry = Desktop_Entry::new (app_name)?;
-  let icon_path = format! (
-    "/usr/share/icons/{}/48x48/apps/{}.svg",
-    (*config).icon_theme,
-    desktop_entry.icon?
-  );
+  let name = desktop_entry.icon?;
+  let icon_path = if name.starts_with ('/') {
+    name
+  } else {
+    format! (
+      "/usr/share/icons/{}/48x48/apps/{}.svg",
+      (*config).icon_theme,
+      name
+    )
+  };
   Svg_Resource::open (&icon_path)
 }
 
