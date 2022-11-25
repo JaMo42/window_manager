@@ -10,15 +10,79 @@ use x11::xlib::*;
 static mut shown: Option<Context_Menu> = None;
 static mut mouse_on_shown: bool = false;
 
-struct Action {
-  icon: Option<&'static mut Svg_Resource>,
+pub enum Indicator {
+  Check,
+  Diamond,
+  Circle,
+}
+
+impl Indicator {
+  fn symbol (&self) -> &str {
+    match self {
+      &Self::Check => "✔",
+      &Self::Diamond => "♦", //"◆",
+      &Self::Circle => "●",
+    }
+  }
+
+  // Determines the with needed for any indicator. The calculation is only done
+  // once.
+  fn width () -> u32 {
+    use std::sync::Once;
+    static once_flag: Once = Once::new ();
+    static mut result: u32 = 0;
+    once_flag.call_once (|| unsafe {
+      let all_types = [Self::Check, Self::Diamond, Self::Circle];
+      (*draw).select_font (&(*config).bar_font);
+      for i in all_types {
+        result = u32::max (result, (*draw).text (i.symbol ()).get_width ());
+      }
+      log::debug! ("Context menu indicator width: {}", result);
+    });
+    unsafe { result }
+  }
+}
+
+pub struct Action {
   name: String,
   index: usize,
+  icon: Option<&'static mut Svg_Resource>,
+  indicator: Option<Indicator>,
+}
+
+impl Action {
+  fn new (name: String, index: usize) -> Self {
+    Self {
+      name,
+      index,
+      icon: None,
+      indicator: None,
+    }
+  }
+
+  pub fn icon (&mut self, icon: Option<&'static mut Svg_Resource>) -> &mut Self {
+    self.icon = icon;
+    self
+  }
+
+  pub fn indicator (&mut self, indicator: Option<Indicator>) -> &mut Self {
+    self.indicator = indicator;
+    self
+  }
 }
 
 enum Item {
   Action (Action),
   Divider,
+}
+
+impl Item {
+  fn unwrap_action (&mut self) -> &mut Action {
+    match self {
+      Self::Action (ref mut action) => action,
+      _ => panic! ("Item::unwrap_action on non-action item"),
+    }
+  }
 }
 
 pub struct Context_Menu {
@@ -34,7 +98,8 @@ pub struct Context_Menu {
   selected: Option<usize>,
   content_geometry: Geometry,
   action_count: usize,
-  has_at_least_one_icon: bool,
+  has_at_least_one_indicator: bool,
+  always_show_indicator_column: bool,
   x: i32,
   y: i32,
 }
@@ -56,23 +121,19 @@ impl Context_Menu {
       selected: None,
       content_geometry: Geometry::new (),
       action_count: 0,
-      has_at_least_one_icon: false,
+      has_at_least_one_indicator: false,
+      always_show_indicator_column: false,
       x: 0,
       y: 0,
     }
   }
 
-  pub fn action (&mut self, icon: Option<&'static mut Svg_Resource>, name: String) -> &mut Self {
-    if icon.is_some () {
-      self.has_at_least_one_icon = true;
-    }
-    self.items.push (Item::Action (Action {
-      icon,
-      name,
-      index: self.action_count,
-    }));
-    self.action_count += 1;
+  pub fn action (&mut self, name: String) -> &mut Action {
     self
+      .items
+      .push (Item::Action (Action::new (name, self.action_count)));
+    self.action_count += 1;
+    self.items.last_mut ().unwrap ().unwrap_action ()
   }
 
   pub fn divider (&mut self) -> &mut Self {
@@ -82,6 +143,11 @@ impl Context_Menu {
 
   pub fn min_width (&mut self, width: u32) -> &mut Self {
     self.min_width = width;
+    self
+  }
+
+  pub fn always_show_indicator_column (&mut self) -> &mut Self {
+    self.always_show_indicator_column = true;
     self
   }
 
@@ -103,15 +169,24 @@ impl Context_Menu {
     self.window.resize (width, height);
     self.window_geometry.w = width;
     self.window_geometry.h = height;
+    for i in self.items.iter () {
+      if let Item::Action (action) = i {
+        if action.indicator.is_some () {
+          self.has_at_least_one_indicator = true;
+          break;
+        }
+      }
+    }
     self
   }
 
-  unsafe fn text_width (&self) -> u32 {
+  unsafe fn text_width (&self, height: u32) -> u32 {
     let mut widest = 0;
     (*draw).select_font (&(*config).bar_font);
     for item in self.items.iter () {
       if let Item::Action (action) = item {
-        let width = (*draw).text (&action.name).get_width ();
+        let width = (*draw).text (&action.name).get_width ()
+          + if action.icon.is_some () { height } else { 0 };
         widest = u32::max (widest, width);
       }
     }
@@ -119,17 +194,19 @@ impl Context_Menu {
   }
 
   unsafe fn redraw (&mut self) -> (u32, u32) {
+    let show_indicator_column =
+      self.has_at_least_one_indicator || self.always_show_indicator_column;
     let action_height = (*draw).font_height (None);
     let content_width = u32::max (
-      self.text_width () + (action_height * self.has_at_least_one_icon as u32),
+      self.text_width (action_height) + (2 * Indicator::width () * show_indicator_column as u32),
       self.min_width,
     );
     let mut y = Self::PADDING as i32;
     let x = Self::PADDING as i32;
     let icon_size = action_height * 90 / 100;
     let icon_position = (action_height - icon_size) as i32 / 2;
-    let text_x = if self.has_at_least_one_icon {
-      x + action_height as i32
+    let text_x = if show_indicator_column {
+      x + Indicator::width () as i32
     } else {
       x
     };
@@ -154,14 +231,24 @@ impl Context_Menu {
           } else {
             (*config).colors.bar_text
           };
-          if let Some (icon) = action.icon.as_mut () {
+          if let Some (indicator) = &action.indicator {
+            (*draw)
+              .text (indicator.symbol ())
+              .at (x, y)
+              .color (text_color)
+              .align_vertically (crate::draw::Alignment::Centered, action_height as i32)
+              .draw ();
+          }
+          let mut text_x = text_x;
+          if let Some (icon) = &action.icon {
             (*draw).draw_svg (
               icon,
-              x + icon_position,
+              text_x - icon_position,
               y + icon_position,
               icon_size,
               icon_size,
             );
+            text_x += action_height as i32;
           }
           (*draw)
             .text (&action.name)

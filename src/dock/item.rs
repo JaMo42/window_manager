@@ -1,7 +1,7 @@
 use crate::action;
 use crate::client::Client;
 use crate::color::Color;
-use crate::context_menu::Context_Menu;
+use crate::context_menu::{Context_Menu, Indicator};
 use crate::desktop_entry::Desktop_Entry;
 use crate::draw::{self, Drawing_Context, Svg_Resource};
 use crate::error::message_box;
@@ -248,10 +248,9 @@ impl Item {
         .instances
         .iter_mut ()
         .map (|client| {
-          menu.action (
-            client.as_mut ().icon (),
-            window_title (client.as_ref ().window),
-          );
+          menu
+            .action (window_title (client.as_ref ().window))
+            .icon (client.as_mut ().icon ());
         })
         .for_each (drop);
       menu.divider ();
@@ -263,32 +262,34 @@ impl Item {
         .iter ()
         .enumerate ()
         .map (|(index, action)| {
-          let icon = self.action_icons[index]
-            .as_mut ()
-            .map (|icon| &mut *(icon.as_mut () as *mut Svg_Resource));
-          menu.action (icon, action.name.clone ());
+          menu.action (action.name.clone ()).icon (
+            self.action_icons[index]
+              .as_mut ()
+              .map (|icon| &mut *(icon.as_mut () as *mut Svg_Resource)),
+          );
         })
         .for_each (drop);
       menu.divider ();
     }
 
-    menu.action (None, "Launch".to_string ());
+    menu.action ("Launch".to_string ());
 
     if let Some (active) = self.instances.first () {
-      menu
-        .action (
-          None,
-          if active.as_ref ().is_minimized {
-            "Show"
-          } else {
-            "Hide"
-          }
-          .to_string (),
-        )
-        .action (None, "Quit".to_string ());
+      menu.action (
+        if active.as_ref ().is_minimized {
+          "Show"
+        } else {
+          "Hide"
+        }
+        .to_string (),
+      );
+      menu.action ("Quit".to_string ());
     }
 
-    menu.min_width (240).build ();
+    menu
+      .min_width (240)
+      .always_show_indicator_column ()
+      .build ();
 
     let dock = super::the ();
     let x = dock.geometry ().x + self.geometry.x + self.geometry.w as i32 / 2;
