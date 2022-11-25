@@ -35,6 +35,7 @@ mod notifications;
 mod platform;
 mod process;
 mod session_manager;
+mod timeout_thread;
 mod tooltip;
 mod update_thread;
 

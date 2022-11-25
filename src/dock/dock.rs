@@ -6,7 +6,7 @@ use crate::error::fatal_error;
 use crate::ewmh;
 use crate::geometry::Geometry;
 use crate::property::Net;
-use crate::update_thread::Update_Thread;
+use crate::timeout_thread::Repeatable_Timeout_Thread;
 use crate::x::Window;
 use crate::{set_window_kind, set_window_opacity};
 use cairo::{Context, Surface};
@@ -136,7 +136,7 @@ pub struct Dock {
   // Invisible window at the bottom of the screen which is used to show the dock
   // when it is hovered
   show_window: Window,
-  hide_thread: Option<Update_Thread>,
+  hide_thread: Repeatable_Timeout_Thread,
   visible: bool,
   geometry: Geometry,
   keep_open: bool,
@@ -200,7 +200,9 @@ impl Dock {
       items,
       drawing_context: my_draw,
       show_window,
-      hide_thread: None,
+      hide_thread: Repeatable_Timeout_Thread::new (|| {
+        super::the ().hide ();
+      }),
       visible: false,
       geometry: Geometry::from_parts (x, y, width, height),
       keep_open: false,
@@ -211,6 +213,7 @@ impl Dock {
   pub fn destroy (&mut self) {
     self.window.destroy ();
     self.show_window.destroy ();
+    self.hide_thread.destroy ();
   }
 
   pub fn redraw (&mut self) {
@@ -286,20 +289,12 @@ impl Dock {
     if self.keep_open {
       return;
     }
-    self.hide_thread = Some (Update_Thread::new (after_ms, || {
-      let this = super::the ();
-      unsafe {
-        this.hide ();
-      }
-      this.cancel_hide ();
-    }));
+    self.hide_thread.start (after_ms);
   }
 
   /// Cancels a `hide_after` request.
   pub fn cancel_hide (&mut self) {
-    if let Some (t) = self.hide_thread.take () {
-      t.stop ();
-    }
+    self.hide_thread.cancel ();
   }
 
   pub fn keep_open (&mut self, yay_or_nay: bool) {
