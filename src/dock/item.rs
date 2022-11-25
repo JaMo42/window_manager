@@ -281,6 +281,13 @@ impl Item {
       }
     }));
     if !self.instances.is_empty () {
+      let mut all_on_current_workspace = true;
+      for i in self.instances.iter () {
+        if i.as_ref ().workspace != active_workspace {
+          all_on_current_workspace = false;
+          break;
+        }
+      }
       self
         .instances
         .iter_mut ()
@@ -301,11 +308,13 @@ impl Item {
             } else {
               None
             })
-            .info (if (*config).dock_context_show_workspaces {
-              format! (" ({})", client.as_ref ().workspace + 1)
-            } else {
-              String::new ()
-            });
+            .info (
+              if (*config).dock_context_show_workspaces && !all_on_current_workspace {
+                format! (" ({})", client.as_ref ().workspace + 1)
+              } else {
+                String::new ()
+              },
+            );
         })
         .for_each (drop);
       menu.divider ();
