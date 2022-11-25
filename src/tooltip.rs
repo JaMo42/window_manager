@@ -66,10 +66,10 @@ impl Tooltip {
     // I find this makes it look at bit better without looking uncentered.
     let height = text.get_height () + 2 * Self::BORDER + 1;
     self.move_and_resize (x, y, width, height);
-    (*draw).fill_rect (0, 0, width, height, (*config).colors.bar_background);
+    (*draw).fill_rect (0, 0, width, height, (*config).colors.tooltip_background);
     text
       .at (Self::BORDER as i32, Self::BORDER as i32)
-      .color ((*config).colors.bar_text)
+      .color ((*config).colors.tooltip_text)
       .draw ();
     self.window.map_raised ();
     (*draw).render (self.window, 0, 0, width, height);

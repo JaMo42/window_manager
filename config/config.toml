@@ -39,3 +39,13 @@ mod = "Win"
 font = "sans 18"
 opacity = 80
 height = "36"
+
+[dock]
+pinned = [
+  "xfce4-terminal",
+  "speedcrunch",
+  "thunar",
+  "chromium",
+  "spotify-qt",
+  "visual-studio-code"
+]

@@ -72,6 +72,8 @@ pub struct Bar {
 #[derive(Deserialize, Debug, Default)]
 pub struct Dock {
   pub pinned: Option<Vec<String>>,
+  pub focused_client_on_top: Option<bool>,
+  pub focus_urgent: Option<bool>,
 }
 
 pub fn parse (pathname: &str) -> Result<Parsed_Config, toml::de::Error> {

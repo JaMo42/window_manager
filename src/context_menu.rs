@@ -15,7 +15,7 @@ pub enum Indicator {
   Check,
   Diamond,
   Circle,
-  Exclamation
+  Exclamation,
 }
 
 impl Indicator {
@@ -263,7 +263,7 @@ impl Context_Menu {
           let y = y + (Self::DIVIDER_SPACE - Self::DIVIDER_HEIGHT) as i32 / 2;
           (*draw)
             .rect (x, y, content_width, Self::DIVIDER_HEIGHT)
-            .color (crate::color::Color::from_rgb (0.3, 0.3, 0.3))
+            .color ((*config).colors.context_menu_divider)
             .draw ();
           h = Self::DIVIDER_SPACE;
         }

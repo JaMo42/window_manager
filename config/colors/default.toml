@@ -30,3 +30,11 @@ text = "light_text"
 
 [notifications]
 background = "#1F1F1F"
+
+[dock]
+hovered = "#333333"
+urgent = "#C34B47"
+indicator = "#ADB2B8"
+
+[context_menu]
+divider = "#4C4C4C"

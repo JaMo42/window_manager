@@ -1,6 +1,5 @@
 use crate::action;
 use crate::client::Client;
-use crate::color::Color;
 use crate::context_menu::{Context_Menu, Indicator};
 use crate::desktop_entry::Desktop_Entry;
 use crate::draw::{self, Drawing_Context, Svg_Resource};
@@ -72,7 +71,7 @@ pub struct Item {
   is_pinned: bool,
   hovered: bool,
   focused_instance: usize,
-  has_urgent: bool
+  has_urgent: bool,
 }
 
 impl Item {
@@ -138,7 +137,7 @@ impl Item {
       is_pinned,
       hovered: false,
       focused_instance: 0,
-      has_urgent: false
+      has_urgent: false,
     });
     window.save_context (super::item_context, this.as_mut () as *mut Item as XPointer);
     this.redraw (dc, false);
@@ -160,7 +159,7 @@ impl Item {
       let x = (self.geometry.w - w) as i32 / 2;
       let y = (self.geometry.h - h) as i32;
       dc.rect (x, y, w, h)
-        .color (Color::from_rgb (0.68, 0.7, 0.72))
+        .color ((*config).colors.dock_indicator)
         .corner_radius (0.5)
         .draw ();
       dc.render (self.window, x, y, w, h);
@@ -177,9 +176,9 @@ impl Item {
       .draw ();
     if hovered || self.has_urgent {
       let color = if self.has_urgent {
-        (*config).colors.urgent
+        (*config).colors.dock_urgent
       } else {
-        Color::from_rgb (0.2, 0.2, 0.2)
+        (*config).colors.dock_hovered
       };
       dc.square (0, 0, self.size)
         .corner_radius (0.1)
@@ -208,8 +207,7 @@ impl Item {
 
   pub unsafe fn click (&self) {
     if !self.instances.is_empty () {
-      let focus_urgent = false;
-      if self.has_urgent && focus_urgent {
+      if self.has_urgent && (*config).dock_focus_urgent {
         for (index, instance) in self.instances.iter ().enumerate () {
           if instance.as_ref ().is_urgent {
             self.focus_instance_client (index);
@@ -380,8 +378,7 @@ impl Item {
       .iter ()
       .position (|c| unsafe { c.as_ref () } == client)
     {
-      let active_on_top = false;
-      if active_on_top {
+      if unsafe { &*config }.dock_focused_client_on_top {
         let instance = self.instances.remove (index);
         self.instances.insert (0, instance);
         // Active instance is always 0

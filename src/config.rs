@@ -143,6 +143,8 @@ pub struct Config {
   pub icon_theme: String,
   pub window_icon_size: u8,
   pub dock_pinned: Vec<String>,
+  pub dock_focused_client_on_top: bool,
+  pub dock_focus_urgent: bool,
 }
 
 impl Config {
@@ -211,6 +213,8 @@ impl Config {
       icon_theme: theme.icons.unwrap_or_else (|| "Papirus".to_string ()),
       window_icon_size: window.icon_size.unwrap_or (0).clamp (0, 100),
       dock_pinned: dock.pinned.unwrap_or_default (),
+      dock_focused_client_on_top: dock.focused_client_on_top.unwrap_or (false),
+      dock_focus_urgent: dock.focus_urgent.unwrap_or (false),
     };
     if let Some (table) = keys.bindings {
       let m = this.modifier;

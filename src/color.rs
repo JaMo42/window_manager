@@ -47,26 +47,21 @@ impl Color {
   }
 }
 
+#[derive(Clone)]
 pub enum Color_Config {
   Default,
   Hex (String),
   Link (String),
 }
 
-impl std::default::Default for Color_Config {
-  fn default () -> Self {
-    Color_Config::Default
-  }
-}
-
 pub struct Color_Scheme_Config {
-  pub cfg: [Color_Config; COLOR_COUNT],
+  pub cfg: Vec<Color_Config>,
 }
 
 impl Color_Scheme_Config {
   pub fn new () -> Self {
     Color_Scheme_Config {
-      cfg: Default::default (),
+      cfg: vec! [Color_Config::Default; COLOR_COUNT],
     }
   }
 
@@ -103,6 +98,15 @@ pub struct Color_Scheme {
   pub bar_urgent_workspace_text: Color,
   pub notification_background: Color,
   pub notification_text: Color,
+  pub tooltip_background: Color,
+  pub tooltip_text: Color,
+  pub dock_background: Color,
+  pub dock_hovered: Color,
+  pub dock_urgent: Color,
+  pub dock_indicator: Color,
+  pub context_menu_background: Color,
+  pub context_menu_text: Color,
+  pub context_menu_divider: Color,
 }
 const COLOR_COUNT: usize = size_of::<Color_Scheme> () / size_of::<Color> ();
 const COLOR_NAMES: [&str; COLOR_COUNT] = [
@@ -131,6 +135,15 @@ const COLOR_NAMES: [&str; COLOR_COUNT] = [
   "bar.urgent_workspace_text",
   "notifications.background",
   "notifications.text",
+  "tooltip.background",
+  "tooltip.text",
+  "dock.background",
+  "dock.hovered",
+  "dock.urgent",
+  "dock.indicator",
+  "context_menu.background",
+  "context_menu.text",
+  "context_menu.divider",
 ];
 const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   // Window borders
@@ -174,6 +187,18 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   "window.urgent_text",
   // Notifications
   "bar.background",
+  "bar.text",
+  // Tooltip
+  "bar.background",
+  "bar.text",
+  // Dock
+  "bar.background",
+  "window.focused",
+  "window.urgent",
+  "bar.text",
+  // Context menu
+  "bar.background",
+  "bar.text",
   "bar.text",
 ];
 

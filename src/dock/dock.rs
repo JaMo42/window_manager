@@ -229,7 +229,7 @@ impl Dock {
     context.arc (w - r, r, r, -90.0f64.to_radians (), 0.0f64.to_radians ());
     context.line_to (w, h);
     context.close_path ();
-    let c = unsafe { &(*config).colors.bar_background };
+    let c = unsafe { &(*config).colors.dock_background };
     context.set_source_rgba (c.red, c.green, c.blue, 1.0);
     context.fill ().unwrap ();
 
@@ -354,7 +354,6 @@ impl Dock {
       }
     }
   }
-
 
   fn find_client_item (&mut self, client: &Client) -> Option<usize> {
     // TODO: just searching through all instances of all items for the window
