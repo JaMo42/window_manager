@@ -379,7 +379,9 @@ pub unsafe fn close_shown () {
   if let Some (menu) = shown.take () {
     menu.destroy ();
     display.ungrab_button (1, 0);
-    focused_client! ().map (|client| client.focus ());
+    if let Some (client) = focused_client! () {
+      client.focus ()
+    }
   }
 }
 

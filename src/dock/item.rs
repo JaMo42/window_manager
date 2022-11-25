@@ -259,7 +259,7 @@ impl Item {
       1 => {
         let mut client = this.instances[this.focused_instance];
         if client.as_ref ().is_minimized {
-          client.as_mut ().focus ();
+          client.as_mut ().unminimize (true);
         } else {
           action::minimize (client.as_mut ());
         }
@@ -291,7 +291,6 @@ impl Item {
           menu
             .action (title)
             .icon (client.as_mut ().icon ())
-            // TODO: should unsaved or active have higher priority?
             .indicator (if index == self.focused_instance {
               Some (Indicator::Check)
             } else if client.as_ref ().is_urgent {
