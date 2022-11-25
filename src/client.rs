@@ -165,11 +165,7 @@ impl Client {
       })
       .unwrap_or_else (|| window_title (window));
 
-    let icon = if (*config).window_icon_size > 0 && frame_kind.should_draw_decorations () {
-      draw::get_app_icon (&application_id)
-    } else {
-      None
-    };
+    let icon = draw::get_app_icon (&application_id);
 
     let mut result = Box::new (Client {
       window,
