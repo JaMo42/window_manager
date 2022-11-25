@@ -146,7 +146,7 @@ pub struct Config {
   pub dock_focused_client_on_top: bool,
   pub dock_focus_urgent: bool,
   pub dock_item_size: u32,
-  pub dock_icon_size: u32
+  pub dock_icon_size: u32,
 }
 
 impl Config {
@@ -218,7 +218,7 @@ impl Config {
       dock_focused_client_on_top: dock.focused_client_on_top.unwrap_or (false),
       dock_focus_urgent: dock.focus_urgent.unwrap_or (false),
       dock_item_size: dock.item_size.unwrap_or (80),
-      dock_icon_size: dock.icon_size.unwrap_or (85)
+      dock_icon_size: dock.icon_size.unwrap_or (85),
     };
     if let Some (table) = keys.bindings {
       let m = this.modifier;

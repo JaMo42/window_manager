@@ -109,8 +109,6 @@ unsafe fn create_windows_and_drawing_context (
 
   let window = create_window (x, y, width, height, &vi, colormap);
   ewmh::set_window_type (window, Net::WMWindowTypeDock);
-  // TODO: config value for opacity
-  set_window_opacity (window, (*config).bar_opacity);
   set_window_kind (window, Window_Kind::Dock);
   window.set_class_hint ("Window_manager_dock", "window_manager_dock");
   window.map_raised ();
