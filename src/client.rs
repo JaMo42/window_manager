@@ -149,20 +149,27 @@ impl Client {
     let (reparent_x, reparent_y) = frame_kind.parent_offset ();
     window.reparent (frame, reparent_x, reparent_y);
 
-    // Get the application id:
-    // 1. If the window has _GTK_APPLICATION_ID set, use it if there is an
-    //    entry for it.
-    // 2. If the window has class hints...
-    //     1. Try to use the desktop entry name for the name specified in the class hint
-    //     2. If not found or ambiguous, use the name itself
-    // 3. Otherwise use the window title and hope that it doesn't change
+    // Get the application id (first one that matches):
+    // 1. Check if the window has _GTK_APPLICATION_ID set and a desktop entry
+    //    for the ID exists.
+    // If the window has class hints:
+    //   2. Check if a desktop entry exists for the name
+    //   3. Check if a desktop entry exists for the class
+    //   4. Use the name
+    // 5. Use the window title
     let application_id = property::get_string (window, property::Other::GtkApplicationId)
       .filter (|gtk_id| Desktop_Entry::entry_name (gtk_id).is_some ())
       .or_else (|| {
         class_hint
           .as_ref ()
-          .map (|h| Desktop_Entry::entry_name (&h.name).unwrap_or_else (|| h.name.clone ()))
+          .and_then (|h| Desktop_Entry::entry_name (&h.name))
       })
+      .or_else (|| {
+        class_hint
+          .as_ref ()
+          .and_then (|h| Desktop_Entry::entry_name (&h.class))
+      })
+      .or_else (|| class_hint.as_ref ().map (|h| h.name.clone ()))
       .unwrap_or_else (|| window_title (window));
 
     let icon = draw::get_app_icon (&application_id);

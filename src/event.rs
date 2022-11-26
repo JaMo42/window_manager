@@ -295,8 +295,10 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   let window = Window::from_handle (&display, event.window);
   let name = window_title (window);
   let maybe_class_hints = property::Class_Hints::new (window);
-  if maybe_class_hints.is_some () && maybe_class_hints.as_ref ().unwrap ().is_meta ()
-    || name == "window_manager_bar"
+  if maybe_class_hints
+    .as_ref ()
+    .map (|h| h.is_meta ())
+    .unwrap_or_else (|| name == "window_manager_bar")
   {
     meta_windows.push (window);
     set_window_kind (window, Window_Kind::Meta_Or_Unmanaged);
@@ -328,7 +330,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     if !has_trans_client {
       window_area = monitors::main ().window_area ();
       if c.is_dialog {
-        g.center_inside (&window_area);
+        g.center_inside (window_area);
       } else {
         let mut rng = rand::thread_rng ();
         g.random_inside (&window_area.get_client (), &mut rng);

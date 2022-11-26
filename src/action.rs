@@ -61,7 +61,7 @@ pub unsafe fn snap_geometry (flags: u8, window_area: &Geometry) -> Geometry {
   }
   // Maximized
   if (flags & SNAP_MAXIMIZED) != 0 {
-    target = window_area.clone ();
+    target = *window_area;
     // We don't care about the gap for maximized windows so we add it here
     // since it gets removed inside `client.move_and_resize` again.
     target.expand ((*config).gap as i32);

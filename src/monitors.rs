@@ -71,7 +71,7 @@ pub unsafe fn query () {
   } else {
     log::info! ("Xinerama inacitve");
     log::info! ("Display size: {}x{}", screen_size.w, screen_size.h);
-    monitors.push (Monitor::new (0, screen_size.clone ()));
+    monitors.push (Monitor::new (0, screen_size));
   }
 }
 
@@ -80,7 +80,30 @@ pub fn main () -> &'static Monitor {
   unsafe { &monitors }
     .iter ()
     .find (|m| m.number () == 0)
-    .unwrap_or (unsafe { &monitors }.first ().unwrap ())
+    .unwrap_or_else (|| unsafe { &monitors }.first ().unwrap ())
+}
+
+fn find_closest (x: i32, y: i32) -> &'static Monitor {
+  fn distance (x: i32, y: i32, g: &Geometry) -> f32 {
+    let dx = i32::max (0, i32::max (g.x - x, x - g.x + g.w as i32)) as f32;
+    let dy = i32::max (0, i32::max (g.y - y, y - g.y + g.h as i32)) as f32;
+    (dx * dx + dy * dy).sqrt ()
+  }
+  if unsafe { monitors.len () } == 1 {
+    return main ();
+  }
+  let mut idx = 0;
+  unsafe {
+    let mut min_d = distance (x, y, &monitors[0].geometry);
+    for (i, mon) in monitors.iter ().enumerate ().skip (1) {
+      let d = distance (x, y, &mon.geometry);
+      if d < min_d {
+        min_d = d;
+        idx = i;
+      }
+    }
+    &monitors[idx]
+  }
 }
 
 /// Returns the monitor containing the given point. If no monitor contains it
@@ -89,7 +112,7 @@ pub fn at (x: i32, y: i32) -> &'static Monitor {
   unsafe { &monitors }
     .iter ()
     .find (|m| m.geometry.contains (x, y))
-    .unwrap_or_else (|| main ())
+    .unwrap_or_else (|| find_closest (x, y))
 }
 
 /// Gets the monitor containing the client.
