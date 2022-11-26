@@ -78,6 +78,8 @@ where
 pub fn run (cmd: &[impl AsRef<str>]) -> Result<()> {
   Command::new (cmd[0].as_ref ())
     .args (cmd[1..].iter ().map (|a| a.as_ref ()))
+    .stderr (Stdio::null ())
+    .stdout (Stdio::null ())
     .spawn ()
     .map (|_| ())
 }
@@ -94,14 +96,18 @@ pub fn run_or_message_box (cmd: &[impl AsRef<str>]) {
 
 pub fn run_and_await (cmd: &[&str]) -> Result<ExitStatus> {
   let _guard = Scoped_Default_SigChld::new ();
-  Command::new (cmd[0]).args (&cmd[1..]).status ()
+  Command::new (cmd[0])
+    .args (&cmd[1..])
+    .stdout (Stdio::null ())
+    .stderr (Stdio::null ())
+    .status ()
 }
 
 pub fn run_and_await_with_output (cmd: &[&str]) -> Result<String> {
   let _guard = Scoped_Default_SigChld::new ();
   Command::new (cmd[0])
     .args (&cmd[1..])
-    .stderr (Stdio::inherit ())
+    .stderr (Stdio::null ())
     .output ()
     .map (|output| String::from_utf8_lossy (&output.stdout).into_owned ())
 }
