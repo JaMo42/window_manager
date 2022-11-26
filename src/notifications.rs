@@ -3,6 +3,7 @@ use super::draw::{get_icon, Svg_Resource};
 use super::ewmh;
 use super::property::Net;
 use super::set_window_kind;
+use crate::monitors;
 use crate::x::{Window, XWindow};
 use futures::executor;
 use std::thread;
@@ -225,8 +226,9 @@ impl Manager {
 
   /// Repositions all notifications
   fn arrange (&mut self) {
-    let mut y = unsafe { window_area.y };
-    let x_right = unsafe { window_area.x + window_area.w as i32 };
+    let window_area = monitors::main ().window_area ();
+    let mut y = window_area.y;
+    let x_right = window_area.x + window_area.w as i32;
     for n in self.notifications.iter () {
       n.window.r#move (x_right - n.width as i32, y);
       y += n.height as i32 + 10;
@@ -389,6 +391,9 @@ pub unsafe fn init () {
 
 /// Terminates the service
 pub unsafe fn quit () {
+  if _dbus_connection.is_none () {
+    return;
+  }
   if let Err (error) = executor::block_on (do_quit ()) {
     log::error! ("Error during notification server shutdown: {}", error);
   } else {
@@ -404,6 +409,11 @@ pub fn maybe_close (window: XWindow) -> bool {
 
 /// Spawns a notification
 pub fn notify (summary: &str, body: &str, timeout: i32) {
+  if unsafe { _dbus_connection.is_none () } {
+    // Failed to intitialize, there likely already was a notification server.
+    super::process::run (&["notify-send", summary, body, "-t", &timeout.to_string ()]).ok ();
+    return;
+  }
   let id = manager ().get_id (0);
   manager ().new_notification (id, summary, body, "");
   if timeout < 0 && unsafe { &*config }.default_notification_timeout != 0 {

@@ -1,5 +1,6 @@
 use super::{window::To_XWindow, *};
 use std::ffi::{CStr, CString};
+use x11::xinerama::{XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo};
 
 pub struct Display {
   connection: XDisplay,
@@ -359,6 +360,20 @@ impl Display {
 
   pub fn create_colormap (&self, visual: *mut Visual, alloc: i32) -> Colormap {
     unsafe { XCreateColormap (self.connection, self.root, visual, alloc) }
+  }
+
+  pub fn query_screens (&self) -> Option<Vec<XineramaScreenInfo>> {
+    unsafe {
+      if XineramaIsActive (self.connection) == XTrue {
+        let mut len = 0;
+        let data = XineramaQueryScreens (self.connection, &mut len);
+        let result = std::slice::from_raw_parts (data, len as usize).to_vec ();
+        XFree (data as *mut c_void);
+        Some (result)
+      } else {
+        None
+      }
+    }
   }
 }
 

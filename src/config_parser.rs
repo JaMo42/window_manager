@@ -32,6 +32,7 @@ pub struct Layout {
   pub workspaces: Option<usize>,
   pub gaps: Option<u32>,
   pub pad: Option<(i32, i32, i32, i32)>,
+  pub secondary_pad: Option<(i32, i32, i32, i32)>,
 }
 
 #[derive(Deserialize, Debug, Default)]

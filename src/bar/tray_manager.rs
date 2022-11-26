@@ -2,6 +2,7 @@ use super::tray_client::Tray_Client;
 use super::xembed;
 use crate::core::*;
 use crate::cursor;
+use crate::monitors;
 use crate::property;
 use crate::property::Net;
 use crate::x::{Window, XNone, XWindow};
@@ -71,7 +72,7 @@ impl Tray_Manager {
   pub unsafe fn create (height: u32) -> Self {
     log::trace! ("Creating tray window");
     let window = Window::builder (&display)
-      .position ((screen_size.w - height) as i32, 0)
+      .position ((monitors::main ().geometry ().w - height) as i32, 0)
       .size (height, height)
       .attributes (|attributes| {
         attributes
@@ -142,15 +143,18 @@ impl Tray_Manager {
   /// Resizes and positions the window. The main bar window is resized as needed.
   unsafe fn resize_window (&mut self) {
     let width = self.width ();
-    bar.resize (screen_size.w - width);
+    bar.resize (monitors::main ().geometry ().w - width);
     if width != 0 {
       if !self.is_mapped {
         self.window.map ();
         self.is_mapped = true;
       }
-      self
-        .window
-        .move_and_resize ((screen_size.w - width) as i32, 0, width, self.height);
+      self.window.move_and_resize (
+        (monitors::main ().geometry ().w - width) as i32,
+        0,
+        width,
+        self.height,
+      );
     } else {
       self.window.unmap ();
       self.is_mapped = false;

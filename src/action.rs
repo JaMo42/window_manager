@@ -1,3 +1,5 @@
+use crate::monitors::Monitor;
+
 use super::client::*;
 use super::core::*;
 use super::geometry::*;
@@ -36,7 +38,7 @@ pub unsafe fn move_snap_flags (x: c_uint, y: c_uint) -> u8 {
   snap_flags
 }
 
-pub unsafe fn snap_geometry (flags: u8) -> Geometry {
+pub unsafe fn snap_geometry (flags: u8, window_area: &Geometry) -> Geometry {
   let mut target = Geometry::new ();
   // Top / Bottom / Full height
   if (flags & SNAP_TOP) != 0 {
@@ -59,7 +61,7 @@ pub unsafe fn snap_geometry (flags: u8) -> Geometry {
   }
   // Maximized
   if (flags & SNAP_MAXIMIZED) != 0 {
-    target = window_area;
+    target = window_area.clone ();
     // We don't care about the gap for maximized windows so we add it here
     // since it gets removed inside `client.move_and_resize` again.
     target.expand ((*config).gap as i32);
@@ -81,7 +83,8 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
       ],
     );
   }
-  client.move_and_resize (Client_Geometry::Snap (snap_geometry (flags)));
+  let window_area = monitors::containing (client).window_area ();
+  client.move_and_resize (Client_Geometry::Snap (snap_geometry (flags, window_area)));
 }
 
 pub unsafe fn snap_left (client: &mut Client) {
@@ -120,8 +123,9 @@ pub unsafe fn center (client: &mut Client) {
   if !client.may_move () {
     return;
   }
-  client.modify_saved_geometry (|g| {
-    g.center_inside (&window_area);
+  let window_area = monitors::containing (client).window_area ();
+  client.modify_saved_geometry (move |g| {
+    g.center_inside (window_area);
   });
   // Need any non-none snap state for the unsnap function
   client.snap_state = SNAP_MAXIMIZED;
@@ -202,4 +206,44 @@ pub unsafe fn move_to_workspace (idx: usize, client_: Option<&mut Client>) {
 
 pub unsafe fn switch_window () {
   workspaces[active_workspace].switch_window ();
+}
+
+pub fn move_to_monitor (client: &mut Client, cur: &Monitor, mon: &Monitor) {
+  let cg = cur.geometry ();
+  let ng = mon.geometry ();
+  let mut g = client.saved_geometry ();
+  g.x = g.x - cg.x + ng.x;
+  g.y = g.y - cg.y + ng.y;
+  g.clamp (mon.window_area ());
+  unsafe {
+    if client.is_snapped () {
+      client.modify_saved_geometry (|sg| {
+        *sg = g;
+      });
+      snap (client, client.snap_state);
+    } else {
+      client.move_and_resize (Client_Geometry::Frame (g));
+      client.save_geometry ();
+    }
+  }
+}
+
+pub fn move_to_next_monitor (client: &mut Client) {
+  if !client.may_move () {
+    return;
+  }
+  let current = monitors::containing (client);
+  if let Some (next) = monitors::get (current.number () + 1) {
+    move_to_monitor (client, current, next);
+  }
+}
+
+pub fn move_to_prev_monitor (client: &mut Client) {
+  if !client.may_move () {
+    return;
+  }
+  let current = monitors::containing (client);
+  if let Some (prev) = monitors::get (current.number () - 1) {
+    move_to_monitor (client, current, prev);
+  }
 }

@@ -2,6 +2,7 @@
 workspaces = 4
 gaps = 5
 pad = [46, 10, 10, 10]
+secondary_pad = [10, 10, 10, 10]
 
 [window]
 border = 5
@@ -28,8 +29,8 @@ mod = "Win"
 'Mod+Right' = "snap_right"
 'Mod+Alt+Up' = "snap_up"
 'Mod+Alt+Down' = "snap_down"
-'Mod+M' = "minimize"
-'Mod+R' = "raise_all"
+'Mod+Shift+Left' = "move_to_prev_monitor"
+'Mod+Shift+Right' = "move_to_next_monitor"
 'Mod+Print' = "$ scrot ~/Pictures/Screenshots/%Y-%m-%d-%H%M%S-screenshot.jpg"
 'XF86AudioLowerVolume' = "decrease_volume"
 'XF86AudioRaiseVolume' = "increase_volume"

@@ -22,6 +22,8 @@
 
 - Dock
 
+- Support for multiple monitors
+
 ## Dependencies
 
 Written in rust, `cargo` required.
@@ -33,6 +35,8 @@ Libraries:
 - `Xft`
 
 - `XRes`
+
+- `Xinerama`
 
 ### Optional
 

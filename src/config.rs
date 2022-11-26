@@ -4,6 +4,7 @@ use super::paths;
 use super::*;
 use crate::config_parser::*;
 use crate::error::fatal_error;
+use crate::monitors;
 use crate::x::string_to_keysym;
 use pango::FontDescription;
 use std::collections::{BTreeMap, HashMap};
@@ -34,6 +35,16 @@ impl Key {
     Key {
       modifiers,
       code: unsafe { &display }.keysym_to_keycode (sym as KeySym) as u32,
+    }
+  }
+}
+
+impl ToString for Key {
+  fn to_string (&self) -> String {
+    unsafe {
+      let sym = XKeycodeToKeysym (display.as_raw (), self.code as u8, 0);
+      let c_str = XKeysymToString (sym);
+      string_from_ptr! (c_str)
     }
   }
 }
@@ -77,6 +88,8 @@ impl Action {
       "mute_volume" => Generic (mute_volume),
       "increase_volume" => Generic (increase_volume),
       "decrease_volume" => Generic (decrease_volume),
+      "move_to_next_monitor" => WM (action::move_to_next_monitor),
+      "move_to_prev_monitor" => WM (action::move_to_prev_monitor),
       _ => my_panic! ("action::from_str: unknown action: {}", s),
     }
   }
@@ -118,6 +131,7 @@ pub struct Config {
   // padding: (top, bottom, left, right)
   // Spacing from the respective screen border for snapped windows
   pub padding: (c_int, c_int, c_int, c_int),
+  pub secondary_padding: (c_int, c_int, c_int, c_int),
   // Internal border between the client and the actual window (only affects
   // snapped windows)
   pub gap: c_uint,
@@ -174,6 +188,7 @@ impl Config {
         .unwrap_or (MOD_WIN),
       key_binds: HashMap::new (),
       padding: layout.pad.unwrap_or ((0, 0, 0, 0)),
+      secondary_padding: layout.secondary_pad.unwrap_or ((0, 0, 0, 0)),
       gap: layout.gaps.unwrap_or (0),
       border_width: window.border.unwrap_or (0),
       workspace_count: layout.workspaces.unwrap_or (1),
@@ -243,14 +258,7 @@ impl Config {
       Action::Generic (action::switch_window),
     );
     // Set window area
-    unsafe {
-      window_area = Geometry::from_parts (
-        screen_size.x + this.padding.2,
-        screen_size.y + this.padding.0,
-        screen_size.w - (this.padding.2 + this.padding.3) as u32,
-        screen_size.h - (this.padding.0 + this.padding.1) as u32,
-      );
-    }
+    monitors::set_window_areas (this.padding, this.secondary_padding);
     Ok (this)
   }
 

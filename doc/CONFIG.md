@@ -15,7 +15,8 @@ Key | Description | Default
 ---|---|---
 `workspaces` | Number of workspaces. | `1`
 `gaps` | Width of inner gaps for snapped windows. | `0`
-`pad` | Padding from screen edges for snapped windows, values are [Top, Bottom, Left, Right]. | `[0, 0, 0, 0]`
+`pad` | Padding from screen edges for snapped windows, values are [Top, Bottom, Left, Right]. This sets the padding for the main monitor, which contains the status bar which does get automatic padding. | `[0, 0, 0, 0]`
+`secondary_pad` | Like `pad` for all non-primary monitors. | `[0, 0, 0, 0]`
 
 ### `window` section
 

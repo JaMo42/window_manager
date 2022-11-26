@@ -5,6 +5,7 @@ use crate::draw::Drawing_Context;
 use crate::error::fatal_error;
 use crate::ewmh;
 use crate::geometry::Geometry;
+use crate::monitors;
 use crate::property::Net;
 use crate::timeout_thread::Repeatable_Timeout_Thread;
 use crate::x::Window;
@@ -49,7 +50,7 @@ unsafe fn create_drawing_context (
   vi: &XVisualInfo,
 ) -> Drawing_Context {
   log::trace! ("dock: creating drawing context");
-  let width = screen_size.w;
+  let width = monitors::main ().geometry ().w;
   let pixmap = XCreatePixmap (display.as_raw (), drawable, width, height, vi.depth as u32);
   let gc = XCreateGC (display.as_raw (), pixmap, 0, std::ptr::null_mut ());
   let surface = {
@@ -77,7 +78,7 @@ unsafe fn create_show_window (vi: &XVisualInfo, colormap: Colormap) -> Window {
   let height = 10;
   Window::builder (&display)
     .size (1920, height)
-    .position (0, (screen_size.h - height) as i32)
+    .position (0, (monitors::main ().geometry ().h - height) as i32)
     .attributes (|attributes| {
       attributes
         .override_redirect (true)
@@ -158,12 +159,11 @@ impl Dock {
   }
 
   fn position (width: u32, height: u32) -> (i32, i32) {
-    unsafe {
-      (
-        screen_size.x + (screen_size.w - width) as i32 / 2,
-        screen_size.y + (screen_size.h - height) as i32,
-      )
-    }
+    let mon = monitors::main ().geometry ();
+    (
+      mon.x + (mon.w - width) as i32 / 2,
+      mon.y + (mon.h - height) as i32,
+    )
   }
 
   /// `size` specifies the for the icons, the dock dimensions are derived from it.

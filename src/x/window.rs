@@ -238,7 +238,7 @@ impl Window {
       let mut count: i32 = 0;
       if XGetWMProtocols (self.display (), self.handle, &mut protocols, &mut count) != 0 {
         let result = std::slice::from_raw_parts (protocols, count as usize).to_vec ();
-        XFree (protocols as *mut libc::c_void);
+        XFree (protocols as *mut c_void);
         result
       } else {
         Vec::new ()

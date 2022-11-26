@@ -1,10 +1,10 @@
 use super::error::fatal_error;
 use crate::action::{move_snap_flags, snap_geometry};
 use crate::client::{decorated_frame_offset, Client, Client_Geometry};
-use crate::core::*;
 use crate::ewmh;
 use crate::property;
 use crate::x::Window;
+use crate::{core::*, monitors};
 use rand::{prelude::ThreadRng, Rng};
 use std::os::raw::*;
 use x11::xlib::*;
@@ -113,6 +113,16 @@ impl Geometry {
   pub fn contains (&self, x: i32, y: i32) -> bool {
     x >= self.x && x < (self.x + self.w as i32) && y >= self.y && y < (self.y + self.h as i32)
   }
+
+  pub fn center_point (&self) -> (i32, i32) {
+    (self.x + self.w as i32 / 2, self.y + self.h as i32 / 2)
+  }
+}
+
+impl std::fmt::Display for Geometry {
+  fn fmt (&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+    write! (f, "{}x{}+{}+{}", self.w, self.h, self.x, self.y)
+  }
 }
 
 pub struct Preview {
@@ -201,7 +211,11 @@ impl Preview {
   pub unsafe fn snap (&mut self, x: i32, y: i32) {
     let flags = move_snap_flags (x as u32, y as u32);
     self.is_snapped = true;
-    self.snap_geometry = snap_geometry (flags);
+    let window_area = {
+      let (x, y) = self.geometry.center_point ();
+      monitors::at (x, y).window_area ()
+    };
+    self.snap_geometry = snap_geometry (flags, window_area);
   }
 
   pub unsafe fn apply_normal_hints (&mut self, hints: &property::Normal_Hints, keep_height: bool) {

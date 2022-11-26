@@ -6,6 +6,7 @@ mod xembed;
 use crate::core::*;
 use crate::cursor;
 use crate::ewmh;
+use crate::monitors;
 use crate::property;
 use crate::update_thread::Update_Thread;
 use crate::x::{Window, XWindow};
@@ -49,10 +50,14 @@ impl Bar {
   }
 
   pub unsafe fn create () -> Self {
-    let width = screen_size.w as u32;
+    let main_mon = monitors::main ();
+    let width = main_mon.geometry ().w;
     let height = (*config).bar_height.get (Some (&(*config).bar_font));
+    let x = main_mon.geometry ().x;
+    let y = main_mon.geometry ().y;
     let window = Window::builder (&display)
       .size (width, height)
+      .position (x, y)
       .attributes (|attributes| {
         attributes
           .override_redirect (true)

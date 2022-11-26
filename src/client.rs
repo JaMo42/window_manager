@@ -378,7 +378,10 @@ impl Client {
   }
 
   /// Modify the saved frame geometry using a callback
-  pub fn modify_saved_geometry (&mut self, f: fn (&mut Geometry)) {
+  pub fn modify_saved_geometry<F> (&mut self, f: F)
+  where
+    F: FnOnce(&mut Geometry),
+  {
     f (&mut self.prev_geometry);
   }
 

@@ -31,6 +31,7 @@ mod dock;
 mod draw;
 mod error;
 mod ewmh;
+mod monitors;
 mod notifications;
 mod platform;
 mod process;
@@ -140,8 +141,6 @@ unsafe fn select_input (mut mask: c_long) {
       | ButtonPressMask
       | ButtonReleaseMask
       | PointerMotionMask
-      /*| EnterWindowMask
-      | LeaveWindowMask*/
       | StructureNotifyMask
       | PropertyChangeMask;
   }
@@ -511,7 +510,7 @@ fn main () {
     std::env::set_var ("WM", "window_manager");
     log::trace! ("Connecting to X server");
     connect ();
-    log::info! ("Display size: {}x{}", screen_size.w, screen_size.h);
+    monitors::query ();
     log::trace! ("Loading configuration");
     let config_instance = Config::load ();
     config = &config_instance;
