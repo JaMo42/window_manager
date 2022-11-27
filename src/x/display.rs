@@ -35,8 +35,11 @@ impl Display {
           .unwrap_or (std::ptr::null ()),
       );
       if connection.is_null () {
-        // TODO: print display name used
-        panic! ("Could not open display");
+        let name = name
+          .map (|s| s.to_string ())
+          .or_else (|| std::env::var ("DISPLAY").ok ())
+          .unwrap_or_default ();
+        panic! ("Could not open display: {}", name);
       }
       root = XDefaultRootWindow (connection);
       screen = XDefaultScreen (connection);
