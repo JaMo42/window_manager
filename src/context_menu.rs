@@ -462,7 +462,6 @@ pub unsafe fn key_press (event: &XKeyEvent) {
       shown.as_mut ().unwrap ().key_select ();
     }
     _ => {
-      // TODO: should key be put back into event queue?
       if let Some (menu) = &mut shown {
         menu.cancel ();
       }

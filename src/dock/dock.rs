@@ -350,8 +350,6 @@ impl Dock {
   }
 
   fn find_client_item (&mut self, client: &Client) -> Option<usize> {
-    // TODO: just searching through all instances of all items for the window
-    //       of the client may be faster the getting its name.
     self.find_item (client.application_id ())
   }
 
