@@ -188,6 +188,24 @@ impl Preview {
     self.final_geometry = self.geometry;
   }
 
+  pub unsafe fn move_edge (&mut self, x: i32, y: i32) {
+    let mon = monitors::at (x, y).window_area ();
+    let is_top = y < mon.y;
+    let is_bot = y > (mon.y + mon.h as i32);
+    if x < mon.x {
+      let flags = SNAP_LEFT | (SNAP_TOP * is_top as u8) | (SNAP_BOTTOM * is_bot as u8);
+      self.snap_geometry = snap_geometry (flags, mon);
+    } else if x > (mon.x + mon.w as i32) {
+      let flags = SNAP_RIGHT | (SNAP_TOP * is_top as u8) | (SNAP_BOTTOM * is_bot as u8);
+      self.snap_geometry = snap_geometry (flags, mon);
+    } else {
+      // bottom maximizes as well, this way we don't need to return to
+      // `mouse_move` and call `move_by` instead.
+      self.snap_geometry = snap_geometry (SNAP_MAXIMIZED, mon);
+    }
+    self.is_snapped = true;
+  }
+
   pub fn resize_by (&mut self, w: i32, h: i32) {
     if w < 0 {
       let ww = -w as u32;
@@ -268,9 +286,9 @@ impl Preview {
     display.sync (false);
   }
 
-  pub unsafe fn finish (&mut self, client: &mut Client, snap: bool) {
+  pub unsafe fn finish (&mut self, client: &mut Client) {
     self.window.destroy ();
-    if snap {
+    if self.is_snapped {
       let flags = move_snap_flags (self.geometry.x as u32, self.geometry.y as u32);
       if flags == client.snap_state {
         return;

@@ -149,7 +149,6 @@ pub unsafe fn mouse_move (client: &mut Client) {
   let mut last_time: Time = 0;
   let mut mouse_x = start_x;
   let mut mouse_y = start_y;
-  let mut state = 0;
   let mut preview = geometry::Preview::create (if client.is_snapped () {
     client.saved_geometry ()
   } else {
@@ -166,21 +165,25 @@ pub unsafe fn mouse_move (client: &mut Client) {
           continue;
         }
         last_time = motion.time;
-        if state & MOD_SHIFT == MOD_SHIFT {
+        if motion.state & MOD_SHIFT == MOD_SHIFT {
           preview.snap (motion.x, motion.y);
+        } else if !monitors::at (motion.x, motion.y)
+          .window_area ()
+          .contains (motion.x, motion.y)
+        {
+          preview.move_edge (motion.x, motion.y);
         } else {
           preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
         }
         preview.update ();
         mouse_x = motion.x;
         mouse_y = motion.y;
-        state = motion.state;
       }
       ButtonRelease => break,
       _ => {}
     }
   }
-  preview.finish (client, state & MOD_SHIFT == MOD_SHIFT);
+  preview.finish (client);
 }
 
 pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool) {
@@ -247,7 +250,7 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
       _ => {}
     }
   }
-  preview.finish (client, false);
+  preview.finish (client);
 }
 
 pub unsafe fn key_press (event: &XKeyEvent) {

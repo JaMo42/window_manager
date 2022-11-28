@@ -6,8 +6,6 @@ pub struct Display {
   connection: XDisplay,
   screen: c_int,
   root: XWindow,
-  width: u32,
-  height: u32,
 }
 
 impl Display {
@@ -16,8 +14,6 @@ impl Display {
       connection: std::ptr::null_mut (),
       screen: 0,
       root: XNone,
-      width: 0,
-      height: 0,
     }
   }
 
@@ -25,8 +21,6 @@ impl Display {
     let connection;
     let root;
     let screen;
-    let width;
-    let height;
 
     unsafe {
       connection = XOpenDisplay (
@@ -43,16 +37,12 @@ impl Display {
       }
       root = XDefaultRootWindow (connection);
       screen = XDefaultScreen (connection);
-      width = XDisplayWidth (connection, screen) as u32;
-      height = XDisplayHeight (connection, screen) as u32;
     }
 
     Self {
       connection,
       screen,
       root,
-      width,
-      height,
     }
   }
 
@@ -65,15 +55,15 @@ impl Display {
   }
 
   pub fn width (&self) -> u32 {
-    self.width
+    unsafe { XDisplayWidth (self.connection, self.screen) as u32 }
   }
 
   pub fn height (&self) -> u32 {
-    self.height
+    unsafe { XDisplayHeight (self.connection, self.screen) as u32 }
   }
 
   pub fn size (&self) -> (u32, u32) {
-    (self.width, self.height)
+    (self.width (), self.height ())
   }
 
   pub fn default_visual (&self) -> *mut Visual {
