@@ -35,8 +35,6 @@ pub mod resources {
 pub struct Svg_Resource {
   file: &'static str,
   handle: Option<SvgHandle>,
-  // TODO: doesn't this being being static mean it's never dropped, even when
-  //       using this as a boxed value?
   renderer: Option<CairoRenderer<'static>>,
   // The pattern used to draw a colored SVG, it is assumed that the size the
   // SVG is drawn in is always the same and it's always drawn to (0, 0).
