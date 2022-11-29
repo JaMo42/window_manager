@@ -1,6 +1,26 @@
-use freedesktop_entry_parser::parse_entry;
+use freedesktop_entry_parser::{parse_entry, AttrSelector};
 use std::fs;
 use std::io;
+
+fn get_locale () -> Option<(String, Option<String>, Option<String>)> {
+  let mut locale = std::env::var ("LC_MESSAGES")
+    .or_else (|_| std::env::var ("LANG"))
+    .ok ()?;
+  let mut country = None;
+  let mut modifier = None;
+  if let Some (modifier_tag) = locale.chars ().position (|c| c == '@') {
+    modifier = Some (locale[(modifier_tag + 1)..].to_string ());
+    locale.replace_range (modifier_tag.., "");
+  }
+  if let Some (encoding) = locale.chars ().position (|c| c == '.') {
+    locale.replace_range (encoding.., "");
+  }
+  if let Some (country_tag) = locale.chars ().position (|c| c == '_') {
+    country = Some (locale[(country_tag + 1)..].to_string ());
+    locale.replace_range (country_tag.., "");
+  }
+  Some ((locale, country, modifier))
+}
 
 // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions
 #[derive(Default)]
@@ -58,9 +78,31 @@ impl Desktop_Entry {
         // Value of the icon key or nothing
         &icon.map (|i| format! ("--icon {}", i)).unwrap_or_default (),
       )
-      // TODO: Should be the translated name.
       .replace ("%c", name)
       .replace ("%k", pathname)
+  }
+
+  // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#localized-keys
+  fn get_localized_name<S: AsRef<str>> (section: &AttrSelector<'_, S>) -> Option<String> {
+    macro_rules! check {
+      ($param:expr) => {
+        if let Some (name) = section.attr_with_param ("Name", $param) {
+          return Some (name.to_owned ());
+        }
+      }
+    }
+    let (lang, country, modifier) = get_locale ()?;
+    if let Some (country) = &country {
+      if let Some (modifier) = &modifier {
+        check! (format! ("{}_{}@{}", lang, country, modifier));
+      }
+      check! (format! ("{}_{}", lang, country));
+    }
+    if let Some (modifier) = &modifier {
+      check! (format! ("{}@{}", lang, modifier));
+    }
+    check! (lang);
+    None
   }
 
   fn read_file (pathname: &str) -> io::Result<Desktop_Entry> {
@@ -72,7 +114,7 @@ impl Desktop_Entry {
       };
     }
     let mut result = Desktop_Entry {
-      name: get! ("Name").unwrap (), // Name is a required field
+      name: Self::get_localized_name (&de).unwrap_or_else (|| get! ("Name").unwrap ()),
       icon: get! ("Icon"),
       exec: get! ("Exec"),
       actions: Vec::new (),
@@ -92,7 +134,7 @@ impl Desktop_Entry {
         let section = entry.section (section_name);
         if let Some (name) = section.attr ("Name") {
           let mut action = Desktop_Action {
-            name: name.to_owned (),
+            name: Self::get_localized_name (&section).unwrap_or_else (|| name.to_owned ()),
             exec: section.attr ("Exec").map (|s| s.to_owned ()),
             icon: section.attr ("Icon").map (|s| s.to_owned ()),
           };

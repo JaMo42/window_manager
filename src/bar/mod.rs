@@ -165,13 +165,7 @@ impl Bar {
       return;
     }
     self.last_scroll_time = event.time;
-    if self.mouse_widget.is_null () {
-      log::debug! ("MOUSE WIDGET IS NULL");
-    } else if (*self.mouse_widget).window () != window {
-      log::debug! ("MOUSE WIDGET HAS DIFFERENT WINDOW");
-    } else {
-      (*self.mouse_widget).click (event);
-    }
+    (*self.mouse_widget).click (event);
   }
 
   pub unsafe fn enter (&mut self, window: XWindow) {

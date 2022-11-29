@@ -6,7 +6,7 @@ use x11::xlib::*;
 
 pub type XDisplay = *mut x11::xlib::Display;
 pub type XWindow = x11::xlib::Window;
-type Error_Handler = unsafe extern "C" fn (XDisplay, *mut XErrorEvent) -> i32;
+pub type Error_Handler = unsafe extern "C" fn (XDisplay, *mut XErrorEvent) -> i32;
 
 pub const XNone: c_ulong = 0;
 pub const XFalse: c_int = 0;
