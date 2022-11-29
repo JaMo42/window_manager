@@ -42,7 +42,7 @@ pub unsafe fn button_press (event: &XButtonEvent) {
         handled = false;
       }
       Window_Kind::Status_Bar => {
-        bar.click (event.window, event);
+        bar.click (event);
       }
       Window_Kind::Dock_Item => {
         dock::click_item (event);
@@ -70,7 +70,7 @@ pub unsafe fn button_press (event: &XButtonEvent) {
     }
   }
   if is_kind (event.subwindow, Window_Kind::Status_Bar) {
-    bar.click (event.subwindow, event);
+    bar.click (event);
     return;
   }
   if let Some (client) = win2client (event.subwindow) {

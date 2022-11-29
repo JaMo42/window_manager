@@ -157,7 +157,7 @@ impl Bar {
     self.draw ();
   }
 
-  pub unsafe fn click (&mut self, window: XWindow, event: &XButtonEvent) {
+  pub unsafe fn click (&mut self, event: &XButtonEvent) {
     // Limit scroll speed
     // We just do this for all button types as it doesn't matter for normal
     // button presses.
