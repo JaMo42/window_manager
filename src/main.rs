@@ -97,6 +97,7 @@ unsafe extern "C" fn x_error (my_display: XDisplay, event: *mut XErrorEvent) -> 
 }
 
 unsafe fn connect () {
+  x::init_threads ();
   display = Display::connect (None);
   root = Window::from_handle (&display, display.root ());
   screen_size = Geometry::from_parts (0, 0, display.width (), display.height ());
