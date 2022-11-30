@@ -21,7 +21,7 @@ unsafe fn get_icon (maybe_name_or_path: Option<String>) -> Option<Box<Svg_Resour
       name
     } else {
       format! (
-        "/usr/share/icons/{}/48x48/apps/{}.svg",
+        "{}/48x48/apps/{}.svg",
         (*config).icon_theme,
         name
       )

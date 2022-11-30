@@ -566,7 +566,7 @@ pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
     name
   } else {
     format! (
-      "/usr/share/icons/{}/48x48/apps/{}.svg",
+      "{}/48x48/apps/{}.svg",
       (*config).icon_theme,
       name
     )
@@ -590,7 +590,7 @@ pub unsafe fn get_icon (name: &str) -> Option<Box<Svg_Resource>> {
   ];
   for d in dirs {
     let pathname = format! (
-      "/usr/share/icons/{}/48x48/{}/{}.svg",
+      "{}/48x48/{}/{}.svg",
       (*config).icon_theme,
       d,
       name

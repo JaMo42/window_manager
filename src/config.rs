@@ -125,6 +125,37 @@ impl std::str::FromStr for Height {
   }
 }
 
+/// Find the absolute path for the icon theme.
+/// Causes a fatal error if the theme is not found.
+fn find_icon_theme (maybe_theme_name: Option<String>) -> String {
+  let home = std::env::var ("HOME").unwrap ();
+  let directories = [
+    "/usr/share/icons".to_string (),
+    format! ("{}/{}", home, ".local/share/icons"),
+    format! ("{}/{}", home, ".icons"),
+  ];
+  let theme_given = maybe_theme_name.is_some ();
+  let theme_name = maybe_theme_name.unwrap_or ("Papirus".to_string ());
+  log::trace! ("Looking for icon theme");
+  for d in directories {
+    let path = format! ("{}/{}", d, theme_name);
+    log::trace! (" - {}", path);
+    if std::fs::metadata (&path).is_ok () {
+      log::trace! (" -> exists");
+      return path;
+    }
+  }
+  log::trace! (" -> none found");
+  unsafe {
+    let message = if theme_given {
+      format! ("Icon theme not found: {}", theme_name)
+    } else {
+      format! ("No icon theme specified and the default 'Papirus' was not found")
+    };
+    fatal_error (&message);
+  }
+}
+
 pub struct Config {
   pub modifier: c_uint,
   pub key_binds: HashMap<Key, Action>,
@@ -228,7 +259,7 @@ impl Config {
       button_icon_size: window.button_icon_size.unwrap_or (75).clamp (0, 100),
       circle_buttons: window.circle_buttons.unwrap_or (false),
       default_notification_timeout: general.default_notification_timeout.unwrap_or (6000) as i32,
-      icon_theme: theme.icons.unwrap_or_else (|| "Papirus".to_string ()),
+      icon_theme: find_icon_theme (theme.icons),
       window_icon_size: window.icon_size.unwrap_or (0).clamp (0, 100),
       dock_pinned: dock.pinned.unwrap_or_default (),
       dock_focused_client_on_top: dock.focused_client_on_top.unwrap_or (false),
