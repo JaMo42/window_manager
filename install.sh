@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 : "${INSTALL_PREFIX:=/usr/local/bin}"
 : "${CONFIG_PREFIX:=$XDG_CONFIG_HOME}"
