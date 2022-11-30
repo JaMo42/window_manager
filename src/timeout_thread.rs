@@ -45,7 +45,8 @@ impl Repeatable_Timeout_Thread {
   }
 
   pub fn start (&mut self, delay: u64) {
-    if let Some (old) = self.thread.take () {
+    if let Some (mut old) = self.thread.take () {
+      old.cancel ();
       old.join ();
     }
     self.thread = Some (Timeout_Thread::new (delay, self.function))
