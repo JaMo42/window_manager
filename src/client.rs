@@ -3,8 +3,8 @@ use super::core::*;
 use super::geometry::*;
 use super::property::{Class_Hints, Motif_Hints, MWM_HINTS_DECORATIONS, WM};
 use super::*;
-use crate::desktop_entry::Desktop_Entry;
 use crate::action;
+use crate::desktop_entry::Desktop_Entry;
 use crate::x::*;
 
 pub static mut decorated_frame_offset: Geometry = Geometry::new ();
@@ -113,7 +113,7 @@ pub struct Client {
   frame_kind: Frame_Kind,
   icon: Option<Box<draw::Svg_Resource>>,
   application_id: String,
-  last_click_time: Time
+  last_click_time: Time,
 }
 
 impl Client {
@@ -202,7 +202,7 @@ impl Client {
       frame_kind,
       icon,
       application_id,
-      last_click_time: 0
+      last_click_time: 0,
     });
     let this = result.as_mut () as *mut Client as XPointer;
     window.save_context (wm_context, this);
@@ -257,7 +257,7 @@ impl Client {
       frame_kind: Frame_Kind::Decorated,
       icon: None,
       application_id: String::new (),
-      last_click_time: 0
+      last_click_time: 0,
     }
   }
 

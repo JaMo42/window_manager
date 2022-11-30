@@ -219,11 +219,11 @@ impl Drawing_Context {
       .unwrap ();
   }
 
-  pub unsafe fn select_font (&mut self, description: &FontDescription) {
+  pub fn select_font (&mut self, description: &FontDescription) {
     self.pango_layout.set_font_description (Some (description));
   }
 
-  pub unsafe fn font_height (&mut self, description: Option<&FontDescription>) -> u32 {
+  pub fn font_height (&mut self, description: Option<&FontDescription>) -> u32 {
     if let Some (d) = description {
       self.select_font (d);
     }
@@ -565,11 +565,7 @@ pub unsafe fn get_app_icon (app_name: &str) -> Option<Box<Svg_Resource>> {
   let icon_path = if name.starts_with ('/') {
     name
   } else {
-    format! (
-      "{}/48x48/apps/{}.svg",
-      (*config).icon_theme,
-      name
-    )
+    format! ("{}/48x48/apps/{}.svg", (*config).icon_theme, name)
   };
   Svg_Resource::open (&icon_path)
 }
@@ -589,12 +585,7 @@ pub unsafe fn get_icon (name: &str) -> Option<Box<Svg_Resource>> {
     "status",
   ];
   for d in dirs {
-    let pathname = format! (
-      "{}/48x48/{}/{}.svg",
-      (*config).icon_theme,
-      d,
-      name
-    );
+    let pathname = format! ("{}/48x48/{}/{}.svg", (*config).icon_theme, d, name);
     if std::fs::metadata (&pathname).is_ok () {
       return Svg_Resource::open (&pathname);
     }

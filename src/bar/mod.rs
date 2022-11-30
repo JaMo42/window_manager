@@ -52,7 +52,7 @@ impl Bar {
   pub unsafe fn create () -> Self {
     let main_mon = monitors::main ();
     let width = main_mon.geometry ().w;
-    let height = (*config).bar_height.get (Some (&(*config).bar_font));
+    let height = (*config).bar_height;
     let x = main_mon.geometry ().x;
     let y = main_mon.geometry ().y;
     let window = Window::builder (&display)

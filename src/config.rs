@@ -102,9 +102,9 @@ pub enum Height {
 }
 
 impl Height {
-  pub unsafe fn get (&self, font: Option<&FontDescription>) -> u32 {
+  pub fn get (&self, font: Option<&FontDescription>) -> u32 {
     match *self {
-      Height::FontPlus (n) => n + (*draw).font_height (font),
+      Height::FontPlus (n) => n + unsafe { &mut *draw }.font_height (font),
       Height::Absolute (n) => n,
     }
   }
@@ -159,10 +159,6 @@ fn find_icon_theme (maybe_theme_name: Option<String>) -> String {
 pub struct Config {
   pub modifier: c_uint,
   pub key_binds: HashMap<Key, Action>,
-  // padding: (top, bottom, left, right)
-  // Spacing from the respective screen border for snapped windows
-  pub padding: (c_int, c_int, c_int, c_int),
-  pub secondary_padding: (c_int, c_int, c_int, c_int),
   // Internal border between the client and the actual window (only affects
   // snapped windows)
   pub gap: c_uint,
@@ -175,7 +171,7 @@ pub struct Config {
   pub bar_opacity: u32,
   pub bar_time_format: String,
   pub bar_power_supply: String,
-  pub bar_height: Height,
+  pub bar_height: u32,
   pub bar_update_interval: u64,
   pub title_font: FontDescription,
   pub title_height: Height,
@@ -193,7 +189,7 @@ pub struct Config {
   pub dock_item_size: u32,
   pub dock_icon_size: u32,
   pub dock_context_show_workspaces: bool,
-  pub double_click_time: Time
+  pub double_click_time: Time,
 }
 
 impl Config {
@@ -219,8 +215,6 @@ impl Config {
         .map (|m| modifiers_from_string (&m))
         .unwrap_or (MOD_WIN),
       key_binds: HashMap::new (),
-      padding: layout.pad.unwrap_or ((0, 0, 0, 0)),
-      secondary_padding: layout.secondary_pad.unwrap_or ((0, 0, 0, 0)),
       gap: layout.gaps.unwrap_or (0),
       border_width: window.border.unwrap_or (0),
       workspace_count: layout.workspaces.unwrap_or (1),
@@ -238,9 +232,7 @@ impl Config {
         .time_format
         .unwrap_or_else (|| "%a %b %e %H:%M %Y".to_string ()),
       bar_power_supply: bar_.power_supply.unwrap_or_else (|| "BAT0".to_string ()),
-      bar_height: E! (Height::from_str (
-        &bar_.height.unwrap_or_else (|| "+5".to_string ())
-      )),
+      bar_height: 0,
       bar_update_interval: bar_.update_interval.unwrap_or (10000),
       title_font: FontDescription::from_string (
         &window.title_font.unwrap_or_else (|| "sans 14".to_string ()),
@@ -268,8 +260,14 @@ impl Config {
       dock_item_size: dock.item_size.unwrap_or (80),
       dock_icon_size: dock.icon_size.unwrap_or (85),
       dock_context_show_workspaces: dock.context_show_workspaces.unwrap_or (true),
-      double_click_time: general.double_click_time.unwrap_or (500)
+      double_click_time: general.double_click_time.unwrap_or (500),
     };
+    if cfg! (feature = "bar") {
+      this.bar_height = E! (Height::from_str (
+        &bar_.height.unwrap_or_else (|| "+5".to_string ())
+      ))
+      .get (Some (&this.bar_font));
+    }
     if let Some (table) = keys.bindings {
       let m = this.modifier;
       parse_key_bindings (&table, &mut this, m);
@@ -291,7 +289,10 @@ impl Config {
       Action::Generic (action::switch_window),
     );
     // Set window area
-    monitors::set_window_areas (this.padding, this.secondary_padding);
+    monitors::set_window_areas (
+      layout.pad.unwrap_or ((this.bar_height as i32, 0, 0, 0)),
+      layout.secondary_pad.unwrap_or ((0, 0, 0, 0)),
+    );
     Ok (this)
   }
 

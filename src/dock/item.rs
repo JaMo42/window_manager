@@ -20,11 +20,7 @@ unsafe fn get_icon (maybe_name_or_path: Option<String>) -> Option<Box<Svg_Resour
     let icon_path = if name.starts_with ('/') {
       name
     } else {
-      format! (
-        "{}/48x48/apps/{}.svg",
-        (*config).icon_theme,
-        name
-      )
+      format! ("{}/48x48/apps/{}.svg", (*config).icon_theme, name)
     };
     Svg_Resource::open (&icon_path)
   }) {
