@@ -11,7 +11,7 @@ pub struct Icon_Group<const N: usize> {
 impl<const N: usize> Icon_Group<N> {
   pub const fn new (names: [&'static str; N]) -> Self {
     Self {
-      names: names,
+      names,
       loaded: None,
     }
   }

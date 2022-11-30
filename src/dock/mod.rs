@@ -7,7 +7,6 @@ pub use dock::Dock;
 use crate::as_static::AsStaticMut;
 use crate::client::Client;
 use crate::core::*;
-use crate::tooltip::{tooltip, Tooltip};
 use crate::x::{Window, XNone};
 use item::Item;
 use std::ptr::NonNull;
@@ -44,7 +43,7 @@ pub unsafe fn click_item (event: &XButtonEvent) {
       }
       Button3 => {
         dock.keep_open (true);
-        tooltip.close ();
+        item.close_tooltip ();
         item.context_menu ();
       }
       _ => {}
@@ -70,14 +69,9 @@ pub unsafe fn cross_item (event: &XCrossingEvent) {
     let item: &'static mut Item = &mut *(ctx as *mut Item);
     item.redraw (dock.drawing_context (), event.type_ == EnterNotify);
     if event.type_ == EnterNotify {
-      let g = item.geometry ();
-      tooltip.show (
-        item.display_name (),
-        dock.geometry ().x + g.x + g.w as i32 / 2,
-        dock.geometry ().y + g.y - Tooltip::height () as i32 - 5,
-      );
+      item.show_tooltip ();
     } else {
-      tooltip.close ();
+      item.close_tooltip ();
     }
   }
 }
@@ -103,9 +97,6 @@ pub unsafe fn remove_client (client: &Client) {
   the ().remove_client (client);
 }
 
-/// Moves the client to the top of the instances of its item.
-/// This means the given client becomes affected by the `Hide` and `Close`
-/// actions of the context menu.
 pub unsafe fn focus (client: &Client) {
   the ().update_focus (client);
 }

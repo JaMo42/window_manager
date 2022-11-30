@@ -7,6 +7,7 @@ use crate::error::message_box;
 use crate::geometry::Geometry;
 use crate::process::{run_or_message_box, split_commandline};
 use crate::set_window_kind;
+use crate::tooltip::Tooltip;
 use crate::x::{Window, XWindow};
 use crate::{core::*, window_title};
 use std::ptr::NonNull;
@@ -72,6 +73,7 @@ pub struct Item {
   hovered: bool,
   focused_instance: usize,
   has_urgent: bool,
+  tooltip: Tooltip,
 }
 
 impl Item {
@@ -138,6 +140,7 @@ impl Item {
       hovered: false,
       focused_instance: 0,
       has_urgent: false,
+      tooltip: Tooltip::new (),
     });
     window.save_context (super::item_context, this.as_mut () as *mut Item as XPointer);
     this.redraw (dc, false);
@@ -146,10 +149,6 @@ impl Item {
 
   pub fn destroy (&self) {
     self.window.destroy ();
-  }
-
-  pub fn geometry (&self) -> &Geometry {
-    &self.geometry
   }
 
   unsafe fn draw_indicator (&self, dc: &mut Drawing_Context) {
@@ -223,10 +222,6 @@ impl Item {
 
   pub fn name (&self) -> &str {
     &self.app_name
-  }
-
-  pub fn display_name (&self) -> &str {
-    &self.desktop_entry.name
   }
 
   pub fn new_instance (&self) {
@@ -402,5 +397,20 @@ impl Item {
 
   pub fn urgent (&mut self, is_urgent: bool) {
     self.has_urgent = is_urgent;
+  }
+
+  pub unsafe fn show_tooltip (&mut self) {
+    let dock_g = super::the ().geometry ();
+    let g = &self.geometry;
+    let name = &self.desktop_entry.name;
+    self.tooltip.show (
+      name,
+      dock_g.x + g.x + g.w as i32 / 2,
+      dock_g.y + g.y - Tooltip::height () as i32 - 5,
+    );
+  }
+
+  pub unsafe fn close_tooltip (&mut self) {
+    self.tooltip.close ();
   }
 }

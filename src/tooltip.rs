@@ -32,7 +32,8 @@ impl Tooltip {
       .attributes (|attributes| {
         attributes
           .background_pixel ((*config).colors.bar_background.pixel)
-          .override_redirect (true);
+          .override_redirect (true)
+          .save_under (true);
       })
       .build ();
     ewmh::set_window_type (self.window, Net::WMWindowTypeTooltip);
@@ -80,7 +81,6 @@ impl Tooltip {
     if self.active {
       self.window.unmap ();
       self.active = false;
-      display.sync (false);
     }
   }
 
