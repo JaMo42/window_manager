@@ -53,6 +53,14 @@ $ ./run.sh
 
 This launches the X server and runs the window manager locally so it has to be ran from a tty.
 
+Methods of running:
+
+- `./run.sh` or `./run.sh startx`: starts the X server and the window manager, must be called from a tty.
+
+- `./run.sh xephyr`: starts Xephyr with a single displayed and runs the window manager in it.
+
+- `./run.sh multi_mon`: starts Xephyr with multiple monitors and runs the window manager in it.
+
 ### Release
 
 ```

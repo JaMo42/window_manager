@@ -1,4 +1,4 @@
-xrdb -merge $HOME/.Xresources
+xrdb -merge $HOME/.Xresources 2>/dev/null
 export RUST_BACKTRACE=1
 case $VALGRIND in
   1)
