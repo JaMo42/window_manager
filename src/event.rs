@@ -83,7 +83,7 @@ pub unsafe fn button_press (event: &XButtonEvent) {
       return;
     }
   }
-  if event.subwindow != x::XNone {
+  if win2client (event.subwindow).is_some () {
     mouse_held = event.button;
     workspaces[active_workspace].focus (event.subwindow);
   }
@@ -295,6 +295,7 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   if let Some (client) = win2client (event.window) {
     if client.workspace == active_workspace {
       client.map ();
+      return;
     }
   }
   // New client

@@ -66,7 +66,7 @@ pub unsafe fn cross_item (event: &XCrossingEvent) {
   dock.cancel_hide ();
   dock.window ().raise ();
   if let Some (ctx) = Window::from_handle (&display, event.window).find_context (item_context) {
-    let item: &'static mut Item = &mut *(ctx as *mut Item);
+    let item: &'static mut Item = (ctx as *mut Item).as_static_mut ();
     item.redraw (dock.drawing_context (), event.type_ == EnterNotify);
     if event.type_ == EnterNotify {
       item.show_tooltip ();
