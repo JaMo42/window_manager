@@ -78,6 +78,7 @@ pub unsafe fn button_press (event: &XButtonEvent) {
   if let Some (client) = win2client (event.subwindow) {
     if event.button == Button1 && !client.may_move ()
       || event.button == Button3 && !client.may_resize ()
+      || client.click_frame (event.time)
     {
       return;
     }

@@ -193,6 +193,7 @@ pub struct Config {
   pub dock_item_size: u32,
   pub dock_icon_size: u32,
   pub dock_context_show_workspaces: bool,
+  pub double_click_time: Time
 }
 
 impl Config {
@@ -267,6 +268,7 @@ impl Config {
       dock_item_size: dock.item_size.unwrap_or (80),
       dock_icon_size: dock.icon_size.unwrap_or (85),
       dock_context_show_workspaces: dock.context_show_workspaces.unwrap_or (true),
+      double_click_time: general.double_click_time.unwrap_or (500)
     };
     if let Some (table) = keys.bindings {
       let m = this.modifier;

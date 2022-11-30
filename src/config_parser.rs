@@ -25,6 +25,7 @@ pub struct Parsed_Config {
 pub struct General {
   pub meta_window_classes: Option<Vec<String>>,
   pub default_notification_timeout: Option<u64>,
+  pub double_click_time: Option<u64>
 }
 
 #[derive(Deserialize, Debug, Default)]

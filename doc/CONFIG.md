@@ -8,6 +8,7 @@ Key | Description | Default
 ---|---|---
 `meta_window_classes` | Classes to use as meta windows; these windows are visible from each workspace, are undecorated, and cannot be interacted with. Additionally, windows with the title `window_manager_bar` are also meta windows. | `[]`
 `default_notification_timeout` | Default time desktop notifications are displayed for if no time is specified, if set to `0` notifications never expire. | `6000`
+`double_click_time` | Maximum time after which a second click is considered a double-click in milliseconds. | `500`
 
 ### `layout` section
 
