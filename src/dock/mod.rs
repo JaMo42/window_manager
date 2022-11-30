@@ -4,6 +4,7 @@ mod item;
 
 pub use dock::Dock;
 
+use crate::as_static::AsStaticMut;
 use crate::client::Client;
 use crate::core::*;
 use crate::tooltip::{tooltip, Tooltip};
@@ -33,7 +34,7 @@ pub unsafe fn destroy () {
 pub unsafe fn click_item (event: &XButtonEvent) {
   let dock = the ();
   if let Some (ctx) = Window::from_handle (&display, event.window).find_context (item_context) {
-    let item: &'static mut Item = &mut *(ctx as *mut Item);
+    let item = (ctx as *mut Item).as_static_mut ();
     match event.button {
       Button1 => {
         item.click ();

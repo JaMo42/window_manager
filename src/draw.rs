@@ -11,6 +11,7 @@ use x11::xlib::*;
 
 pub mod resources {
   use super::Svg_Resource;
+  use crate::icon_group::Icon_Group;
   pub static mut close_button: Svg_Resource = Svg_Resource::new ("close_button.svg");
   pub static mut maximize_button: Svg_Resource = Svg_Resource::new ("maximize_button.svg");
   pub static mut minimize_button: Svg_Resource = Svg_Resource::new ("minimize_button.svg");
@@ -20,22 +21,21 @@ pub mod resources {
   pub static mut battery_full: Svg_Resource = Svg_Resource::new ("battery_full.svg");
   pub static mut battery_critical: Svg_Resource = Svg_Resource::new ("battery_critical.svg");
   pub static mut battery_charging: Svg_Resource = Svg_Resource::new ("battery_charging.svg");
-  // TODO: lazy loading and probably only keep currently used loaded
-  pub static mut battery_bars: [Svg_Resource; 6] = [
-    Svg_Resource::new ("battery_1_bar.svg"),
-    Svg_Resource::new ("battery_2_bar.svg"),
-    Svg_Resource::new ("battery_3_bar.svg"),
-    Svg_Resource::new ("battery_4_bar.svg"),
-    Svg_Resource::new ("battery_5_bar.svg"),
-    Svg_Resource::new ("battery_6_bar.svg"),
-  ];
+  pub static mut battery_bars: Icon_Group<6> = Icon_Group::new ([
+    "battery_1_bar.svg",
+    "battery_2_bar.svg",
+    "battery_3_bar.svg",
+    "battery_4_bar.svg",
+    "battery_5_bar.svg",
+    "battery_6_bar.svg",
+  ]);
   pub static mut power: Svg_Resource = Svg_Resource::new ("power.svg");
 }
 
 pub struct Svg_Resource {
   file: &'static str,
-  handle: Option<SvgHandle>,
   renderer: Option<CairoRenderer<'static>>,
+  handle: Option<SvgHandle>,
   // The pattern used to draw a colored SVG, it is assumed that the size the
   // SVG is drawn in is always the same and it's always drawn to (0, 0).
   pattern: Option<cairo::Pattern>,
@@ -554,9 +554,6 @@ pub unsafe fn load_resources () {
   load_svg (&mut resources::battery_full);
   load_svg (&mut resources::battery_critical);
   load_svg (&mut resources::battery_charging);
-  for i in resources::battery_bars.iter_mut () {
-    load_svg (i);
-  }
   load_svg (&mut resources::power);
 }
 

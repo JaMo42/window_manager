@@ -1,3 +1,5 @@
+use crate::as_static::AsStaticMut;
+
 use super::config::*;
 use super::context_menu;
 use super::core::*;
@@ -21,7 +23,7 @@ pub unsafe fn win2client<W: To_XWindow> (window: W) -> Option<&'static mut Clien
   {
     None
   } else if !data.is_null () {
-    Some (&mut *(data as *mut Client))
+    Some ((data as *mut Client).as_static_mut ())
   } else {
     None
   }

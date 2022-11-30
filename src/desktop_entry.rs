@@ -89,7 +89,7 @@ impl Desktop_Entry {
         if let Some (name) = section.attr_with_param ("Name", $param) {
           return Some (name.to_owned ());
         }
-      }
+      };
     }
     let (lang, country, modifier) = get_locale ()?;
     if let Some (country) = &country {

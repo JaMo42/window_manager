@@ -157,7 +157,7 @@ impl Battery {
     } else {
       let percent = (capacity - 10) as f64 / 80.0;
       let idx = (percent * (resources::battery_bars.len ()) as f64) as usize;
-      (&mut resources::battery_bars[idx], c)
+      (resources::battery_bars.get (idx), c)
     }
   }
 }

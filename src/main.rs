@@ -22,6 +22,7 @@ mod event;
 mod workspace;
 #[macro_use]
 mod property;
+mod as_static;
 mod bar;
 mod buttons;
 mod context_menu;
@@ -31,6 +32,7 @@ mod dock;
 mod draw;
 mod error;
 mod ewmh;
+mod icon_group;
 mod monitors;
 mod notifications;
 mod platform;
