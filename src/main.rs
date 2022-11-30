@@ -485,6 +485,7 @@ unsafe fn configure_logging () {
     encode::pattern::PatternEncoder,
   };
   let log_file = FileAppender::builder ()
+    .append (false)
     .encoder (Box::new (PatternEncoder::new ("{l:<5}| {m}\n")))
     .build (paths::logfile.as_str ())
     .unwrap ();

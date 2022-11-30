@@ -21,7 +21,6 @@ run_xephyr()
   fi
 }
 
-> $HOME/.config/window_manager/log.txt
 case "${1:-startx}" in
   startx)
     startx ./xinitrc
