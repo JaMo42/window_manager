@@ -62,7 +62,7 @@ impl Bar {
         attributes
           .override_redirect (true)
           .background_pixel ((*config).colors.bar_background.pixel)
-          .event_mask (ButtonPressMask | ExposureMask)
+          .event_mask (ExposureMask)
           .cursor (cursor::normal);
       })
       .build ();
