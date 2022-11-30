@@ -120,7 +120,13 @@ impl Client {
 
   pub unsafe fn new (window: Window) -> Box<Self> {
     let geometry = get_window_geometry (window);
-    let class_hint = Class_Hints::new (window);
+    let mut class_hint = Class_Hints::new (window);
+
+    if let Some (h) = &class_hint {
+      if h.name == "Mail" && h.class == "thunderbird-default" {
+        class_hint.as_mut ().unwrap ().class = "thunderbird".to_string ();
+      }
+    }
 
     window.change_attributes (|attributes| {
       attributes
