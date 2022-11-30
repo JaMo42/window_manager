@@ -21,7 +21,9 @@ impl Timeout_Thread {
   }
 
   pub fn cancel (&mut self) {
-    log_error! (self.sender.send (()));
+    if !self.handle.is_finished () {
+      log_error! (self.sender.send (()));
+    }
   }
 
   pub fn join (self) {
@@ -56,12 +58,13 @@ impl Repeatable_Timeout_Thread {
     if let Some (thread) = &mut self.thread {
       thread.cancel ();
     }
+    self.thread = None;
   }
 
   pub fn destroy (&mut self) {
-    self.cancel ();
-    if let Some (handle) = self.thread.take () {
-      handle.join ();
+    if let Some (mut thread) = self.thread.take () {
+      thread.cancel ();
+      thread.join ();
     }
   }
 }

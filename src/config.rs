@@ -141,7 +141,7 @@ fn find_icon_theme (maybe_theme_name: Option<String>) -> String {
     let path = format! ("{}/{}", d, theme_name);
     log::trace! (" - {}", path);
     if std::fs::metadata (&path).is_ok () {
-      log::trace! (" -> exists");
+      log::trace! (" -> found");
       return path;
     }
   }
