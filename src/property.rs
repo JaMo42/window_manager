@@ -25,6 +25,7 @@ pub enum Net {
   ActiveWindow,
   ClientList,
   CurrentDesktop,
+  MoveresizeWindow,
   NumberOfDesktops,
   Supported,
   SupportingWMCheck,
@@ -177,6 +178,7 @@ pub unsafe fn load_atoms () {
   N! (ActiveWindow, "_NET_ACTIVE_WINDOW");
   N! (ClientList, "_NET_CLIENT_LIST");
   N! (CurrentDesktop, "_NET_CURRENT_DESKTOP");
+  N! (MoveresizeWindow, "_NET_MOVERESIZE_WINDOW");
   N! (NumberOfDesktops, "_NET_NUMBER_OF_DESKTOPS");
   N! (Supported, "_NET_SUPPORTED");
   N! (SupportingWMCheck, "_NET_SUPPORTING_WM_CHECK");

@@ -1,7 +1,8 @@
 use super::action;
-use super::client::Client;
+use super::client::{Client, Client_Geometry};
 use super::core::*;
 use super::event::{mouse_move, mouse_resize};
+use super::geometry::Geometry;
 use super::property::{self, atom, Net, WM};
 use crate::x::Window;
 use libc::c_long;
@@ -118,7 +119,9 @@ unsafe fn net_wm_moveresize (client: &mut Client, event: &XClientMessageEvent) {
   //       bottom and/or right direction, we could just ignore them but it's
   //       probably nicer to have them anyways.
 
-  workspaces[active_workspace].focus (client.window);
+  if client.workspace == active_workspace {
+    workspaces[active_workspace].focus (client.window);
+  }
 
   if direction == _NET_WM_MOVERESIZE_MOVE && client.may_move () {
     mouse_move (client);
@@ -144,6 +147,19 @@ unsafe fn net_wm_moveresize (client: &mut Client, event: &XClientMessageEvent) {
   // not implemented.
 }
 
+unsafe fn net_moveresize_window (client: &mut Client, event: &XClientMessageEvent) {
+  client.move_and_resize (Client_Geometry::Frame (Geometry::from_parts (
+    event.data.get_long (1) as i32,
+    event.data.get_long (2) as i32,
+    event.data.get_long (3) as u32,
+    event.data.get_long (4) as u32,
+  )));
+  // Not sure if this should focus or not, for now I'll go without.
+  //if client.workspace == active_workspace {
+  //  workspaces[active_workspace].focus (client.window);
+  //}
+}
+
 /// Maybe handles a client message to a client window, returns whether the
 /// message was handled or not.
 pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) -> bool {
@@ -167,6 +183,8 @@ pub unsafe fn client_message (client: &mut Client, event: &XClientMessageEvent) 
     wm_change_state (client, event.data.get_long (0));
   } else if event.message_type == atom (Net::WMMoveresize) {
     net_wm_moveresize (client, event);
+  } else if event.message_type == atom (Net::MoveresizeWindow) {
+    net_moveresize_window (client, event);
   } else {
     return false;
   }
