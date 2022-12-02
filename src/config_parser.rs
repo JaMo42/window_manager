@@ -26,6 +26,8 @@ pub struct General {
   pub meta_window_classes: Option<Vec<String>>,
   pub default_notification_timeout: Option<u64>,
   pub double_click_time: Option<u64>,
+  pub grid_resize: Option<bool>,
+  pub grid_resize_grid_size: Option<(u32, u32)>
 }
 
 #[derive(Deserialize, Debug, Default)]

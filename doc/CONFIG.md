@@ -9,6 +9,8 @@ Key | Description | Default
 `meta_window_classes` | Classes to use as meta windows; these windows are visible from each workspace, are undecorated, and cannot be interacted with. Additionally, windows with the title `window_manager_bar` are also meta windows. | `[]`
 `default_notification_timeout` | Default time desktop notifications are displayed for if no time is specified, if set to `0` notifications never expire. | `6000`
 `double_click_time` | Maximum time after which a second click is considered a double-click in milliseconds. | `500`
+`grid_resize` | Run [grid-resize](https://github.com/JaMo42/grid-resize) when holding the left and right mouse buttons while moving a window. | `false`
+`grid_resize_grid_size` | The vertical and horizontal columns for grid-resize. | `(16, 9)`
 
 ### `layout` section
 

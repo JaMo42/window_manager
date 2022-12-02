@@ -1,5 +1,4 @@
 use crate::as_static::AsStaticMut;
-
 use super::config::*;
 use super::context_menu;
 use super::core::*;
@@ -181,6 +180,14 @@ pub unsafe fn mouse_move (client: &mut Client) {
         preview.update ();
         mouse_x = motion.x;
         mouse_y = motion.y;
+      }
+      ButtonPress if (*config).grid_resize => {
+        let event = event.button;
+        if mouse_held | event.button == Button1 | Button3 {
+          preview.finish (client);
+          action::grid_resize (client);
+          return;
+        }
       }
       ButtonRelease => break,
       _ => {}

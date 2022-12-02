@@ -190,6 +190,8 @@ pub struct Config {
   pub dock_icon_size: u32,
   pub dock_context_show_workspaces: bool,
   pub double_click_time: Time,
+  pub grid_resize: bool,
+  pub grid_resize_grid_size: (u32, u32),
 }
 
 impl Config {
@@ -261,6 +263,8 @@ impl Config {
       dock_icon_size: dock.icon_size.unwrap_or (85),
       dock_context_show_workspaces: dock.context_show_workspaces.unwrap_or (true),
       double_click_time: general.double_click_time.unwrap_or (500),
+      grid_resize: general.grid_resize.unwrap_or (false),
+      grid_resize_grid_size: general.grid_resize_grid_size.unwrap_or ((16, 9)),
     };
     if cfg! (feature = "bar") {
       this.bar_height = E! (Height::from_str (

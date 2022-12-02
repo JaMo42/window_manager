@@ -42,6 +42,8 @@ Libraries:
 
 - `amixer` required for volume control actions
 
+- [`grid-resize`](https://github.com/JaMo42/grid-resize) required if the `grid_resize` option is enabled (see [configuration](./doc/CONFIG.md)).
+
 ## Compiling
 
 ### Debug
