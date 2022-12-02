@@ -1,8 +1,7 @@
-use crate::monitors::Monitor;
-
 use super::client::*;
 use super::core::*;
 use super::geometry::*;
+use super::monitors::Monitor;
 use super::process;
 use super::property::WM;
 use super::*;
