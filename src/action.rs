@@ -250,9 +250,9 @@ pub fn move_to_prev_monitor (client: &mut Client) {
 pub fn grid_resize (client: &mut Client) {
   let area = monitors::containing (client).window_area ();
   let dimensions = format! ("{},{},{},{}", area.x, area.y, area.w, area.h);
-  let (vertical_cells, horizontal_cells) = unsafe {&*config}.grid_resize_grid_size;
+  let (vertical_cells, horizontal_cells) = unsafe { &*config }.grid_resize_grid_size;
   let cells = format! ("{},{}", vertical_cells, horizontal_cells);
-  let color = unsafe {&*config}.colors.selected;
+  let color = unsafe { &*config }.colors.selected;
   let color = format! ("--color={},{},{}", color.red, color.green, color.blue);
   log_error! (process::run (&[
     "grid-resize",
@@ -261,6 +261,7 @@ pub fn grid_resize (client: &mut Client) {
     &cells,
     &color,
     "--live",
-    "--method=message"
+    "--method=message",
+    "--right-button-pressed"
   ]));
 }

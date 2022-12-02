@@ -1,10 +1,10 @@
-use crate::as_static::AsStaticMut;
 use super::config::*;
 use super::context_menu;
 use super::core::*;
 use super::process;
 use super::property::{atom, Net, Normal_Hints};
 use super::*;
+use crate::as_static::AsStaticMut;
 use x::{window::To_XWindow, XFalse, XNone};
 
 pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;

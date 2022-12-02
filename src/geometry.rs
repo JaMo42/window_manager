@@ -1,12 +1,12 @@
 use super::error::fatal_error;
 use crate::action::{move_snap_flags, snap_geometry};
 use crate::client::{decorated_frame_offset, Client, Client_Geometry};
-use crate::ewmh;
-use crate::property;
-use crate::x::Window;
 use crate::core::*;
+use crate::ewmh;
 use crate::monitors;
 use crate::mouse_passthrough;
+use crate::property;
+use crate::x::Window;
 use rand::{prelude::ThreadRng, Rng};
 use std::os::raw::*;
 use x11::xlib::*;
