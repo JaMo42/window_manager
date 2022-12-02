@@ -11,7 +11,7 @@ pub unsafe fn quit () {
 }
 
 pub unsafe fn quit_dialog () {
-  process::run (&["window_manager_quit"]).ok ();
+  process::run_or_message_box (&["window_manager_quit"]);
 }
 
 pub unsafe fn close_client (client: &mut Client) {

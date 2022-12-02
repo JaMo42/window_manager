@@ -477,6 +477,17 @@ unsafe fn list_properties (window: Window) {
   }
 }
 
+/// Remove the hitbox of the given window.
+fn mouse_passthrough (window: Window) {
+  use x11::xfixes::*;
+  unsafe {
+    let region = XFixesCreateRegion (display.as_raw (), std::ptr::null_mut (), 0);
+    // 2 = ShapeInput
+    XFixesSetWindowShapeRegion (display.as_raw (), window.handle (), 2, 0, 0, region);
+    XFixesDestroyRegion (display.as_raw (), region);
+  }
+}
+
 unsafe fn configure_logging () {
   use log::LevelFilter;
   use log4rs::{

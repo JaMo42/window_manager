@@ -4,7 +4,9 @@ use crate::client::{decorated_frame_offset, Client, Client_Geometry};
 use crate::ewmh;
 use crate::property;
 use crate::x::Window;
-use crate::{core::*, monitors};
+use crate::core::*;
+use crate::monitors;
+use crate::mouse_passthrough;
 use rand::{prelude::ThreadRng, Rng};
 use std::os::raw::*;
 use x11::xlib::*;
@@ -168,6 +170,7 @@ impl Preview {
       })
       .colormap (colormap)
       .build ();
+    mouse_passthrough (window);
     ewmh::set_window_type (window, property::Net::WMWindowTypeDesktop);
     window.clear ();
     window.map ();
