@@ -225,3 +225,17 @@ pub unsafe fn set_allowed_actions (window: Window, may_resize: bool) {
     actions.len () as i32,
   );
 }
+
+pub unsafe fn set_frame_extents (window: Window, offset: &Geometry) {
+  let top = offset.y as u32;
+  let left = offset.x as u32;
+  let extents = [left, offset.w - left, top, offset.h - top];
+  property::set (
+    window,
+    Net::FrameExtents,
+    XA_CARDINAL,
+    32,
+    extents.as_ptr (),
+    4,
+  );
+}

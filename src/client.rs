@@ -39,6 +39,7 @@ pub enum Client_Geometry {
   Client (Geometry),
 }
 
+#[derive(Copy, Clone)]
 pub enum Frame_Kind {
   // Frame with title bar and buttons, used for normal clients
   Decorated,
@@ -211,6 +212,7 @@ impl Client {
     set_window_kind (frame, Window_Kind::Frame);
 
     ewmh::set_allowed_actions (window, !is_dialog);
+    ewmh::set_frame_extents (window, frame_kind.frame_offset ());
 
     if result.frame_kind.should_draw_decorations () {
       let mut i = 0;

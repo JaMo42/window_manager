@@ -25,6 +25,7 @@ pub enum Net {
   ActiveWindow,
   ClientList,
   CurrentDesktop,
+  FrameExtents,
   MoveresizeWindow,
   NumberOfDesktops,
   Supported,
@@ -32,8 +33,8 @@ pub enum Net {
   SystemTrayOpcode,
   SystemTrayOrientation,
   SystemTrayS0,
-  WMActionClose,
   WMActionChangeDesktop,
+  WMActionClose,
   WMActionFullscreen,
   WMActionMaximizeHorz,
   WMActionMaximizeVert,
@@ -178,6 +179,7 @@ pub unsafe fn load_atoms () {
   N! (ActiveWindow, "_NET_ACTIVE_WINDOW");
   N! (ClientList, "_NET_CLIENT_LIST");
   N! (CurrentDesktop, "_NET_CURRENT_DESKTOP");
+  N! (FrameExtents, "_NET_FRAME_EXTENTS");
   N! (MoveresizeWindow, "_NET_MOVERESIZE_WINDOW");
   N! (NumberOfDesktops, "_NET_NUMBER_OF_DESKTOPS");
   N! (Supported, "_NET_SUPPORTED");
