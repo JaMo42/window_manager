@@ -376,6 +376,29 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
   }
 }
 
+pub unsafe fn configure_notify (event: &XConfigureEvent) {
+  if root == event.window {
+    let size_changed = event.width as u32 != screen_size.w || event.height as u32 != screen_size.h;
+    screen_size.w = event.width as u32;
+    screen_size.h = event.height as u32;
+    if size_changed || monitors::update () {
+      monitors::set_window_areas ((*config).padding, (*config).secondary_padding);
+      (*draw).resize (screen_size.w, screen_size.h);
+      bar::resize ();
+      dock::resize ();
+      // Update size of fullscreen windows
+      for workspace in workspaces.iter () {
+        for client in workspace.iter () {
+          if client.is_fullscreen {
+            let mon = monitors::containing (client).geometry ();
+            client.window.move_and_resize (mon.x, mon.y, mon.w, mon.h);
+          }
+        }
+      }
+    }
+  }
+}
+
 pub unsafe fn configure_request (event: &XConfigureRequestEvent) {
   if let Some (client) = win2client (event.window) {
     if event.value_mask & CWBorderWidth as u64 != 0 {

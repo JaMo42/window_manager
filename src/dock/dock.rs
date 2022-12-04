@@ -75,7 +75,7 @@ unsafe fn create_drawing_context (
 
 unsafe fn create_show_window (vi: &XVisualInfo, colormap: Colormap) -> Window {
   log::trace! ("dock: creating show window");
-  let height = 10;
+  let height = monitors::main ().geometry ().h / 100;
   Window::builder (&display)
     .size (1920, height)
     .position (0, (monitors::main ().geometry ().h - height) as i32)
@@ -214,6 +214,26 @@ impl Dock {
     self.window.destroy ();
     self.show_window.destroy ();
     self.hide_thread.destroy ();
+  }
+
+  pub fn resize (&mut self) {
+    // Dock window
+    let (x, y) = Self::position (self.geometry.w, self.geometry.h);
+    self.window.r#move (x, y);
+    self.geometry.x = x;
+    self.geometry.y = y;
+    self.redraw ();
+    // Show window
+    let mon = monitors::main ().geometry ();
+    let height = monitors::main ().geometry ().h / 100;
+    self
+      .show_window
+      .move_and_resize (mon.x, mon.y + (mon.h - height) as i32, mon.w, height);
+
+    self.show_window.map_raised ();
+    if self.visible {
+      self.window.map_raised ();
+    }
   }
 
   pub fn redraw (&mut self) {

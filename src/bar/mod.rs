@@ -142,6 +142,17 @@ impl Bar {
     display.sync (false);
   }
 
+  pub unsafe fn redraw_all (&mut self) {
+    for w in self
+      .left_widgets
+      .iter_mut ()
+      .chain (self.right_widgets.iter_mut ())
+    {
+      w.invalidate ();
+    }
+    self.draw ();
+  }
+
   pub fn invalidate_widgets (&mut self) {
     for w in self
       .left_widgets
@@ -209,4 +220,10 @@ pub fn update () {
   unsafe {
     bar.draw ();
   }
+}
+
+pub unsafe fn resize () {
+  // The tray calls `bar.resize`.
+  tray.resize_window ();
+  bar.redraw_all ();
 }

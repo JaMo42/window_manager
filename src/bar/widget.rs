@@ -376,6 +376,7 @@ impl Widget for Workspaces {
 pub struct Quit {
   window: Window,
   width: u32,
+  redraw: bool
 }
 
 impl Quit {
@@ -395,7 +396,7 @@ impl Quit {
       );
       resize_and_render (window, bar.height + super::Bar::RIGHT_GAP, bar.height, 0);
     }
-    Some (Self { window, width })
+    Some (Self { window, width, redraw: false })
   }
 }
 
@@ -405,6 +406,17 @@ impl Widget for Quit {
   }
 
   unsafe fn update (&mut self, _height: u32, _gap: u32) -> u32 {
+    if self.redraw {
+      self.width = bar.height;
+      draw_icon_and_text (
+        "",
+        Some (&mut resources::power),
+        Some ((*config).colors.bar_text),
+        bar.height,
+      );
+      (*draw).render (self.window, 0, 0, self.width, bar.height);
+      self.redraw = false;
+    }
     self.width
   }
 
@@ -420,6 +432,10 @@ impl Widget for Quit {
 
   unsafe fn leave (&mut self) {
     tooltip.close ();
+  }
+
+  fn invalidate (&mut self) {
+    self.redraw = true;
   }
 }
 

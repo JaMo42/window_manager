@@ -258,6 +258,19 @@ impl Drawing_Context {
     );
     display.sync (false);
   }
+
+  pub unsafe fn resize (&mut self, width: u32, height: u32) {
+    XFreePixmap (display.as_raw (), self.drawable);
+    self.drawable = XCreatePixmap (
+      display.as_raw (),
+      root.handle (),
+      width,
+      height,
+      display.default_depth (),
+    );
+    let raw_surface = self.cairo_surface.to_raw_none ();
+    cairo_xlib_surface_set_drawable (raw_surface, self.drawable, width as i32, height as i32);
+  }
 }
 
 #[allow(dead_code)]
