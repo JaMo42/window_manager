@@ -125,9 +125,11 @@ impl Client {
     let geometry = get_window_geometry (window);
     let mut class_hint = Class_Hints::new (window);
 
-    if let Some (h) = &class_hint {
+    if let Some (h) = &mut class_hint {
       if h.name == "Mail" && h.class == "thunderbird-default" {
-        class_hint.as_mut ().unwrap ().class = "thunderbird".to_string ();
+        h.class = "thunderbird".to_string ();
+      } else if h.name == "Navigator" && h.class == "Firefox-esr" {
+        h.class = "firefox-esr".to_string ();
       }
     }
 
