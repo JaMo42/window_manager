@@ -270,6 +270,7 @@ unsafe fn run () {
       ButtonPress => event::button_press (&event.button),
       ButtonRelease => event::button_relase (),
       ClientMessage => event::client_message (&event.client_message),
+      ConfigureNotify => event::configure_notify (&event.configure),
       ConfigureRequest => event::configure_request (&event.configure_request),
       DestroyNotify => event::destroy_notify (&event.destroy_window),
       EnterNotify => event::crossing (&event.crossing),

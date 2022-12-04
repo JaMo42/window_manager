@@ -141,7 +141,7 @@ impl Tray_Manager {
   }
 
   /// Resizes and positions the window. The main bar window is resized as needed.
-  unsafe fn resize_window (&mut self) {
+  pub unsafe fn resize_window (&mut self) {
     let width = self.width ();
     bar.resize (monitors::main ().geometry ().w - width);
     if width != 0 {

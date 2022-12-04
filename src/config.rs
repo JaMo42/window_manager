@@ -159,6 +159,8 @@ fn find_icon_theme (maybe_theme_name: Option<String>) -> String {
 pub struct Config {
   pub modifier: c_uint,
   pub key_binds: HashMap<Key, Action>,
+  pub padding: (i32, i32, i32, i32),
+  pub secondary_padding: (i32, i32, i32, i32),
   // Internal border between the client and the actual window (only affects
   // snapped windows)
   pub gap: c_uint,
@@ -217,6 +219,8 @@ impl Config {
         .map (|m| modifiers_from_string (&m))
         .unwrap_or (MOD_WIN),
       key_binds: HashMap::new (),
+      padding: (0, 0, 0, 0),
+      secondary_padding: (0, 0, 0, 0),
       gap: layout.gaps.unwrap_or (0),
       border_width: window.border.unwrap_or (0),
       workspace_count: layout.workspaces.unwrap_or (1),
@@ -293,10 +297,9 @@ impl Config {
       Action::Generic (action::switch_window),
     );
     // Set window area
-    monitors::set_window_areas (
-      layout.pad.unwrap_or ((this.bar_height as i32, 0, 0, 0)),
-      layout.secondary_pad.unwrap_or ((0, 0, 0, 0)),
-    );
+    this.padding = layout.pad.unwrap_or ((this.bar_height as i32, 0, 0, 0));
+    this.secondary_padding = layout.secondary_pad.unwrap_or ((0, 0, 0, 0));
+    monitors::set_window_areas (this.padding, this.secondary_padding);
     Ok (this)
   }
 

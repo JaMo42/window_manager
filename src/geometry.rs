@@ -303,8 +303,9 @@ impl Preview {
       if self.final_geometry == self.original_geometry {
         return;
       }
-      client.snap_state = SNAP_NONE;
-      client.move_and_resize (Client_Geometry::Frame (self.final_geometry));
+      client.modify_saved_geometry (|g| *g = self.final_geometry);
+      client.snap_state = 1; // Any non-zero value so unsnap does the resizing for us
+      client.unsnap ();
       client.save_geometry ();
     }
   }

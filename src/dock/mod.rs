@@ -104,3 +104,7 @@ pub unsafe fn focus (client: &Client) {
 pub unsafe fn update_urgency (client: &mut Client) {
   the ().update_urgency (client);
 }
+
+pub unsafe fn resize () {
+  the ().resize ();
+}

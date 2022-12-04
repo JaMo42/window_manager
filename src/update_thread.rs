@@ -16,17 +16,19 @@ impl Update_Thread {
   pub fn new (interval: u64, update_fn: fn ()) -> Self {
     let (tx, rx) = mpsc::channel ();
     let duration = Duration::from_millis (interval);
-    let handle = thread::spawn (move || loop {
-      if let Ok (signal) = rx.recv_timeout (duration) {
-        match signal {
-          Self::STOP_SIGNAL => {
-            return;
+    let handle = thread::spawn (move || {
+      loop {
+        if let Ok (signal) = rx.recv_timeout (duration) {
+          match signal {
+            Self::STOP_SIGNAL => {
+              return;
+            }
+            Self::UPDATE_SIGNAL => {}
+            _ => unreachable! (),
           }
-          Self::UPDATE_SIGNAL => {}
-          _ => unreachable! (),
         }
+        update_fn ();
       }
-      update_fn ();
     });
     Self { handle, sender: tx }
   }

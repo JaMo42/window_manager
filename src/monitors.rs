@@ -2,6 +2,7 @@ use crate::client::Client;
 use crate::core::*;
 use crate::geometry::Geometry;
 
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Monitor {
   number: i32,
   geometry: Geometry,
@@ -116,7 +117,7 @@ pub fn at (x: i32, y: i32) -> &'static Monitor {
 }
 
 /// Gets the monitor containing the client.
-pub fn containing (client: &mut Client) -> &'static Monitor {
+pub fn containing (client: &Client) -> &'static Monitor {
   // We use the saved geometry so when moving a snapped client we can just
   // move it's saved geometry and re-snap it.
   // For unsnapped windows this is the same as `frame_geometry`.
@@ -139,4 +140,11 @@ pub fn set_window_areas (
       secondary_margin
     });
   }
+}
+
+pub unsafe fn update () -> bool {
+  let old = monitors.clone ();
+  monitors.clear ();
+  query ();
+  !(old.len () == monitors.len () && monitors.iter ().zip (&old).all (|(new, old)| new == old))
 }
