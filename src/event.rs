@@ -332,14 +332,16 @@ pub unsafe fn map_request (event: &XMapRequestEvent) {
     let mut trans_win = XNone;
     let mut has_trans_client = false;
     let mut window_area;
-    if XGetTransientForHint (display.as_raw (), window.handle (), &mut trans_win) != 0 {
-      if let Some (trans) = win2client (trans_win) {
-        has_trans_client = true;
-        target_workspace = trans.workspace;
-        window_area = monitors::main ().window_area ();
-        g.center (&trans.client_geometry ())
-          .clamp (&window_area.get_client ());
-      }
+    if let Some (trans) = display
+      .get_transient_for_hint (window)
+      .and_then (|w| win2client (w))
+    {
+      trans_win = trans.window.handle ();
+      has_trans_client = true;
+      target_workspace = trans.workspace;
+      window_area = monitors::main ().window_area ();
+      g.center (&trans.client_geometry ())
+        .clamp (&window_area.get_client ());
     }
     if !has_trans_client {
       window_area = monitors::main ().window_area ();

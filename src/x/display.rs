@@ -368,6 +368,15 @@ impl Display {
       }
     }
   }
+
+  pub fn get_transient_for_hint (&self, window: impl To_XWindow) -> Option<XWindow> {
+    let mut trans: XWindow = XNone;
+    if unsafe { XGetTransientForHint (self.connection, window.to_xwindow (), &mut trans) } != 0 {
+      Some (trans)
+    } else {
+      None
+    }
+  }
 }
 
 pub trait To_XDisplay {
