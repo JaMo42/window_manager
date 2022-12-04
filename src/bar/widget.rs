@@ -348,7 +348,7 @@ impl Widget for Workspaces {
 
   unsafe fn click (&mut self, event: &XButtonEvent) {
     use crate::action::select_workspace;
-    if event.x > (bar.height as i32 * workspaces.len () as i32) {
+    if event.x >= (bar.height as i32 * workspaces.len () as i32) {
       // Click on padding
       return;
     }
