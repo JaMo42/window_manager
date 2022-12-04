@@ -573,17 +573,21 @@ impl Client {
     if state {
       self.snap_state = SNAP_NONE;
       self.window.reparent (root, 0, 0);
-      self.window.resize (screen_size.w, screen_size.h);
+      self.frame.unmap ();
+      let size = monitors::containing (self).geometry ();
+      self.window.move_and_resize (size.x, size.y, size.w, size.h);
       self.window.raise ();
       display.set_input_focus (self.window);
       ewmh::set_net_wm_state (self, &[property::atom (Net::WMStateFullscreen)]);
     } else {
       let (reparent_x, reparent_y) = self.frame_kind.parent_offset ();
+      self.frame.map ();
       self.window.reparent (self.frame, reparent_x, reparent_y);
       self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
       self.focus ();
       ewmh::set_net_wm_state (self, &[]);
     }
+    display.flush ();
   }
 
   pub unsafe fn configure (&self) {
