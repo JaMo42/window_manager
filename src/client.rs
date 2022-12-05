@@ -571,7 +571,6 @@ impl Client {
     }
     self.is_fullscreen = state;
     if state {
-      self.snap_state = SNAP_NONE;
       self.window.reparent (root, 0, 0);
       self.frame.unmap ();
       let size = monitors::containing (self).geometry ();
@@ -583,9 +582,13 @@ impl Client {
       let (reparent_x, reparent_y) = self.frame_kind.parent_offset ();
       self.frame.map ();
       self.window.reparent (self.frame, reparent_x, reparent_y);
-      self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
+      if self.snap_state != SNAP_NONE {
+        action::snap (self, self.snap_state);
+      } else {
+        ewmh::set_net_wm_state (self, &[]);
+        self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
+      }
       self.focus ();
-      ewmh::set_net_wm_state (self, &[]);
     }
     display.flush ();
   }

@@ -81,6 +81,8 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
         property::atom (Net::WMStateMaximizedVert),
       ],
     );
+  } else {
+    ewmh::set_net_wm_state (client, &[]);
   }
   let window_area = monitors::containing (client).window_area ();
   client.move_and_resize (Client_Geometry::Snap (snap_geometry (flags, window_area)));
