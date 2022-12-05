@@ -13,7 +13,8 @@ use crate::{core::*, window_title};
 use std::ptr::NonNull;
 use x11::xlib::*;
 
-unsafe fn get_icon (maybe_name_or_path: Option<String>) -> Option<Box<Svg_Resource>> {
+unsafe fn get_icon (entry: Option<&Desktop_Entry>) -> Option<Box<Svg_Resource>> {
+  let maybe_name_or_path = entry.and_then (|d| d.icon.clone ());
   if let Some (app_icon) = maybe_name_or_path.and_then (|name| {
     // Same as `draw::get_app_icon` but we already have the desktop entry so
     // we don't want to use that
@@ -57,7 +58,7 @@ fn get_title_and_unsaved_changes (client: &Client) -> (String, bool) {
 pub struct Item {
   // Name of the .desktop file, used of the entry does not specify a name
   app_name: String,
-  desktop_entry: Desktop_Entry,
+  desktop_entry: Option<Desktop_Entry>,
   action_icons: Vec<Option<Box<Svg_Resource>>>,
   instances: Vec<NonNull<Client>>,
   window: Window,
@@ -82,17 +83,14 @@ impl Item {
     y: i32,
     dc: &mut Drawing_Context,
   ) -> Option<Box<Self>> {
-    let de = if let Some (entry) = Desktop_Entry::new (app_name) {
-      entry
-    } else {
-      if is_pinned {
-        message_box (
-          "Application not found",
-          &format! ("'{}' was not found and got removed from the dock", app_name),
-        );
-      }
+    let de = Desktop_Entry::new (app_name);
+    if de.is_none () && is_pinned {
+      message_box (
+        "Application not found",
+        &format! ("'{}' was not found and got removed from the dock", app_name),
+      );
       return None;
-    };
+    }
     let window = Window::builder (&display)
       .size (size, size)
       .position (x, y)
@@ -101,7 +99,7 @@ impl Item {
         attributes.event_mask (EnterWindowMask | LeaveWindowMask | ButtonPressMask);
       })
       .build ();
-    let icon = if let Some (icon) = get_icon (de.icon.clone ()) {
+    let icon = if let Some (icon) = get_icon (de.as_ref ()) {
       icon
     } else {
       message_box (
@@ -111,17 +109,23 @@ impl Item {
       return None;
     };
     let mut action_icons = Vec::new ();
-    for action in de.actions.iter () {
-      if let Some (icon_name_or_path) = action.icon.as_ref () {
-        action_icons.push (draw::get_app_icon (icon_name_or_path));
-      } else {
-        action_icons.push (None);
+    if let Some (de) = &de {
+      for action in de.actions.iter () {
+        if let Some (icon_name_or_path) = action.icon.as_ref () {
+          action_icons.push (draw::get_app_icon (icon_name_or_path));
+        } else {
+          action_icons.push (None);
+        }
       }
     }
     set_window_kind (window, Window_Kind::Dock_Item);
     window.map ();
     window.clear ();
-    let command = split_commandline (de.exec.as_ref ().unwrap ());
+    let command = if let Some (de) = &de {
+      split_commandline (de.exec.as_ref ().unwrap ())
+    } else {
+      Vec::new ()
+    };
     let mut this = Box::new (Self {
       app_name: app_name.to_owned (),
       desktop_entry: de,
@@ -232,16 +236,22 @@ impl Item {
     }
     choice -= this.instances.len ();
     // Actions
-    if choice < this.desktop_entry.actions.len () {
-      let action = &this.desktop_entry.actions[choice];
-      if let Some (command) = action.exec.clone () {
-        let command: Vec<String> = split_commandline (&command);
-        run_or_message_box (&command);
+    if let Some (de) = &this.desktop_entry {
+      if choice < de.actions.len () {
+        let action = &de.actions[choice];
+        if let Some (command) = action.exec.clone () {
+          let command: Vec<String> = split_commandline (&command);
+          run_or_message_box (&command);
+        }
+        return;
       }
-      return;
+      choice -= de.actions.len ();
     }
-    choice -= this.desktop_entry.actions.len ();
     // Default operations
+    if this.desktop_entry.is_none () {
+      // Skip 'Launch' choice
+      choice += 1;
+    }
     match choice {
       0 => {
         this.new_instance ();
@@ -310,24 +320,24 @@ impl Item {
         .for_each (drop);
       menu.divider ();
     }
-    if !self.desktop_entry.actions.is_empty () {
-      self
-        .desktop_entry
-        .actions
-        .iter ()
-        .enumerate ()
-        .map (|(index, action)| {
-          menu.action (action.name.clone ()).icon (
-            self.action_icons[index]
-              .as_mut ()
-              .map (|icon| &mut *(icon.as_mut () as *mut Svg_Resource)),
-          );
-        })
-        .for_each (drop);
-      menu.divider ();
-    }
+    if let Some (de) = &self.desktop_entry {
+      if !de.actions.is_empty () {
+        de.actions
+          .iter ()
+          .enumerate ()
+          .map (|(index, action)| {
+            menu.action (action.name.clone ()).icon (
+              self.action_icons[index]
+                .as_mut ()
+                .map (|icon| &mut *(icon.as_mut () as *mut Svg_Resource)),
+            );
+          })
+          .for_each (drop);
+        menu.divider ();
+      }
 
-    menu.action ("Launch".to_string ());
+      menu.action ("Launch".to_string ());
+    }
 
     if let Some (active) = self.instances.first () {
       menu.action (
@@ -398,12 +408,19 @@ impl Item {
   pub unsafe fn show_tooltip (&mut self) {
     let dock_g = super::the ().geometry ();
     let g = &self.geometry;
-    let name = &self.desktop_entry.name;
-    self.tooltip.show (
-      name,
-      dock_g.x + g.x + g.w as i32 / 2,
-      dock_g.y + g.y - Tooltip::height () as i32 - 5,
-    );
+    if let Some (de) = &self.desktop_entry {
+      self.tooltip.show (
+        &de.name,
+        dock_g.x + g.x + g.w as i32 / 2,
+        dock_g.y + g.y - Tooltip::height () as i32 - 5,
+      );
+    } else {
+      self.tooltip.show (
+        &window_title (self.instances[0].as_ref ().window),
+        dock_g.x + g.x + g.w as i32 / 2,
+        dock_g.y + g.y - Tooltip::height () as i32 - 5,
+      );
+    };
   }
 
   pub unsafe fn close_tooltip (&mut self) {
