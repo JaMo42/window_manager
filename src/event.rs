@@ -8,6 +8,7 @@ use crate::as_static::AsStaticMut;
 use x::{window::To_XWindow, XFalse, XNone};
 
 pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
+const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 20;
 
 pub unsafe fn win2client<W: To_XWindow> (window: W) -> Option<&'static mut Client> {
   let mut data: XPointer = std::ptr::null_mut ();
@@ -134,6 +135,7 @@ pub unsafe fn motion (event: &XMotionEvent) {
 }
 
 pub unsafe fn mouse_move (client: &mut Client) {
+  // TODO: this has quite a lot of duplicate code with mouse_resize now...
   let _grab = if let Some (grab) = display.scoped_pointer_grab (MOUSE_MASK, cursor::moving) {
     grab
   } else {
@@ -156,6 +158,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
   } else {
     client.frame_geometry ()
   });
+  let mut active = false;
   loop {
     display.mask_event (MOUSE_MASK | SubstructureRedirectMask, &mut event);
     match event.type_ {
@@ -165,6 +168,15 @@ pub unsafe fn mouse_move (client: &mut Client) {
         let motion = event.motion;
         if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
           continue;
+        }
+        if !active {
+          if (start_x - motion.x).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
+            || (start_y - motion.y).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
+          {
+            active = true;
+          } else {
+            continue;
+          }
         }
         last_time = motion.time;
         if motion.state & MOD_SHIFT == MOD_SHIFT {
@@ -231,6 +243,7 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
     client.frame_geometry ()
   });
   let normal_hints = Normal_Hints::get (client.window);
+  let mut active = false;
   loop {
     display.mask_event (MOUSE_MASK | SubstructureRedirectMask, &mut event);
     match event.type_ {
@@ -240,6 +253,15 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
         let motion = event.motion;
         if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
           continue;
+        }
+        if !active {
+          if (start_x - motion.x).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
+            || (start_y - motion.y).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
+          {
+            active = true;
+          } else {
+            continue;
+          }
         }
         last_time = motion.time;
         let mx = (motion.x - prev_x) * width_mul;

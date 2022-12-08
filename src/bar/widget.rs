@@ -376,7 +376,7 @@ impl Widget for Workspaces {
 pub struct Quit {
   window: Window,
   width: u32,
-  redraw: bool
+  redraw: bool,
 }
 
 impl Quit {
@@ -396,7 +396,11 @@ impl Quit {
       );
       resize_and_render (window, bar.height + super::Bar::RIGHT_GAP, bar.height, 0);
     }
-    Some (Self { window, width, redraw: false })
+    Some (Self {
+      window,
+      width,
+      redraw: false,
+    })
   }
 }
 
