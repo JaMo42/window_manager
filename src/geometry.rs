@@ -173,7 +173,6 @@ impl Preview {
     mouse_passthrough (window);
     ewmh::set_window_type (window, property::Net::WMWindowTypeDesktop);
     window.clear ();
-    window.map ();
     Preview {
       window,
       original_geometry: initial_geometry,
@@ -182,6 +181,10 @@ impl Preview {
       final_geometry: initial_geometry,
       is_snapped: false,
     }
+  }
+
+  pub fn show (&self) {
+    self.window.map ()
   }
 
   pub fn move_by (&mut self, x: i32, y: i32) {

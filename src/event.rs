@@ -8,7 +8,7 @@ use crate::as_static::AsStaticMut;
 use x::{window::To_XWindow, XFalse, XNone};
 
 pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
-const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 20;
+const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 10;
 
 pub unsafe fn win2client<W: To_XWindow> (window: W) -> Option<&'static mut Client> {
   let mut data: XPointer = std::ptr::null_mut ();
@@ -120,7 +120,7 @@ pub unsafe fn motion (event: &XMotionEvent) {
     }
     mouse_held = 0;
   } else if is_kind (event.window, Window_Kind::Context_Menu) {
-    crate::context_menu::motion (event);
+    context_menu::motion (event);
   } else {
     // Ignore all subsequent MotionNotify events
     let mut my_event: XEvent = uninitialized! ();
@@ -174,6 +174,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
             || (start_y - motion.y).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
           {
             active = true;
+            preview.show ();
           } else {
             continue;
           }
@@ -259,6 +260,7 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
             || (start_y - motion.y).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
           {
             active = true;
+            preview.show ();
           } else {
             continue;
           }
