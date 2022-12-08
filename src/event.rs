@@ -5,7 +5,8 @@ use super::process;
 use super::property::{atom, Net, Normal_Hints};
 use super::*;
 use crate::as_static::AsStaticMut;
-use x::{window::To_XWindow, XFalse, XNone};
+use x::{window::To_XWindow, Window, XFalse, XNone};
+use x11::keysym::XK_Escape;
 
 pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 10;
@@ -170,8 +171,12 @@ pub unsafe fn mouse_move (client: &mut Client) {
     g
   });
   let mut active = false;
+  display.grab_keyboard (root);
   loop {
-    display.mask_event (MOUSE_MASK | SubstructureRedirectMask, &mut event);
+    display.mask_event (
+      MOUSE_MASK | KeyPressMask | SubstructureRedirectMask,
+      &mut event,
+    );
     match event.type_ {
       ConfigureRequest => configure_request (&event.configure_request),
       MapRequest => map_request (&event.map_request),
@@ -209,15 +214,23 @@ pub unsafe fn mouse_move (client: &mut Client) {
       ButtonPress if (*config).grid_resize => {
         let event = event.button;
         if mouse_held | event.button == Button1 | Button3 {
+          display.ungrab_keyboard ();
           preview.finish (client);
           action::grid_resize (client);
           return;
+        }
+      }
+      KeyPress => {
+        let event = event.key;
+        if x::lookup_keysym (&event) as u32 == XK_Escape {
+          break;
         }
       }
       ButtonRelease => break,
       _ => {}
     }
   }
+  display.ungrab_keyboard ();
   preview.finish (client);
 }
 
@@ -257,8 +270,12 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
   });
   let normal_hints = Normal_Hints::get (client.window);
   let mut active = false;
+  display.grab_keyboard (root);
   loop {
-    display.mask_event (MOUSE_MASK | SubstructureRedirectMask, &mut event);
+    display.mask_event (
+      MOUSE_MASK | KeyPressMask | SubstructureRedirectMask,
+      &mut event,
+    );
     match event.type_ {
       ConfigureRequest => configure_request (&event.configure_request),
       MapRequest => map_request (&event.map_request),
@@ -292,10 +309,17 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
         prev_x = motion.x;
         prev_y = motion.y;
       }
+      KeyPress => {
+        let event = event.key;
+        if x::lookup_keysym (&event) as u32 == XK_Escape {
+          break;
+        }
+      }
       ButtonRelease => break,
       _ => {}
     }
   }
+  display.ungrab_keyboard ();
   preview.finish (client);
 }
 

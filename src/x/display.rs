@@ -157,12 +157,12 @@ impl Display {
     unsafe { XKeysymToKeycode (self.connection, sym) }
   }
 
-  pub fn grab_key (&self, code: u32, mods: u32) {
+  pub fn grab_key (&self, code: u32, modifiers: u32) {
     unsafe {
       XGrabKey (
         self.connection,
         code as i32,
-        mods,
+        modifiers,
         self.root,
         XTrue,
         GrabModeAsync,
@@ -171,9 +171,9 @@ impl Display {
     }
   }
 
-  pub fn ungrab_key (&self, code: u32, mods: u32) {
+  pub fn ungrab_key (&self, code: u32, modifiers: u32) {
     unsafe {
-      XUngrabKey (self.connection, code as i32, mods, self.root);
+      XUngrabKey (self.connection, code as i32, modifiers, self.root);
     }
   }
 

@@ -120,13 +120,23 @@ unsafe fn update_numlock_mask () {
   XFreeModifiermap (modmap);
 }
 
+unsafe fn grab_key_with_toggle_mods (code: u32, modifiers: u32) {
+  for extra in [0, LockMask, numlock_mask, LockMask | numlock_mask] {
+    display.grab_key (code, modifiers | extra);
+  }
+}
+
+unsafe fn ungrab_key_with_toggle_mods (code: u32, modifiers: u32) {
+  for extra in [0, LockMask, numlock_mask, LockMask | numlock_mask] {
+    display.ungrab_key (code, modifiers | extra);
+  }
+}
+
 unsafe fn grab_keys () {
   update_numlock_mask ();
   display.ungrab_key (AnyKey as u32, AnyModifier);
   for key in (*config).key_binds.keys () {
-    for extra in [0, LockMask, numlock_mask, LockMask | numlock_mask] {
-      display.grab_key (key.code, key.modifiers | extra);
-    }
+    grab_key_with_toggle_mods (key.code, key.modifiers);
   }
 }
 
@@ -312,7 +322,7 @@ unsafe fn cleanup () {
   // Un-grab keys and buttons
   log::trace! ("Un-grabbing keys and buttons");
   for key in (*config).key_binds.keys () {
-    display.ungrab_key (key.code, key.modifiers);
+    ungrab_key_with_toggle_mods (key.code, key.modifiers);
   }
   display.ungrab_button (1, (*config).modifier);
   display.ungrab_button (1, (*config).modifier | MOD_SHIFT);
