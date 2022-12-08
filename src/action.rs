@@ -267,3 +267,9 @@ pub fn grid_resize (client: &mut Client) {
     "--right-button-pressed"
   ]));
 }
+
+fn mouse_action<F> (cb: F)
+where
+  F: FnMut(i32, i32, &XMotionEvent),
+{
+}

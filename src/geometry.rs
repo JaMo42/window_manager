@@ -187,10 +187,23 @@ impl Preview {
     self.window.map ()
   }
 
+  pub fn ensure_unsnapped (
+    &mut self,
+    mouse_x: i32,
+    mouse_y: i32,
+    x_offset_percent: f64,
+    y_offset: i32,
+  ) {
+    if self.is_snapped {
+      self.geometry.x = mouse_x - (self.geometry.w as f64 * x_offset_percent) as i32;
+      self.geometry.y = mouse_y - y_offset;
+      self.is_snapped = false;
+    }
+  }
+
   pub fn move_by (&mut self, x: i32, y: i32) {
     self.geometry.x += x;
     self.geometry.y += y;
-    self.is_snapped = false;
     self.final_geometry = self.geometry;
   }
 

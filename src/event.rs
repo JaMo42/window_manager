@@ -153,10 +153,21 @@ pub unsafe fn mouse_move (client: &mut Client) {
   let mut last_time: Time = 0;
   let mut mouse_x = start_x;
   let mut mouse_y = start_y;
+  let y_offset;
+  let x_offset_percent;
   let mut preview = geometry::Preview::create (if client.is_snapped () {
-    client.saved_geometry ()
+    let fg = client.frame_geometry ();
+    y_offset = mouse_y - fg.y;
+    x_offset_percent = (mouse_x - fg.x) as f64 / fg.w as f64;
+    let mut g = client.saved_geometry ();
+    g.x = mouse_x - (g.w as f64 * x_offset_percent) as i32;
+    g.y = fg.y;
+    g
   } else {
-    client.frame_geometry ()
+    let g = client.frame_geometry ();
+    y_offset = mouse_y - g.y;
+    x_offset_percent = (mouse_x - g.x) as f64 / g.w as f64;
+    g
   });
   let mut active = false;
   loop {
@@ -188,6 +199,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
         {
           preview.move_edge (motion.x, motion.y);
         } else {
+          preview.ensure_unsnapped (mouse_x, mouse_y, x_offset_percent, y_offset);
           preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
         }
         preview.update ();
