@@ -375,6 +375,10 @@ impl Client {
     }
   }
 
+  pub fn frame_offset (&self) -> &'static Geometry {
+    self.frame_kind.frame_offset ()
+  }
+
   /// Rerturns the geometry of the frame window (outer window)
   pub fn frame_geometry (&self) -> Geometry {
     self.frame_kind.get_frame (self.geometry)

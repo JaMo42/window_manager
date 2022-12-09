@@ -119,6 +119,31 @@ impl Geometry {
   pub fn center_point (&self) -> (i32, i32) {
     (self.x + self.w as i32 / 2, self.y + self.h as i32 / 2)
   }
+
+  pub fn offset_of (
+    &self,
+    x: i32,
+    y: i32,
+    x_static_threshhold: i32,
+    y_static_threshhold: i32,
+  ) -> Point_Offset {
+    let x_inside = x - self.x;
+    let y_inside = y - self.y;
+    let x_offset = if x_inside > x_static_threshhold {
+      Offset::Percent (x_inside as f32 / self.w as f32)
+    } else {
+      Offset::Static (x_inside)
+    };
+    let y_offset = if y_inside > y_static_threshhold {
+      Offset::Percent (y_inside as f32 / self.h as f32)
+    } else {
+      Offset::Static (y_inside)
+    };
+    Point_Offset {
+      x: x_offset,
+      y: y_offset,
+    }
+  }
 }
 
 impl std::fmt::Display for Geometry {
@@ -187,15 +212,10 @@ impl Preview {
     self.window.map ()
   }
 
-  pub fn ensure_unsnapped (
-    &mut self,
-    mouse_x: i32,
-    mouse_y: i32,
-    x_offset_percent: f64,
-    y_offset: i32,
-  ) {
+  pub fn ensure_unsnapped (&mut self, mouse_x: i32, mouse_y: i32, offset: &Point_Offset) {
     if self.is_snapped {
-      self.geometry.x = mouse_x - (self.geometry.w as f64 * x_offset_percent) as i32;
+      let (x_offset, y_offset) = offset.inside (&self.original_geometry);
+      self.geometry.x = mouse_x - x_offset;
       self.geometry.y = mouse_y - y_offset;
       self.is_snapped = false;
     }
@@ -324,5 +344,29 @@ impl Preview {
       client.unsnap ();
       client.save_geometry ();
     }
+  }
+}
+
+pub enum Offset {
+  Static (i32),
+  Percent (f32),
+}
+
+pub struct Point_Offset {
+  x: Offset,
+  y: Offset,
+}
+
+impl Point_Offset {
+  pub fn inside (&self, geometry: &Geometry) -> (i32, i32) {
+    let x = match self.x {
+      Offset::Static (offset) => offset,
+      Offset::Percent (percent) => (geometry.w as f32 * percent) as i32,
+    };
+    let y = match self.y {
+      Offset::Static (offset) => offset,
+      Offset::Percent (percent) => (geometry.h as f32 * percent) as i32,
+    };
+    (x, y)
   }
 }

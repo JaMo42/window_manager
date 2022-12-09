@@ -154,21 +154,20 @@ pub unsafe fn mouse_move (client: &mut Client) {
   let mut last_time: Time = 0;
   let mut mouse_x = start_x;
   let mut mouse_y = start_y;
-  let y_offset;
-  let x_offset_percent;
-  let mut preview = geometry::Preview::create (if client.is_snapped () {
-    let fg = client.frame_geometry ();
-    y_offset = mouse_y - fg.y;
-    x_offset_percent = (mouse_x - fg.x) as f64 / fg.w as f64;
+  let offset = {
+    let frame_offset = client.frame_offset ();
+    client
+      .frame_geometry ()
+      .offset_of (mouse_x, mouse_y, frame_offset.x, frame_offset.y)
+  };
+  let mut preview = Preview::create (if client.is_snapped () {
     let mut g = client.saved_geometry ();
-    g.x = mouse_x - (g.w as f64 * x_offset_percent) as i32;
-    g.y = fg.y;
+    let (x_offset, y_offset) = offset.inside (&g);
+    g.x = mouse_x - x_offset;
+    g.y = mouse_y - y_offset;
     g
   } else {
-    let g = client.frame_geometry ();
-    y_offset = mouse_y - g.y;
-    x_offset_percent = (mouse_x - g.x) as f64 / g.w as f64;
-    g
+    client.frame_geometry ()
   });
   let mut active = false;
   display.grab_keyboard (root);
@@ -204,7 +203,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
         {
           preview.move_edge (motion.x, motion.y);
         } else {
-          preview.ensure_unsnapped (mouse_x, mouse_y, x_offset_percent, y_offset);
+          preview.ensure_unsnapped (mouse_x, mouse_y, &offset);
           preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
         }
         preview.update ();
@@ -263,7 +262,7 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
   let mut dy = 0;
   let width_mul = !lock_width as i32;
   let height_mul = !lock_height as i32;
-  let mut preview = geometry::Preview::create (if client.is_snapped () {
+  let mut preview = Preview::create (if client.is_snapped () {
     client.saved_geometry ()
   } else {
     client.frame_geometry ()
