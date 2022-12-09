@@ -28,6 +28,7 @@ pub struct General {
   pub double_click_time: Option<u64>,
   pub grid_resize: Option<bool>,
   pub grid_resize_grid_size: Option<(u32, u32)>,
+  pub grid_resize_live: Option<bool>,
 }
 
 #[derive(Deserialize, Debug, Default)]

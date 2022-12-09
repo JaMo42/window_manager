@@ -194,6 +194,7 @@ pub struct Config {
   pub double_click_time: Time,
   pub grid_resize: bool,
   pub grid_resize_grid_size: (u32, u32),
+  pub grid_resize_live: bool,
 }
 
 impl Config {
@@ -269,6 +270,7 @@ impl Config {
       double_click_time: general.double_click_time.unwrap_or (500),
       grid_resize: general.grid_resize.unwrap_or (false),
       grid_resize_grid_size: general.grid_resize_grid_size.unwrap_or ((16, 9)),
+      grid_resize_live: general.grid_resize_live.unwrap_or (false),
     };
     if cfg! (feature = "bar") {
       this.bar_height = E! (Height::from_str (
