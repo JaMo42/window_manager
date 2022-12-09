@@ -159,6 +159,7 @@ pub struct Preview {
   snap_geometry: Geometry,
   final_geometry: Geometry,
   is_snapped: bool,
+  did_finish: bool,
 }
 
 impl Preview {
@@ -205,6 +206,7 @@ impl Preview {
       snap_geometry: Geometry::new (),
       final_geometry: initial_geometry,
       is_snapped: false,
+      did_finish: false,
     }
   }
 
@@ -326,6 +328,10 @@ impl Preview {
   }
 
   pub unsafe fn finish (&mut self, client: &mut Client) {
+    if self.did_finish {
+      return;
+    }
+    self.did_finish = true;
     self.window.destroy ();
     if self.is_snapped {
       let flags = move_snap_flags (self.geometry.x as u32, self.geometry.y as u32);
@@ -344,6 +350,14 @@ impl Preview {
       client.unsnap ();
       client.save_geometry ();
     }
+  }
+
+  pub unsafe fn cancel (&mut self) {
+    if self.did_finish {
+      return;
+    }
+    self.did_finish = true;
+    self.window.destroy ();
   }
 }
 

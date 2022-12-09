@@ -214,7 +214,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
         let event = event.button;
         if mouse_held | event.button == Button1 | Button3 {
           display.ungrab_keyboard ();
-          preview.finish (client);
+          preview.cancel ();
           action::grid_resize (client);
           return;
         }
@@ -222,6 +222,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
       KeyPress => {
         let event = event.key;
         if x::lookup_keysym (&event) as u32 == XK_Escape {
+          preview.cancel ();
           break;
         }
       }
@@ -311,6 +312,7 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
       KeyPress => {
         let event = event.key;
         if x::lookup_keysym (&event) as u32 == XK_Escape {
+          preview.cancel ();
           break;
         }
       }
