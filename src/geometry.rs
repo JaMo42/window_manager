@@ -338,7 +338,9 @@ impl Preview {
       if flags == client.snap_state {
         return;
       }
-      client.save_geometry ();
+      if client.snap_state == SNAP_NONE {
+        client.save_geometry ();
+      }
       client.snap_state = flags;
       client.move_and_resize (Client_Geometry::Snap (self.snap_geometry));
     } else {
