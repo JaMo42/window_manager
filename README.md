@@ -142,6 +142,19 @@ The bar contains the following widgets:
 
  - Right: Battery charge, volume, current time, and a system tray
 
+## XDND
+
+Supporing XDND using the recommended way of forwarding all XDND client messages
+to the reparented client windows doesn't want to work for me so it's currently
+implemented in a very hacky way where all client windows are just reparented
+onto the root window when a drag & drop operation starts.
+
+However some programs forget to signal that the operation has stopped leaving
+client windows detached from their frames, if this happens simply clicking on the
+root window will reparent all clients back into their frames.
+
+Optionally this can also be disabled by building without the `xdnd-hack` feature (enabled by default).
+
 ## ws_tool
 
 A basic python script that lets you interact with workspaces.

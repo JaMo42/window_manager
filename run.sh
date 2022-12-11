@@ -7,7 +7,7 @@ run_xephyr()
       Xephyr -screen 2560x1400 -ac :3 &
       ;;
     multi)
-      Xephyr +extension RANDR +xinerama -screen 1600x900+0+0 -screen 1280x720+1600+180 -ac :3 &
+      Xephyr +extension RANDR +xinerama -screen 1920x1080+100+100 -screen 1600x900+2020+280 -ac :3 &
       ;;
   esac
   XEPHYR_PID=$!

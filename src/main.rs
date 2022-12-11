@@ -41,6 +41,7 @@ mod session_manager;
 mod timeout_thread;
 mod tooltip;
 mod update_thread;
+mod xdnd;
 
 use crate::core::*;
 use bar::Bar;
@@ -210,6 +211,7 @@ unsafe fn init () {
   client::set_border_info ();
   notifications::init ();
   session_manager::init ();
+  xdnd::listen ();
 }
 
 const fn event_name (type_: c_int) -> &'static str {
@@ -254,6 +256,24 @@ const fn event_name (type_: c_int) -> &'static str {
   EVENT_NAMES[type_ as usize]
 }
 
+unsafe fn handle_unknown_event (event: &XEvent) -> bool {
+  use std::sync::Once;
+  use x11::xfixes::XFixesSelectionNotifyEvent;
+  static mut selection_notify: i32 = -1;
+  static INIT: Once = Once::new ();
+  INIT.call_once (|| {
+    selection_notify = xdnd::get_selection_notify_event_type ();
+  });
+  if event.type_ == selection_notify {
+    if cfg! (feature = "xdnd-hack") {
+      xdnd::selection_notify (&*(event as *const XEvent as *const XFixesSelectionNotifyEvent));
+    }
+  } else {
+    return false;
+  }
+  true
+}
+
 unsafe fn run () {
   let mut event: XEvent = uninitialized! ();
   running = true;
@@ -295,6 +315,9 @@ unsafe fn run () {
       UnmapNotify => event::unmap_notify (&event.unmap),
       SessionManagerEvent => session_manager::manager ().process (),
       _ => {
+        if handle_unknown_event (&event) {
+          continue;
+        }
         if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
           log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
         }

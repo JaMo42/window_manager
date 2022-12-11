@@ -42,6 +42,9 @@ pub unsafe fn button_press (event: &XButtonEvent) {
     let mut handled = true;
     match kind {
       Window_Kind::Root => {
+        if cfg! (feature = "xdnd-hack") && event.subwindow == XNone {
+          xdnd::ensure_hack_stopped ();
+        }
         handled = false;
       }
       Window_Kind::Status_Bar => {

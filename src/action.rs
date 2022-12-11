@@ -257,7 +257,7 @@ pub fn grid_resize (client: &mut Client) {
   let color = unsafe { &*config }.colors.selected;
   let color = format! ("--color={},{},{}", color.red, color.green, color.blue);
   let window = format! ("{}", client.window);
-  let mut cmd = vec![
+  let mut cmd = vec! [
     "grid-resize",
     &window,
     &dimensions,
@@ -266,7 +266,7 @@ pub fn grid_resize (client: &mut Client) {
     "--method=message",
     "--right-button-pressed"
   ];
-  if unsafe {&*config}.grid_resize_live {
+  if unsafe { &*config }.grid_resize_live {
     cmd.push ("--live");
   }
   log_error! (process::run (cmd.as_slice ()));
