@@ -5,10 +5,11 @@ use super::process;
 use super::property::{atom, Net, Normal_Hints};
 use super::*;
 use crate::as_static::AsStaticMut;
+use std::rc::Rc;
+use std::cell::RefCell;
 use x::{window::To_XWindow, Window, XFalse, XNone};
 use x11::keysym::XK_Escape;
 
-pub const MOUSE_MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 10;
 
 pub unsafe fn win2client<W: To_XWindow> (window: W) -> Option<&'static mut Client> {
@@ -139,192 +140,128 @@ pub unsafe fn motion (event: &XMotionEvent) {
 }
 
 pub unsafe fn mouse_move (client: &mut Client) {
-  // TODO: this has quite a lot of duplicate code with mouse_resize now...
-  let _grab = if let Some (grab) = display.scoped_pointer_grab (MOUSE_MASK, cursor::moving) {
-    grab
+  let (x, y) = if let Some (position) = display.query_pointer_position () {
+    position
   } else {
     return;
   };
-  let start_x: c_int;
-  let start_y: c_int;
-  if let Some ((x, y)) = display.query_pointer_position () {
-    start_x = x;
-    start_y = y;
-  } else {
-    return;
-  }
-  let mut event: XEvent = uninitialized! ();
-  let mut last_time: Time = 0;
-  let mut mouse_x = start_x;
-  let mut mouse_y = start_y;
   let offset = {
     let frame_offset = client.frame_offset ();
     client
       .frame_geometry ()
-      .offset_of (mouse_x, mouse_y, frame_offset.x, frame_offset.y)
+      .offset_of (x, y, frame_offset.x, frame_offset.y)
   };
-  let mut preview = Preview::create (if client.is_snapped () {
+  let preview = Preview::create (if client.is_snapped () {
     let mut g = client.saved_geometry ();
     let (x_offset, y_offset) = offset.inside (&g);
-    g.x = mouse_x - x_offset;
-    g.y = mouse_y - y_offset;
+    g.x = x - x_offset;
+    g.y = y - y_offset;
     g
   } else {
     client.frame_geometry ()
   });
-  let mut active = false;
-  display.grab_keyboard (root);
-  loop {
-    display.mask_event (
-      MOUSE_MASK | KeyPressMask | SubstructureRedirectMask,
-      &mut event,
-    );
-    match event.type_ {
-      ConfigureRequest => configure_request (&event.configure_request),
-      MapRequest => map_request (&event.map_request),
-      MotionNotify => {
-        let motion = event.motion;
-        if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
-          continue;
-        }
-        if !active {
-          if (start_x - motion.x).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
-            || (start_y - motion.y).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
-          {
-            active = true;
-            preview.show ();
-          } else {
-            continue;
-          }
-        }
-        last_time = motion.time;
-        if motion.state & MOD_SHIFT == MOD_SHIFT {
-          preview.snap (motion.x, motion.y);
-        } else if !monitors::at (motion.x, motion.y)
-          .window_area ()
-          .contains (motion.x, motion.y)
-        {
-          preview.move_edge (motion.x, motion.y);
-        } else {
-          preview.ensure_unsnapped (mouse_x, mouse_y, &offset);
-          preview.move_by (motion.x - mouse_x, motion.y - mouse_y);
-        }
-        preview.update ();
-        mouse_x = motion.x;
-        mouse_y = motion.y;
+  let preview = Rc::new (RefCell::new (preview));
+  let client = Rc::new (RefCell::new (client));
+  mouse::Tracked_Motion::new ()
+    .rate (MOUSE_MOVE_RESIZE_RATE)
+    .activation_threshold (MOUSE_MOVE_ACTIVATION_THRESHHOLD, &mut || {
+      preview.borrow_mut ().show ();
+    })
+    .on_motion (&mut |motion, _start_x, _start_y, last_x, last_y| {
+      let mut preview = preview.borrow_mut ();
+      if motion.state & MOD_SHIFT == MOD_SHIFT {
+        preview.snap (motion.x, motion.y);
+      } else if !monitors::at (motion.x, motion.y)
+        .window_area ()
+        .contains (motion.x, motion.y)
+      {
+        preview.move_edge (motion.x, motion.y);
+      } else {
+        preview.ensure_unsnapped (last_x, last_y, &offset);
+        preview.move_by (motion.x - last_x, motion.y - last_y);
       }
-      ButtonPress if (*config).grid_resize => {
-        let event = event.button;
-        if mouse_held | event.button == Button1 | Button3 {
-          display.ungrab_keyboard ();
-          preview.cancel ();
-          action::grid_resize (client);
-          return;
-        }
+      preview.update ();
+    })
+    .on_button_press (&mut |event| {
+      if mouse_held | event.button == Button1 | Button3 {
+        preview.borrow_mut ().cancel ();
+        action::grid_resize (*client.borrow_mut ());
+        true
+      } else {
+        false
       }
-      KeyPress => {
-        let event = event.key;
-        if x::lookup_keysym (&event) as u32 == XK_Escape {
-          preview.cancel ();
-          break;
-        }
+    })
+    .on_key_press (&mut |event| {
+      if x::lookup_keysym (&event) as u32 == XK_Escape {
+        preview.borrow_mut ().cancel ();
+        true
+      } else {
+        false
       }
-      ButtonRelease => break,
-      _ => {}
-    }
-  }
-  display.ungrab_keyboard ();
-  preview.finish (client);
+    })
+    .on_finish (&mut |reason| {
+      if matches! (reason, mouse::Finish_Reason::Finish) {
+        preview.borrow_mut ().finish (*client.borrow_mut ());
+      } else {
+        preview.borrow_mut ().cancel ();
+      }
+    })
+    .run (cursor::moving);
 }
 
 pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: bool) {
-  let cursor = if lock_height {
-    cursor::resizing_horizontal
-  } else if lock_width {
-    cursor::resizing_vertical
-  } else {
-    cursor::resizing
-  };
-  let _grab = if let Some (grab) = display.scoped_pointer_grab (MOUSE_MASK, cursor) {
-    grab
-  } else {
-    return;
-  };
-  let start_x: c_int;
-  let start_y: c_int;
-  if let Some ((x, y)) = display.query_pointer_position () {
-    start_x = x;
-    start_y = y;
-  } else {
-    return;
-  }
-  let mut event: XEvent = uninitialized! ();
-  let mut last_time: Time = 0;
-  let mut prev_x = start_x;
-  let mut prev_y = start_y;
   let mut dx = 0;
   let mut dy = 0;
   let width_mul = !lock_width as i32;
   let height_mul = !lock_height as i32;
-  let mut preview = Preview::create (if client.is_snapped () {
+  let normal_hints = Normal_Hints::get (client.window);
+  let preview = Preview::create (if client.is_snapped () {
     client.saved_geometry ()
   } else {
     client.frame_geometry ()
   });
-  let normal_hints = Normal_Hints::get (client.window);
-  let mut active = false;
-  display.grab_keyboard (root);
-  loop {
-    display.mask_event (
-      MOUSE_MASK | KeyPressMask | SubstructureRedirectMask,
-      &mut event,
-    );
-    match event.type_ {
-      ConfigureRequest => configure_request (&event.configure_request),
-      MapRequest => map_request (&event.map_request),
-      MotionNotify => {
-        let motion = event.motion;
-        if (motion.time - last_time) <= MOUSE_MOVE_RESIZE_RATE {
-          continue;
-        }
-        if !active {
-          if (start_x - motion.x).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
-            || (start_y - motion.y).abs () > MOUSE_MOVE_ACTIVATION_THRESHHOLD
-          {
-            active = true;
-            preview.show ();
-          } else {
-            continue;
-          }
-        }
-        last_time = motion.time;
-        let mx = (motion.x - prev_x) * width_mul;
-        let my = (motion.y - prev_y) * height_mul;
-        dx += mx;
-        dy += my;
-        preview.resize_by (mx, my);
-        if let Some (h) = normal_hints.as_ref () {
-          // If resizing freely prefer the direction the mouse has moved more in
-          let keep_height = lock_width || (!lock_height && dx > dy);
-          preview.apply_normal_hints (h, keep_height);
-        }
-        preview.update ();
-        prev_x = motion.x;
-        prev_y = motion.y;
+  let preview = Rc::new (RefCell::new (preview));
+  mouse::Tracked_Motion::new ()
+    .rate (MOUSE_MOVE_RESIZE_RATE)
+    .activation_threshold (MOUSE_MOVE_ACTIVATION_THRESHHOLD, &mut || {
+      preview.borrow_mut ().show ();
+    })
+    .on_motion (&mut |motion, _start_x, _start_y, last_x, last_y| {
+      let mut preview = preview.borrow_mut ();
+      let mx = (motion.x - last_x) * width_mul;
+      let my = (motion.y - last_y) * height_mul;
+      dx += mx;
+      dy += my;
+      preview.resize_by (mx, my);
+      if let Some (h) = normal_hints.as_ref () {
+        // If resizing freely prefer the direction the mouse has moved more in
+        let keep_height = lock_width || (!lock_height && dx > dy);
+        preview.apply_normal_hints (h, keep_height);
       }
-      KeyPress => {
-        let event = event.key;
-        if x::lookup_keysym (&event) as u32 == XK_Escape {
-          preview.cancel ();
-          break;
-        }
+      preview.update ();
+    })
+    .on_key_press (&mut |event| {
+      if x::lookup_keysym (&event) as u32 == XK_Escape {
+        preview.borrow_mut ().cancel ();
+        true
+      } else {
+        false
       }
-      ButtonRelease => break,
-      _ => {}
-    }
-  }
-  display.ungrab_keyboard ();
-  preview.finish (client);
+    })
+    .on_finish (&mut |reason| {
+      if matches! (reason, mouse::Finish_Reason::Finish) {
+        preview.borrow_mut ().finish (client);
+      } else {
+        preview.borrow_mut ().cancel ();
+      }
+    })
+    .run (if lock_height {
+      cursor::resizing_horizontal
+    } else if lock_width {
+      cursor::resizing_vertical
+    } else {
+      cursor::resizing
+    });
 }
 
 pub unsafe fn key_press (event: &XKeyEvent) {
