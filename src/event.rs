@@ -4,11 +4,12 @@ use super::core::*;
 use super::process;
 use super::property::{atom, Net, Normal_Hints};
 use super::*;
-use crate::as_static::AsStaticMut;
-use std::rc::Rc;
+use super::as_static::AsStaticMut;
+use super::split_handles::Split_Handles;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::rc::Rc;
 use x::{window::To_XWindow, Window, XFalse, XNone};
-use x11::keysym::XK_Escape;
 
 const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 10;
 
@@ -63,6 +64,9 @@ pub unsafe fn button_press (event: &XButtonEvent) {
       }
       Window_Kind::Notification => {
         notifications::maybe_close (event.window);
+      }
+      Window_Kind::Split_Handle => {
+        split_handles::click (event);
       }
       _ => {
         log::warn! (
@@ -151,15 +155,18 @@ pub unsafe fn mouse_move (client: &mut Client) {
       .frame_geometry ()
       .offset_of (x, y, frame_offset.x, frame_offset.y)
   };
-  let preview = Preview::create (if client.is_snapped () {
-    let mut g = client.saved_geometry ();
-    let (x_offset, y_offset) = offset.inside (&g);
-    g.x = x - x_offset;
-    g.y = y - y_offset;
-    g
-  } else {
-    client.frame_geometry ()
-  });
+  let preview = Preview::create (
+    if client.is_snapped () {
+      let mut g = client.saved_geometry ();
+      let (x_offset, y_offset) = offset.inside (&g);
+      g.x = x - x_offset;
+      g.y = y - y_offset;
+      g
+    } else {
+      client.frame_geometry ()
+    },
+    client.workspace,
+  );
   let preview = Rc::new (RefCell::new (preview));
   let client = Rc::new (RefCell::new (client));
   mouse::Tracked_Motion::new ()
@@ -167,7 +174,7 @@ pub unsafe fn mouse_move (client: &mut Client) {
     .activation_threshold (MOUSE_MOVE_ACTIVATION_THRESHHOLD, &mut || {
       preview.borrow_mut ().show ();
     })
-    .on_motion (&mut |motion, _start_x, _start_y, last_x, last_y| {
+    .on_motion (&mut |motion, last_x, last_y| {
       let mut preview = preview.borrow_mut ();
       if motion.state & MOD_SHIFT == MOD_SHIFT {
         preview.snap (motion.x, motion.y);
@@ -185,23 +192,16 @@ pub unsafe fn mouse_move (client: &mut Client) {
     .on_button_press (&mut |event| {
       if mouse_held | event.button == Button1 | Button3 {
         preview.borrow_mut ().cancel ();
-        action::grid_resize (*client.borrow_mut ());
+        action::grid_resize (&mut client.borrow_mut ());
         true
       } else {
         false
       }
     })
-    .on_key_press (&mut |event| {
-      if x::lookup_keysym (&event) as u32 == XK_Escape {
-        preview.borrow_mut ().cancel ();
-        true
-      } else {
-        false
-      }
-    })
+    .cancel_on_escape ()
     .on_finish (&mut |reason| {
-      if matches! (reason, mouse::Finish_Reason::Finish) {
-        preview.borrow_mut ().finish (*client.borrow_mut ());
+      if matches! (reason, mouse::Finish_Reason::Finish (_, _)) {
+        preview.borrow_mut ().finish (&mut client.borrow_mut ());
       } else {
         preview.borrow_mut ().cancel ();
       }
@@ -215,18 +215,21 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
   let width_mul = !lock_width as i32;
   let height_mul = !lock_height as i32;
   let normal_hints = Normal_Hints::get (client.window);
-  let preview = Preview::create (if client.is_snapped () {
-    client.saved_geometry ()
-  } else {
-    client.frame_geometry ()
-  });
+  let preview = Preview::create (
+    if client.is_snapped () {
+      client.saved_geometry ()
+    } else {
+      client.frame_geometry ()
+    },
+    client.workspace,
+  );
   let preview = Rc::new (RefCell::new (preview));
   mouse::Tracked_Motion::new ()
     .rate (MOUSE_MOVE_RESIZE_RATE)
     .activation_threshold (MOUSE_MOVE_ACTIVATION_THRESHHOLD, &mut || {
       preview.borrow_mut ().show ();
     })
-    .on_motion (&mut |motion, _start_x, _start_y, last_x, last_y| {
+    .on_motion (&mut |motion, last_x, last_y| {
       let mut preview = preview.borrow_mut ();
       let mx = (motion.x - last_x) * width_mul;
       let my = (motion.y - last_y) * height_mul;
@@ -240,21 +243,14 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
       }
       preview.update ();
     })
-    .on_key_press (&mut |event| {
-      if x::lookup_keysym (&event) as u32 == XK_Escape {
-        preview.borrow_mut ().cancel ();
-        true
-      } else {
-        false
-      }
-    })
     .on_finish (&mut |reason| {
-      if matches! (reason, mouse::Finish_Reason::Finish) {
+      if matches! (reason, mouse::Finish_Reason::Finish (_, _)) {
         preview.borrow_mut ().finish (client);
       } else {
         preview.borrow_mut ().cancel ();
       }
     })
+    .cancel_on_escape ()
     .run (if lock_height {
       cursor::resizing_horizontal
     } else if lock_width {
@@ -398,6 +394,27 @@ pub unsafe fn configure_notify (event: &XConfigureEvent) {
           }
         }
       }
+      // Re-create split handles, keeping relative sizes for knows monitors.
+      for workspace_index in 0..workspaces.len () {
+        let mut old: BTreeMap<i32, (f64, f64, f64)> = BTreeMap::new ();
+        for split_handles in workspaces[workspace_index].splits.iter () {
+          let g = split_handles.geometry ();
+          let percent_vertical = split_handles.vertical () as f64 / g.w as f64;
+          let percent_left = split_handles.left () as f64 / g.h as f64;
+          let percent_right = split_handles.right () as f64 / g.h as f64;
+          old.insert (split_handles.screen_number (), (percent_vertical, percent_left, percent_right));
+        }
+        workspaces[workspace_index].splits.clear ();
+        for m in 0..monitors::count () {
+          workspaces[workspace_index].splits.push (
+            Split_Handles::with_percentages (
+              workspace_index,
+              monitors::at_index (m),
+              old.get (&monitors::at_index (m).number ()).unwrap_or (&(0.5, 0.5, 0.5))
+            )
+          );
+        }
+      }
     }
   }
 }
@@ -503,13 +520,8 @@ pub unsafe fn destroy_notify (event: &XDestroyWindowEvent) {
   }
   if let Some (client) = win2client (event.window) {
     dock::remove_client (client);
-  }
-  for workspace in &mut workspaces {
-    if workspace.contains (window) {
-      workspace.remove (&Client::dummy (window)).destroy ();
-      update_client_list ();
-      break;
-    }
+    workspaces[client.workspace].remove (client).destroy ();
+    update_client_list ();
   }
 }
 
@@ -554,6 +566,9 @@ pub unsafe fn crossing (event: &XCrossingEvent) {
       }
       Context_Menu => {
         context_menu::cross (event);
+      }
+      Split_Handle => {
+        split_handles::crossing (event);
       }
       _ => {}
     }

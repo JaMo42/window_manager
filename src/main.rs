@@ -34,10 +34,12 @@ mod error;
 mod ewmh;
 mod icon_group;
 mod monitors;
+mod mouse;
 mod notifications;
 mod platform;
 mod process;
 mod session_manager;
+mod split_handles;
 mod timeout_thread;
 mod tooltip;
 mod update_thread;
@@ -180,15 +182,17 @@ fn run_autostartrc () {
 unsafe fn init () {
   wm_context = x::unique_context ();
   wm_winkind_context = x::unique_context ();
+  property::load_atoms ();
+  property::init_set_root_properties ();
   workspaces.reserve ((*config).workspace_count);
   for _ in 0..(*config).workspace_count {
-    workspaces.push (Workspace::new ());
+    let index = workspaces.len ();
+    workspaces.push (Workspace::new (index));
   }
+  workspaces[0].split_handles_visible (true);
   x::set_error_handler (x_error);
   root.set_background (&(*config).colors.background);
   root.clear ();
-  property::load_atoms ();
-  property::init_set_root_properties ();
   cursor::load_cursors ();
   grab_keys ();
   grab_buttons ();
@@ -454,6 +458,7 @@ unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
     const kind_dock_item: usize = Window_Kind::Dock_Item as usize;
     const kind_dock_show: usize = Window_Kind::Dock_Show as usize;
     const kind_context_menu: usize = Window_Kind::Context_Menu as usize;
+    const kind_split_handle: usize = Window_Kind::Split_Handle as usize;
     Some (match data as usize {
       kind_root => Window_Kind::Root,
       kind_client => Window_Kind::Client,
@@ -467,6 +472,7 @@ unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
       kind_dock_item => Window_Kind::Dock_Item,
       kind_dock_show => Window_Kind::Dock_Show,
       kind_context_menu => Window_Kind::Context_Menu,
+      kind_split_handle => Window_Kind::Split_Handle,
       _ => {
         my_panic! ("Invalid Window_Kind value on {}: {}", window, data as usize);
       }

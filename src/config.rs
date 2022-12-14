@@ -135,7 +135,7 @@ fn find_icon_theme (maybe_theme_name: Option<String>) -> String {
     format! ("{}/{}", home, ".icons"),
   ];
   let theme_given = maybe_theme_name.is_some ();
-  let theme_name = maybe_theme_name.unwrap_or ("Papirus".to_string ());
+  let theme_name = maybe_theme_name.unwrap_or_else (|| "Papirus".to_string ());
   log::trace! ("Looking for icon theme");
   for d in directories {
     let path = format! ("{}/{}", d, theme_name);
@@ -150,7 +150,7 @@ fn find_icon_theme (maybe_theme_name: Option<String>) -> String {
     let message = if theme_given {
       format! ("Icon theme not found: {}", theme_name)
     } else {
-      format! ("No icon theme specified and the default 'Papirus' was not found")
+      "No icon theme specified and the default 'Papirus' was not found".to_string ()
     };
     fatal_error (&message);
   }

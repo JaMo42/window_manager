@@ -1,5 +1,5 @@
 use super::error::fatal_error;
-use crate::action::{move_snap_flags, snap_geometry};
+use crate::action::{move_snap_flags, snap, snap_geometry};
 use crate::client::{decorated_frame_offset, Client, Client_Geometry};
 use crate::core::*;
 use crate::ewmh;
@@ -157,9 +157,11 @@ pub struct Preview {
   original_geometry: Geometry,
   geometry: Geometry,
   snap_geometry: Geometry,
+  snap_flags: u8,
   final_geometry: Geometry,
   is_snapped: bool,
   did_finish: bool,
+  workspace: usize,
 }
 
 impl Preview {
@@ -172,7 +174,7 @@ impl Preview {
   // resize by a single increment)
   const RESIZE_INCREMENT_THRESHHOLD: i32 = 5;
 
-  pub unsafe fn create (initial_geometry: Geometry) -> Self {
+  pub unsafe fn create (initial_geometry: Geometry, workspace: usize) -> Self {
     let vi = display
       .match_visual_info (32, TrueColor)
       .unwrap_or_else (|| {
@@ -204,9 +206,11 @@ impl Preview {
       original_geometry: initial_geometry,
       geometry: initial_geometry,
       snap_geometry: Geometry::new (),
+      snap_flags: SNAP_NONE,
       final_geometry: initial_geometry,
       is_snapped: false,
       did_finish: false,
+      workspace,
     }
   }
 
@@ -230,20 +234,20 @@ impl Preview {
   }
 
   pub unsafe fn move_edge (&mut self, x: i32, y: i32) {
-    let mon = monitors::at (x, y).window_area ();
-    let is_top = y < mon.y;
-    let is_bot = y > (mon.y + mon.h as i32);
-    if x < mon.x {
-      let flags = SNAP_LEFT | (SNAP_TOP * is_top as u8) | (SNAP_BOTTOM * is_bot as u8);
-      self.snap_geometry = snap_geometry (flags, mon);
-    } else if x > (mon.x + mon.w as i32) {
-      let flags = SNAP_RIGHT | (SNAP_TOP * is_top as u8) | (SNAP_BOTTOM * is_bot as u8);
-      self.snap_geometry = snap_geometry (flags, mon);
+    let monitor = monitors::at (x, y);
+    let area = monitor.window_area ();
+    let is_top = y < area.y;
+    let is_bot = y > (area.y + area.h as i32);
+    if x < area.x {
+      self.snap_flags = SNAP_LEFT | (SNAP_TOP * is_top as u8) | (SNAP_BOTTOM * is_bot as u8);
+    } else if x > (area.x + area.w as i32) {
+      self.snap_flags = SNAP_RIGHT | (SNAP_TOP * is_top as u8) | (SNAP_BOTTOM * is_bot as u8);
     } else {
       // bottom maximizes as well, this way we don't need to return to
       // `mouse_move` and call `move_by` instead.
-      self.snap_geometry = snap_geometry (SNAP_MAXIMIZED, mon);
+      self.snap_flags = SNAP_MAXIMIZED;
     }
+    self.snap_geometry = snap_geometry (self.snap_flags, monitor, self.workspace);
     self.is_snapped = true;
   }
 
@@ -268,13 +272,13 @@ impl Preview {
   }
 
   pub unsafe fn snap (&mut self, x: i32, y: i32) {
-    let flags = move_snap_flags (x as u32, y as u32);
+    self.snap_flags = move_snap_flags (x as u32, y as u32);
     self.is_snapped = true;
-    let window_area = {
+    let monitor = {
       let (x, y) = self.geometry.center_point ();
-      monitors::at (x, y).window_area ()
+      monitors::at (x, y)
     };
-    self.snap_geometry = snap_geometry (flags, window_area);
+    self.snap_geometry = snap_geometry (self.snap_flags, monitor, self.workspace);
   }
 
   pub unsafe fn apply_normal_hints (&mut self, hints: &property::Normal_Hints, keep_height: bool) {
@@ -334,23 +338,24 @@ impl Preview {
     self.did_finish = true;
     self.window.destroy ();
     if self.is_snapped {
-      let flags = move_snap_flags (self.geometry.x as u32, self.geometry.y as u32);
-      if flags == client.snap_state {
+      if self.snap_flags == client.snap_state {
         return;
       }
       if client.snap_state == SNAP_NONE {
         client.save_geometry ();
       }
-      client.snap_state = flags;
-      client.move_and_resize (Client_Geometry::Snap (self.snap_geometry));
+      snap (client, self.snap_flags);
     } else {
       if self.final_geometry == self.original_geometry {
         return;
       }
-      client.modify_saved_geometry (|g| *g = self.final_geometry);
-      client.snap_state = 1; // Any non-zero value so unsnap does the resizing for us
-      client.unsnap ();
+      if client.is_snapped () {
+        workspaces[client.workspace].remove_snapped_client (client);
+      }
+      client.snap_state = SNAP_NONE;
+      client.move_and_resize (Client_Geometry::Frame (self.final_geometry));
       client.save_geometry ();
+      ewmh::set_net_wm_state (client, &[]);
     }
   }
 

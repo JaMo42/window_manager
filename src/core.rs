@@ -88,6 +88,7 @@ pub enum Window_Kind {
   Dock_Item,
   Dock_Show,
   Context_Menu,
+  Split_Handle,
 }
 
 pub static mut display: Display = Display::uninit ();

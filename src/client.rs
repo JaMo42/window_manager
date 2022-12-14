@@ -240,31 +240,6 @@ impl Client {
     result
   }
 
-  pub unsafe fn dummy (window: Window) -> Self {
-    Client {
-      window,
-      frame: Window::uninit (),
-      workspace: 0,
-      snap_state: 0,
-      is_urgent: false,
-      is_fullscreen: false,
-      is_dialog: false,
-      is_minimized: false,
-      border_color: &*(1 as *const color::Color),
-      text_color: &*(1 as *const color::Color),
-      geometry: uninitialized! (),
-      prev_geometry: uninitialized! (),
-      title: String::new (),
-      left_buttons: Vec::new (),
-      right_buttons: Vec::new (),
-      title_space: 0,
-      frame_kind: Frame_Kind::Decorated,
-      icon: None,
-      application_id: String::new (),
-      last_click_time: 0,
-    }
-  }
-
   pub fn is_snapped (&self) -> bool {
     self.snap_state != SNAP_NONE
   }
@@ -467,6 +442,7 @@ impl Client {
 
   pub unsafe fn unsnap (&mut self) {
     if self.is_snapped () {
+      workspaces[self.workspace].remove_snapped_client (self);
       self.snap_state = SNAP_NONE;
       self.move_and_resize (Client_Geometry::Frame (self.prev_geometry));
       ewmh::set_net_wm_state (self, &[]);

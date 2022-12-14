@@ -62,6 +62,12 @@ impl Window {
     }
   }
 
+  pub fn lower (&self) {
+    unsafe {
+      XLowerWindow (self.display (), self.handle);
+    }
+  }
+
   pub fn map (&self) {
     unsafe {
       XMapWindow (self.display (), self.handle);

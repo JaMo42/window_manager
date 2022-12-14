@@ -37,29 +37,31 @@ pub unsafe fn move_snap_flags (x: c_uint, y: c_uint) -> u8 {
   snap_flags
 }
 
-pub unsafe fn snap_geometry (flags: u8, window_area: &Geometry) -> Geometry {
+pub unsafe fn snap_geometry (flags: u8, monitor: &Monitor, workspace_index: usize) -> Geometry {
+  let window_area = monitor.window_area ();
   let mut target = Geometry::new ();
-  // Top / Bottom / Full height
-  if (flags & SNAP_TOP) != 0 {
-    target.y = window_area.y;
-    target.h = window_area.h / 2;
-  } else if (flags & SNAP_BOTTOM) != 0 {
-    target.y = window_area.y + (window_area.h / 2) as c_int;
-    target.h = window_area.h / 2;
-  } else {
-    target.y = window_area.y;
-    target.h = window_area.h;
-  }
-  // Left / Right
+  let splits = &workspaces[workspace_index].splits[monitor.index ()];
+  target.y = window_area.y;
+  target.h = window_area.h;
   if (flags & SNAP_LEFT) != 0 {
     target.x = window_area.x;
-    target.w = window_area.w / 2;
+    target.w = splits.vertical () as u32;
+    if (flags & SNAP_TOP) != 0 {
+      target.h = splits.left () as u32;
+    } else if (flags & SNAP_BOTTOM) != 0 {
+      target.y += splits.left ();
+      target.h = window_area.h - splits.left () as u32;
+    }
   } else if (flags & SNAP_RIGHT) != 0 {
-    target.x = window_area.x + (window_area.w / 2) as c_int;
-    target.w = window_area.w / 2;
-  }
-  // Maximized
-  if (flags & SNAP_MAXIMIZED) != 0 {
+    target.x = window_area.x + splits.vertical ();
+    target.w = window_area.w - splits.vertical () as u32;
+    if (flags & SNAP_TOP) != 0 {
+      target.h = splits.right () as u32;
+    } else if (flags & SNAP_BOTTOM) != 0 {
+      target.y += splits.right ();
+      target.h = window_area.h - splits.right () as u32;
+    }
+  } else if flags == SNAP_MAXIMIZED {
     target = *window_area;
     // We don't care about the gap for maximized windows so we add it here
     // since it gets removed inside `client.move_and_resize` again.
@@ -68,7 +70,7 @@ pub unsafe fn snap_geometry (flags: u8, window_area: &Geometry) -> Geometry {
   target
 }
 
-pub unsafe fn snap (client: &mut Client, flags: u8) {
+pub unsafe fn snap_no_update (client: &mut Client, flags: u8) {
   if !client.may_resize () {
     return;
   }
@@ -84,8 +86,24 @@ pub unsafe fn snap (client: &mut Client, flags: u8) {
   } else {
     ewmh::set_net_wm_state (client, &[]);
   }
-  let window_area = monitors::containing (client).window_area ();
-  client.move_and_resize (Client_Geometry::Snap (snap_geometry (flags, window_area)));
+  client.move_and_resize (Client_Geometry::Snap (snap_geometry (
+    flags,
+    monitors::containing (client),
+    client.workspace,
+  )));
+}
+
+pub unsafe fn snap (client: &mut Client, flags: u8) {
+  if !client.may_resize () || flags == SNAP_NONE {
+    return;
+  }
+  let was_snapped = client.is_snapped ();
+  snap_no_update (client, flags);
+  if was_snapped {
+    workspaces[client.workspace].update_snapped_clients ();
+  } else {
+    workspaces[client.workspace].new_snapped_client (client);
+  }
 }
 
 pub unsafe fn snap_left (client: &mut Client) {
@@ -172,11 +190,17 @@ pub unsafe fn select_workspace (idx: usize, _: Option<&mut Client>) {
   for c in workspaces[active_workspace].iter () {
     c.unmap ();
   }
+  for splits in workspaces[active_workspace].splits.iter () {
+    splits.visible (false);
+  }
   for c in workspaces[idx].iter_mut () {
     if !c.is_minimized {
       c.map ();
       c.draw_border ();
     }
+  }
+  for splits in workspaces[idx].splits.iter () {
+    splits.visible (true);
   }
   active_workspace = idx;
   if let Some (focused) = focused_client! () {
@@ -218,6 +242,9 @@ pub fn move_to_monitor (client: &mut Client, cur: &Monitor, mon: &Monitor) {
   g.clamp (mon.window_area ());
   unsafe {
     if client.is_snapped () {
+      workspaces[client.workspace].remove_snapped_client (client);
+    }
+    if client.is_snapped () {
       client.modify_saved_geometry (|sg| {
         *sg = g;
       });
@@ -225,6 +252,9 @@ pub fn move_to_monitor (client: &mut Client, cur: &Monitor, mon: &Monitor) {
     } else {
       client.move_and_resize (Client_Geometry::Frame (g));
       client.save_geometry ();
+    }
+    if client.is_snapped () {
+      workspaces[client.workspace].new_snapped_client (client);
     }
   }
 }

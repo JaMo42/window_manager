@@ -7,6 +7,7 @@ pub struct Monitor {
   number: i32,
   geometry: Geometry,
   window_area: Geometry,
+  index: usize,
 }
 
 impl Monitor {
@@ -15,6 +16,7 @@ impl Monitor {
       number,
       geometry,
       window_area: geometry,
+      index: usize::MAX,
     }
   }
 
@@ -38,9 +40,15 @@ impl Monitor {
   pub fn window_area (&self) -> &Geometry {
     &self.window_area
   }
+
+  pub fn index (&self) -> usize {
+    self.index
+  }
 }
 
 static mut monitors: Vec<Monitor> = Vec::new ();
+static mut max_width: u32 = 0;
+static mut max_height: u32 = 0;
 
 pub unsafe fn query () {
   if let Some (screens) = display.query_screens () {
@@ -55,10 +63,15 @@ pub unsafe fn query () {
         screen.y_org
       );
     }
+    max_width = 0;
+    max_height = 0;
+    let mut index = 0;
     monitors = screens
       .iter ()
       .map (|info| {
-        Monitor::new (
+        max_width = u32::max (max_width, info.width as u32);
+        max_height = u32::max (max_height, info.height as u32);
+        let mut mon = Monitor::new (
           info.screen_number,
           Geometry::from_parts (
             info.x_org as i32,
@@ -66,13 +79,18 @@ pub unsafe fn query () {
             info.width as u32,
             info.height as u32,
           ),
-        )
+        );
+        mon.index = index;
+        index += 1;
+        mon
       })
       .collect ();
   } else {
     log::info! ("Xinerama inacitve");
     log::info! ("Display size: {}x{}", screen_size.w, screen_size.h);
     monitors.push (Monitor::new (0, screen_size));
+    max_width = screen_size.w;
+    max_height = screen_size.h;
   }
 }
 
@@ -129,6 +147,10 @@ pub fn get (number: i32) -> Option<&'static Monitor> {
   unsafe { monitors.iter () }.find (|m| m.number == number)
 }
 
+pub fn at_index (idx: usize) -> &'static Monitor {
+  unsafe { &monitors[idx] }
+}
+
 pub fn set_window_areas (
   main_margin: (i32, i32, i32, i32),
   secondary_margin: (i32, i32, i32, i32),
@@ -147,4 +169,14 @@ pub unsafe fn update () -> bool {
   monitors.clear ();
   query ();
   !(old.len () == monitors.len () && monitors.iter ().zip (&old).all (|(new, old)| new == old))
+}
+
+/// Maximum width and height of any monitor (both values don't need to come from
+/// the same monitor).
+pub fn max_size () -> (u32, u32) {
+  unsafe { (max_width, max_height) }
+}
+
+pub fn count () -> usize {
+  unsafe { monitors.len () }
 }

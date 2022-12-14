@@ -1,22 +1,30 @@
 use super::core::*;
 use super::event::{configure_request, map_request};
+use crate::x;
+use x11::keysym::XK_Escape;
 use x11::xlib::*;
 
 const MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 
+type Motion_Callback<'a> = &'a mut dyn FnMut(&XMotionEvent, i32, i32);
+type Button_Callback<'a> = &'a mut dyn FnMut(&XButtonEvent) -> bool;
+type Key_Callback<'a> = &'a mut dyn FnMut(&XKeyEvent) -> bool;
+type Finish_Callback<'a> = &'a mut dyn FnMut(Finish_Reason);
+type Actication_Callback<'a> = &'a mut dyn FnMut();
+
 #[derive(Copy, Clone)]
 pub enum Finish_Reason {
-  Finish,
+  Finish (i32, i32),
   Cancel,
   Failure,
 }
 
 pub struct Tracked_Motion<'a> {
-  on_motion: Option<&'a mut dyn FnMut(&XMotionEvent, i32, i32, i32, i32)>,
-  on_button_press: Option<&'a mut dyn FnMut(&XButtonEvent) -> bool>,
-  on_key_press: Option<&'a mut dyn FnMut(&XKeyEvent) -> bool>,
-  on_finish: Option<&'a mut dyn FnMut(Finish_Reason)>,
-  on_activation: Option<&'a mut dyn FnMut()>,
+  on_motion: Option<Motion_Callback<'a>>,
+  on_button_press: Option<Button_Callback<'a>>,
+  on_key_press: Option<Key_Callback<'a>>,
+  on_finish: Option<Finish_Callback<'a>>,
+  on_activation: Option<Actication_Callback<'a>>,
   activation_threshold: i32,
   rate: u64,
 }
@@ -34,28 +42,24 @@ impl<'a> Tracked_Motion<'a> {
     }
   }
 
-  pub fn on_motion (
-    &mut self,
-    callback: &'a mut dyn FnMut(&XMotionEvent, i32, i32, i32, i32),
-  ) -> &mut Self {
+  pub fn on_motion (&mut self, callback: &'a mut dyn FnMut(&XMotionEvent, i32, i32)) -> &mut Self {
     self.on_motion = Some (callback);
     self
   }
 
-  pub fn on_button_press (
-    &mut self,
-    callback: &'a mut dyn FnMut(&XButtonEvent) -> bool,
-  ) -> &mut Self {
+  /// If the callback returns `true` the operation is cancelled.
+  pub fn on_button_press (&mut self, callback: Button_Callback<'a>) -> &mut Self {
     self.on_button_press = Some (callback);
     self
   }
 
-  pub fn on_key_press (&mut self, callback: &'a mut dyn FnMut(&XKeyEvent) -> bool) -> &mut Self {
+  /// If the callback returns `true` the operation is cancelled.
+  pub fn on_key_press (&mut self, callback: Key_Callback<'a>) -> &mut Self {
     self.on_key_press = Some (callback);
     self
   }
 
-  pub fn on_finish (&mut self, callback: &'a mut dyn FnMut(Finish_Reason)) -> &mut Self {
+  pub fn on_finish (&mut self, callback: Finish_Callback<'a>) -> &mut Self {
     self.on_finish = Some (callback);
     self
   }
@@ -63,7 +67,7 @@ impl<'a> Tracked_Motion<'a> {
   pub fn activation_threshold (
     &mut self,
     threshold: i32,
-    callback: &'a mut dyn FnMut(),
+    callback: Actication_Callback<'a>,
   ) -> &mut Self {
     self.on_activation = Some (callback);
     self.activation_threshold = threshold;
@@ -75,6 +79,14 @@ impl<'a> Tracked_Motion<'a> {
     self
   }
 
+  // Installs a `on_key_press` handler that cancels the operation when the
+  // escape key is pressed.
+  pub fn cancel_on_escape (&mut self) -> &mut Self {
+    static mut callback: fn (&XKeyEvent) -> bool =
+      |event| x::lookup_keysym (event) as u32 == XK_Escape;
+    self.on_key_press (unsafe { &mut callback })
+  }
+
   unsafe fn run_impl (&mut self, cursor: Cursor) -> Option<()> {
     let _pointer_grab = display.scoped_pointer_grab (MASK, cursor);
     let (start_x, start_y) = display.query_pointer_position ()?;
@@ -83,7 +95,7 @@ impl<'a> Tracked_Motion<'a> {
     let mut mouse_x = start_x;
     let mut mouse_y = start_y;
     let mut active = self.activation_threshold == 0;
-    let mut finish_reason = Finish_Reason::Finish;
+    let finish_reason;
     if self.on_key_press.is_some () {
       display.grab_keyboard (root);
     }
@@ -110,9 +122,7 @@ impl<'a> Tracked_Motion<'a> {
               continue;
             }
           }
-          (self.on_motion.as_mut ().unwrap_unchecked ()) (
-            &motion, start_x, start_y, mouse_x, mouse_y,
-          );
+          (self.on_motion.as_mut ().unwrap_unchecked ()) (&motion, mouse_x, mouse_y);
           mouse_x = motion.x;
           mouse_y = motion.y;
         }
@@ -133,9 +143,8 @@ impl<'a> Tracked_Motion<'a> {
           }
         }
         ButtonRelease => {
-          if event.button.button == Button1 {
-            break;
-          }
+          finish_reason = Finish_Reason::Finish (event.button.x, event.button.y);
+          break;
         }
         _ => {}
       }
