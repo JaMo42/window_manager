@@ -395,9 +395,9 @@ pub unsafe fn configure_notify (event: &XConfigureEvent) {
         }
       }
       // Re-create split handles, keeping relative sizes for knows monitors.
-      for workspace_index in 0..workspaces.len () {
+      for (index, workspace) in workspaces.iter_mut ().enumerate () {
         let mut old: BTreeMap<i32, (f64, f64, f64)> = BTreeMap::new ();
-        for split_handles in workspaces[workspace_index].splits.iter () {
+        for split_handles in workspace.splits.iter () {
           let g = split_handles.geometry ();
           let percent_vertical = split_handles.vertical () as f64 / g.w as f64;
           let percent_left = split_handles.left () as f64 / g.h as f64;
@@ -407,17 +407,15 @@ pub unsafe fn configure_notify (event: &XConfigureEvent) {
             (percent_vertical, percent_left, percent_right),
           );
         }
-        workspaces[workspace_index].splits.clear ();
+        workspace.splits.clear ();
         for m in 0..monitors::count () {
-          workspaces[workspace_index]
-            .splits
-            .push (Split_Handles::with_percentages (
-              workspace_index,
-              monitors::at_index (m),
-              old
-                .get (&monitors::at_index (m).number ())
-                .unwrap_or (&(0.5, 0.5, 0.5)),
-            ));
+          workspace.splits.push (Split_Handles::with_percentages (
+            index,
+            monitors::at_index (m),
+            old
+              .get (&monitors::at_index (m).number ())
+              .unwrap_or (&(0.5, 0.5, 0.5)),
+          ));
         }
       }
     }

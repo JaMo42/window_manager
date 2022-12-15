@@ -157,7 +157,15 @@ impl Workspace {
             } else {
               self.clients[switch_idx].set_border (&(*config).colors.normal);
             }
-            switch_idx = (switch_idx + 1) % self.clients.len ();
+            if event.button.state & MOD_SHIFT != 0 {
+              if switch_idx == 0 {
+                switch_idx = self.clients.len () - 1;
+              } else {
+                switch_idx -= 1;
+              }
+            } else {
+              switch_idx = (switch_idx + 1) % self.clients.len ();
+            }
             if self.clients[switch_idx].is_minimized {
               self.clients[switch_idx].map ();
             }

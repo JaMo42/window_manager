@@ -88,7 +88,11 @@ impl Common {
     // drawing relies on integer division of the width by both 3 and 5.
     let width = (((*config).split_handle_size + 7) / 15) * 15;
     if width != (*config).split_handle_size {
-      log::info! ("Changed split handle size from {} to {}", (*config).split_handle_size, width);
+      log::info! (
+        "Changed split handle size from {} to {}",
+        (*config).split_handle_size,
+        width
+      );
     }
 
     Self {
@@ -96,7 +100,7 @@ impl Common {
       colormap,
       draw: dc,
       width,
-      width_offset: width as i32 / 2
+      width_offset: width as i32 / 2,
     }
   }
 }
@@ -110,21 +114,15 @@ fn ensure_commong_exists () {
 }
 
 fn common () -> &'static mut Common {
-  unsafe {
-    g_common.as_mut ().unwrap_unchecked ()
-  }
+  unsafe { g_common.as_mut ().unwrap_unchecked () }
 }
 
 fn width () -> u32 {
-  unsafe {
-    g_common.as_mut ().unwrap_unchecked ().width
-  }
+  unsafe { g_common.as_mut ().unwrap_unchecked ().width }
 }
 
 fn width_offset () -> i32 {
-  unsafe {
-    g_common.as_mut ().unwrap_unchecked ().width_offset
-  }
+  unsafe { g_common.as_mut ().unwrap_unchecked ().width_offset }
 }
 
 #[derive(Copy, Clone)]
@@ -483,12 +481,12 @@ fn get_sticky_points (handle: &Split_Handle) -> Vec<i32> {
 fn stick (position: i32, sticky_points: &[i32]) -> i32 {
   sticky_points
     .iter ()
+    .copied ()
     .find (|p| {
       let lo = *p - width () as i32;
       let hi = *p + width () as i32;
       position >= lo && position <= hi
     })
-    .map (|p| *p)
     .unwrap_or (position)
 }
 
