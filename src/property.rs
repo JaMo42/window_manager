@@ -131,7 +131,7 @@ pub struct Class_Hints {
 
 impl Class_Hints {
   pub unsafe fn new (window: Window) -> Option<Class_Hints> {
-    let mut class_hints: XClassHint = uninitialized! ();
+    let mut class_hints: XClassHint = zeroed! ();
     if XGetClassHint (display.as_raw (), window.handle (), &mut class_hints) == 0 {
       None
     } else {

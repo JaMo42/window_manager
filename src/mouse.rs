@@ -90,7 +90,7 @@ impl<'a> Tracked_Motion<'a> {
   unsafe fn run_impl (&mut self, cursor: Cursor) -> Option<()> {
     let _pointer_grab = display.scoped_pointer_grab (MASK, cursor);
     let (start_x, start_y) = display.query_pointer_position ()?;
-    let mut event: XEvent = uninitialized! ();
+    let mut event: XEvent = zeroed! ();
     let mut last_time: Time = 0;
     let mut mouse_x = start_x;
     let mut mouse_y = start_y;

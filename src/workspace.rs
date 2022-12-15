@@ -140,7 +140,7 @@ impl Workspace {
     display.sync (true);
     // Add the first Tab back to the event queue
     {
-      let mut ev: XEvent = uninitialized! ();
+      let mut ev: XEvent = zeroed! ();
       ev.type_ = KeyPress;
       ev.key.keycode = 0x17;
       ev.key.time = RATE + 1;
@@ -148,7 +148,7 @@ impl Workspace {
     }
     // Run window switcher loop
     let mut switch_idx = 0;
-    let mut event: XEvent = uninitialized! ();
+    let mut event: XEvent = zeroed! ();
     let mut last_time = 0;
     loop {
       display.mask_event (KeyPressMask | KeyReleaseMask, &mut event);

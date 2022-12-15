@@ -22,7 +22,7 @@ macro_rules! string_from_ptr {
   };
 }
 
-macro_rules! uninitialized {
+macro_rules! zeroed {
   () => {
     std::mem::MaybeUninit::zeroed ().assume_init ()
   };

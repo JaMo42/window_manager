@@ -22,7 +22,7 @@ impl Color {
   }
 
   pub unsafe fn alloc_from_hex (hex: &str) -> Self {
-    let mut xcolor: XftColor = uninitialized! ();
+    let mut xcolor: XftColor = zeroed! ();
     XftColorAllocName (
       display.as_raw (),
       display.default_visual (),
@@ -223,7 +223,7 @@ impl Color_Scheme {
     cfg: &Color_Scheme_Config,
     defs: &BTreeMap<String, Color>,
   ) -> Result<Self, String> {
-    let mut result: Color_Scheme = uninitialized! ();
+    let mut result: Color_Scheme = zeroed! ();
     let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
     let mut links = Vec::<(usize, usize)>::new ();
     for i in 0..COLOR_COUNT {

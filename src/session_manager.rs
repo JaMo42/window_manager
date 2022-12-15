@@ -40,7 +40,7 @@ pub fn manager () -> &'static mut Manager {
 }
 
 unsafe fn notify_mainloop () {
-  let mut event: XEvent = uninitialized! ();
+  let mut event: XEvent = zeroed! ();
   event.type_ = SessionManagerEvent;
   display.push_event (&mut event);
 }

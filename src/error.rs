@@ -37,7 +37,7 @@ pub unsafe fn fatal_error (text: &str) -> ! {
     .draw ();
   my_draw.render (window, 0, 0, screen_size.w, screen_size.h);
 
-  let mut event: XEvent = uninitialized! ();
+  let mut event: XEvent = zeroed! ();
   running = true;
   display.sync (true);
   while running {

@@ -279,7 +279,7 @@ unsafe fn handle_unknown_event (event: &XEvent) -> bool {
 }
 
 unsafe fn run () {
-  let mut event: XEvent = uninitialized! ();
+  let mut event: XEvent = zeroed! ();
   running = true;
   display.sync (false);
   while running {
