@@ -11,6 +11,10 @@ Key | Description | Default
 `double_click_time` | Maximum time after which a second click is considered a double-click in milliseconds. | `500`
 `grid_resize` | Run [grid-resize](https://github.com/JaMo42/grid-resize) when holding the left and right mouse buttons while moving a window. | `false`
 `grid_resize_grid_size` | The vertical and horizontal columns for grid-resize. | `(16, 9)`
+`split_handle_size` | Width of split handles, to ensure proper drawing of decorations the provided value is rounded to the nearest multiple of 15. | `15`
+`vertical_split_handle_sticky` | Percentages at which the vertical split handle will stick while dragging it (unless the Shift key is held). | `[50]`
+`horizontal_split_handle_sticky` | As `vertical_split_handle_sticky` but for horizntal split handles. | `[50]` |
+`minimum_split_size_percent` | Minimum size for splits based on their monitors size. | `10`
 
 ### `layout` section
 

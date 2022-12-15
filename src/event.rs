@@ -1,11 +1,11 @@
+use super::as_static::AsStaticMut;
 use super::config::*;
 use super::context_menu;
 use super::core::*;
 use super::process;
 use super::property::{atom, Net, Normal_Hints};
-use super::*;
-use super::as_static::AsStaticMut;
 use super::split_handles::Split_Handles;
+use super::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
@@ -402,17 +402,22 @@ pub unsafe fn configure_notify (event: &XConfigureEvent) {
           let percent_vertical = split_handles.vertical () as f64 / g.w as f64;
           let percent_left = split_handles.left () as f64 / g.h as f64;
           let percent_right = split_handles.right () as f64 / g.h as f64;
-          old.insert (split_handles.screen_number (), (percent_vertical, percent_left, percent_right));
+          old.insert (
+            split_handles.screen_number (),
+            (percent_vertical, percent_left, percent_right),
+          );
         }
         workspaces[workspace_index].splits.clear ();
         for m in 0..monitors::count () {
-          workspaces[workspace_index].splits.push (
-            Split_Handles::with_percentages (
+          workspaces[workspace_index]
+            .splits
+            .push (Split_Handles::with_percentages (
               workspace_index,
               monitors::at_index (m),
-              old.get (&monitors::at_index (m).number ()).unwrap_or (&(0.5, 0.5, 0.5))
-            )
-          );
+              old
+                .get (&monitors::at_index (m).number ())
+                .unwrap_or (&(0.5, 0.5, 0.5)),
+            ));
         }
       }
     }

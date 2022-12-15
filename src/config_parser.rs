@@ -29,6 +29,10 @@ pub struct General {
   pub grid_resize: Option<bool>,
   pub grid_resize_grid_size: Option<(u32, u32)>,
   pub grid_resize_live: Option<bool>,
+  pub split_handle_size: Option<u32>,
+  pub vertical_split_handle_sticky: Option<Vec<u32>>,
+  pub horizontal_split_handle_sticky: Option<Vec<u32>>,
+  pub minimum_split_size_percent: Option<u32>,
 }
 
 #[derive(Deserialize, Debug, Default)]

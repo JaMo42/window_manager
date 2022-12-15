@@ -36,9 +36,6 @@ use x11::xlib::*;
 /// a snapped window on either of its sides exists.
 /// If a handle gets deactivated it gets reset to a 50/50 split.
 
-const WIDTH: u32 = 15;
-const WIDTH_OFFSET: i32 = WIDTH as i32 / 2;
-
 static mut g_common: Option<Common> = None;
 static mut g_context: XContext = XNone as i32;
 
@@ -47,6 +44,8 @@ struct Common {
   vi: XVisualInfo,
   colormap: Colormap,
   draw: Drawing_Context,
+  width: u32,
+  width_offset: i32,
 }
 
 impl Common {
@@ -84,20 +83,47 @@ impl Common {
 
     let dc = Drawing_Context::from_parts (pixmap, gc, surface, context, layout);
 
+    // Round the width to the closest multiple of 15, this is done to prevent
+    // uneven positioning/sizing of the white lines on the handles as their
+    // drawing relies on integer division of the width by both 3 and 5.
+    let width = (((*config).split_handle_size + 7) / 15) * 15;
+    if width != (*config).split_handle_size {
+      log::info! ("Changed split handle size from {} to {}", (*config).split_handle_size, width);
+    }
+
     Self {
       vi,
       colormap,
       draw: dc,
+      width,
+      width_offset: width as i32 / 2
+    }
+  }
+}
+
+fn ensure_commong_exists () {
+  unsafe {
+    if g_common.is_none () {
+      g_common = Some (Common::new ());
     }
   }
 }
 
 fn common () -> &'static mut Common {
   unsafe {
-    if g_common.is_none () {
-      g_common = Some (Common::new ());
-    }
     g_common.as_mut ().unwrap_unchecked ()
+  }
+}
+
+fn width () -> u32 {
+  unsafe {
+    g_common.as_mut ().unwrap_unchecked ().width
+  }
+}
+
+fn width_offset () -> i32 {
+  unsafe {
+    g_common.as_mut ().unwrap_unchecked ().width_offset
   }
 }
 
@@ -172,9 +198,9 @@ impl Split_Handle {
         .draw ();
       {
         let (width, height) = if self.is_horizontal () {
-          (LINE_LENGTH, WIDTH / 3)
+          (LINE_LENGTH, width () / 3)
         } else {
-          (WIDTH / 3, LINE_LENGTH)
+          (width () / 3, LINE_LENGTH)
         };
         dc.cairo_context ().set_source_rgba (0.95, 0.95, 0.95, 1.0);
         dc.rect (
@@ -187,9 +213,9 @@ impl Split_Handle {
       }
       {
         let (width, height) = if self.is_horizontal () {
-          (LINE_LENGTH, WIDTH / 5)
+          (LINE_LENGTH, width () / 5)
         } else {
-          (WIDTH / 5, LINE_LENGTH)
+          (width () / 5, LINE_LENGTH)
         };
         dc.cairo_context ().set_source_rgba (0.05, 0.05, 0.05, 0.9);
         dc.rect (
@@ -276,18 +302,19 @@ impl Split_Handles {
     mon: &Monitor,
     percentages: &(f64, f64, f64),
   ) -> Box<Self> {
+    ensure_commong_exists ();
     let g = mon.window_area ();
     let vertical = (g.w as f64 * percentages.0) as i32;
     let left = (g.h as f64 * percentages.1) as i32;
     let right = (g.h as f64 * percentages.2) as i32;
     let vertical_handle = Split_Handle::new (
-      Geometry::from_parts (g.x + vertical - WIDTH_OFFSET, g.y, WIDTH, g.h),
+      Geometry::from_parts (g.x + vertical - width_offset (), g.y, width (), g.h),
       Role::Vertical,
       workspace,
       mon.index (),
     );
     let left_handle = Split_Handle::new (
-      Geometry::from_parts (g.x, g.y + left - WIDTH_OFFSET, vertical as u32, WIDTH),
+      Geometry::from_parts (g.x, g.y + left - width_offset (), vertical as u32, width ()),
       Role::Left,
       workspace,
       mon.index (),
@@ -295,9 +322,9 @@ impl Split_Handles {
     let right_handle = Split_Handle::new (
       Geometry::from_parts (
         g.x + vertical,
-        g.y + right - WIDTH_OFFSET,
+        g.y + right - width_offset (),
         g.w - vertical as u32,
-        WIDTH,
+        width (),
       ),
       Role::Right,
       workspace,
@@ -314,7 +341,7 @@ impl Split_Handles {
       screen_number: mon.number (),
       vertical_clients: 0,
       left_clients: 0,
-      right_clients: 0
+      right_clients: 0,
     })
   }
 
@@ -369,11 +396,11 @@ impl Split_Handles {
   pub fn update (&mut self, role: Role, position: i32) {
     match role {
       Role::Left => {
-        self.left = position + WIDTH as i32 / 2 - self.geometry.y;
+        self.left = position + width () as i32 / 2 - self.geometry.y;
         self.left_handle.set_position (position);
       }
       Role::Vertical => {
-        self.vertical = position + WIDTH as i32 / 2 - self.geometry.x;
+        self.vertical = position + width () as i32 / 2 - self.geometry.x;
         self.vertical_handle.set_position (position);
         self.left_handle.resize (self.vertical as u32);
         self
@@ -381,7 +408,7 @@ impl Split_Handles {
           .resize (self.geometry.w - self.vertical as u32);
       }
       Role::Right => {
-        self.right = position + WIDTH as i32 / 2 - self.geometry.y;
+        self.right = position + width () as i32 / 2 - self.geometry.y;
         self.right_handle.set_position (position);
       }
     }
@@ -392,20 +419,20 @@ impl Split_Handles {
     if self.left_clients == 0 {
       self
         .left_handle
-        .set_position (self.geometry.y + y - WIDTH as i32 / 2);
+        .set_position (self.geometry.y + y - width () as i32 / 2);
       self.left = y;
     }
     if self.right_clients == 0 {
       self
         .right_handle
-        .set_position (self.geometry.y + y - WIDTH as i32 / 2);
+        .set_position (self.geometry.y + y - width () as i32 / 2);
       self.right = y;
     }
     if self.vertical_clients == 0 {
       self.vertical = self.geometry.w as i32 / 2;
       self
         .vertical_handle
-        .set_position (self.geometry.x + self.vertical - WIDTH as i32 / 2);
+        .set_position (self.geometry.x + self.vertical - width () as i32 / 2);
       self.left_handle.resize (self.vertical as u32);
       self
         .right_handle
@@ -433,39 +460,92 @@ pub fn crossing (event: &XCrossingEvent) {
   unsafe { display.sync (false) };
 }
 
+fn get_sticky_points (handle: &Split_Handle) -> Vec<i32> {
+  let area = monitors::at_index (handle.monitor).window_area ();
+  let offset;
+  let size;
+  let percentages;
+  if handle.is_horizontal () {
+    offset = area.y;
+    size = area.h;
+    percentages = &unsafe { &*config }.horizontal_split_handle_sticky;
+  } else {
+    offset = area.x;
+    size = area.w;
+    percentages = &unsafe { &*config }.vertical_split_handle_sticky;
+  }
+  percentages
+    .iter ()
+    .map (|p| offset + (size * *p / 100) as i32)
+    .collect ()
+}
+
+fn stick (position: i32, sticky_points: &[i32]) -> i32 {
+  sticky_points
+    .iter ()
+    .find (|p| {
+      let lo = *p - width () as i32;
+      let hi = *p + width () as i32;
+      position >= lo && position <= hi
+    })
+    .map (|p| *p)
+    .unwrap_or (position)
+}
+
 pub unsafe fn click (event: &XButtonEvent) {
   let handle = xwindow_to_split_handle (event.window);
   handle.draw_clicked ();
   let reset_geometry = handle.geometry;
+  let sticky_points = get_sticky_points (handle);
+  let (min, max) = {
+    let area = monitors::at_index (handle.monitor).window_area ();
+    if handle.is_horizontal () {
+      let min = area.h * (*config).min_split_size / 100;
+      (min as i32, (area.h - min) as i32)
+    } else {
+      let min = area.w * (*config).min_split_size / 100;
+      (min as i32, (area.w - min) as i32)
+    }
+  };
   let handle = Rc::new (RefCell::new (handle));
   Tracked_Motion::new ()
     .on_motion (&mut |motion: &XMotionEvent, _last_x, _last_y| {
       let mut handle = handle.borrow_mut ();
+      let is_shift = motion.state & MOD_SHIFT != 0;
       if handle.is_horizontal () {
-        handle.geometry.y = motion.y - event.y;
+        if is_shift {
+          handle.geometry.y = motion.y - event.y;
+        } else {
+          handle.geometry.y = stick (motion.y - event.y, &sticky_points);
+        }
+        handle.geometry.y = handle.geometry.y.clamp (min, max);
       } else {
-        handle.geometry.x = motion.x - event.x;
+        if is_shift {
+          handle.geometry.x = motion.x - event.x;
+        } else {
+          handle.geometry.x = stick (motion.x - event.x, &sticky_points);
+        }
+        handle.geometry.x = handle.geometry.x.clamp (min, max);
       }
       handle.update_window_geometry ();
     })
     .on_finish (&mut |finish_reason| {
       let mut handle = handle.borrow_mut ();
-      match finish_reason {
-        Finish_Reason::Finish (x, y) => {
-          let pos = if handle.is_horizontal () {
-            y - event.y
-          } else {
-            x - event.x
-          };
-          workspaces[handle.workspace].update_split_sizes (handle.monitor, handle.role, pos);
-          handle.raise_and_draw_hovered ();
-          handle.window.lower ();
-          display.sync (false);
-        }
-        _ => {
-          handle.geometry = reset_geometry;
-          handle.update_window_geometry ();
-        }
+      // Use the handles geometry instead of the finish coordinates to we don't
+      // need to apply contraints here again.
+      if matches! (finish_reason, Finish_Reason::Finish (_, _)) {
+        let pos = if handle.is_horizontal () {
+          handle.geometry.y
+        } else {
+          handle.geometry.x
+        };
+        workspaces[handle.workspace].update_split_sizes (handle.monitor, handle.role, pos);
+        handle.raise_and_draw_hovered ();
+        handle.window.lower ();
+        display.sync (false);
+      } else {
+        handle.geometry = reset_geometry;
+        handle.update_window_geometry ();
       }
     })
     .cancel_on_escape ()

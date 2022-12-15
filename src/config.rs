@@ -195,6 +195,10 @@ pub struct Config {
   pub grid_resize: bool,
   pub grid_resize_grid_size: (u32, u32),
   pub grid_resize_live: bool,
+  pub split_handle_size: u32,
+  pub vertical_split_handle_sticky: Vec<u32>,
+  pub horizontal_split_handle_sticky: Vec<u32>,
+  pub min_split_size: u32,
 }
 
 impl Config {
@@ -271,6 +275,14 @@ impl Config {
       grid_resize: general.grid_resize.unwrap_or (false),
       grid_resize_grid_size: general.grid_resize_grid_size.unwrap_or ((16, 9)),
       grid_resize_live: general.grid_resize_live.unwrap_or (false),
+      split_handle_size: general.split_handle_size.unwrap_or (15),
+      vertical_split_handle_sticky: general
+        .vertical_split_handle_sticky
+        .unwrap_or_else (|| vec! [50]),
+      horizontal_split_handle_sticky: general
+        .horizontal_split_handle_sticky
+        .unwrap_or_else (|| vec! [50]),
+      min_split_size: general.minimum_split_size_percent.unwrap_or (10),
     };
     if cfg! (feature = "bar") {
       this.bar_height = E! (Height::from_str (
