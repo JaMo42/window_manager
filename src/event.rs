@@ -261,6 +261,15 @@ pub unsafe fn mouse_resize (client: &mut Client, lock_width: bool, lock_height: 
 }
 
 pub unsafe fn key_press (event: &XKeyEvent) {
+  const RATE: u64 = 1000 / 10;
+  static mut last_key_and_state: u32 = u32::MAX;
+  static mut last_time: u64 = 0;
+  let key_and_state = (event.keycode << 8) | event.state;
+  if key_and_state == last_key_and_state && event.time - last_time < RATE {
+    return;
+  }
+  last_key_and_state = key_and_state;
+  last_time = event.time;
   if is_kind (event.window, Window_Kind::Context_Menu) {
     context_menu::key_press (event);
   }
