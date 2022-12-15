@@ -4,6 +4,7 @@ use super::geometry::*;
 use super::property::{Class_Hints, Motif_Hints, MWM_HINTS_DECORATIONS, WM};
 use super::*;
 use crate::action;
+use crate::as_static::AsStaticMut;
 use crate::desktop_entry::Desktop_Entry;
 use crate::x::*;
 
@@ -253,10 +254,7 @@ impl Client {
   }
 
   pub fn icon (&mut self) -> Option<&'static mut draw::Svg_Resource> {
-    self.icon.as_mut ().map (|icon| unsafe {
-      let p: *mut draw::Svg_Resource = icon.as_mut () as *mut draw::Svg_Resource;
-      &mut *p
-    })
+    self.icon.as_mut ().map (|icon| icon.as_static_mut ())
   }
 
   pub fn application_id (&self) -> &str {

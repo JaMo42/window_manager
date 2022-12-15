@@ -3,7 +3,7 @@ use super::core::*;
 use super::desktop_entry::Desktop_Entry;
 use super::geometry::Geometry;
 use super::paths;
-use crate::x::Window;
+use crate::{as_static::AsStaticRef, x::Window};
 use cairo::ffi::*;
 use librsvg::{CairoRenderer, SvgHandle};
 use pango::FontDescription;
@@ -62,8 +62,7 @@ impl Svg_Resource {
     match loader.read_path (this.file) {
       Ok (handle) => {
         this.handle = Some (handle);
-        let static_handle: &'static SvgHandle =
-          unsafe { &*(this.handle.as_ref ().unwrap () as *const SvgHandle) };
+        let static_handle = (this.handle.as_ref ().unwrap () as *const SvgHandle).as_static_ref ();
         this.renderer = Some (CairoRenderer::new (static_handle));
       }
       Err (error) => {

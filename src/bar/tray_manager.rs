@@ -1,5 +1,6 @@
 use super::tray_client::Tray_Client;
 use super::xembed;
+use crate::as_static::AsStaticRef;
 use crate::core::*;
 use crate::cursor;
 use crate::monitors;
@@ -61,7 +62,7 @@ impl Tray_Manager {
   /// Does a non-blocking delayed call of `notify_clients`
   unsafe fn notify_clients_after (&mut self, milliseconds: u64) {
     log::trace! ("tray: notifying clients about new manager in {milliseconds}ms");
-    let this: &'static Self = &*(self as *const Self);
+    let this = (self as *const Self).as_static_ref ();
     self.notify_thread = Some (thread::spawn (move || {
       thread::sleep (std::time::Duration::from_millis (milliseconds));
       (*this).notify_clients ();
