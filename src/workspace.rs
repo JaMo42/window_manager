@@ -120,6 +120,7 @@ impl Workspace {
   }
 
   pub unsafe fn switch_window (&mut self) {
+    const RATE: u64 = 1000 / 10;
     if self.clients.len () <= 1 {
       if self.clients.len () == 1 && self.clients[0].is_minimized {
         self.clients[0].focus ();
@@ -142,22 +143,28 @@ impl Workspace {
       let mut ev: XEvent = uninitialized! ();
       ev.type_ = KeyPress;
       ev.key.keycode = 0x17;
+      ev.key.time = RATE + 1;
       display.push_event (&mut ev);
     }
     // Run window switcher loop
     let mut switch_idx = 0;
     let mut event: XEvent = uninitialized! ();
+    let mut last_time = 0;
     loop {
       display.mask_event (KeyPressMask | KeyReleaseMask, &mut event);
       match event.type_ {
         KeyPress => {
+          if event.key.time - last_time < RATE {
+            continue;
+          }
+          last_time = event.key.time;
           if event.key.keycode == 0x17 {
             if self.clients[switch_idx].is_minimized {
               self.clients[switch_idx].unmap ();
             } else {
               self.clients[switch_idx].set_border (&(*config).colors.normal);
             }
-            if event.button.state & MOD_SHIFT != 0 {
+            if event.key.state & MOD_SHIFT != 0 {
               if switch_idx == 0 {
                 switch_idx = self.clients.len () - 1;
               } else {
