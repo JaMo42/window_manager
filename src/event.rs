@@ -287,16 +287,12 @@ pub unsafe fn key_press (event: &XKeyEvent) {
         }
         f (*workspace_index, maybe_client);
       }
-      Action::Launch (cmd) => {
-        if let Err (error) = process::run (
-          &cmd
-            .iter ()
-            .map (std::ops::Deref::deref)
-            .collect::<Vec<&str>> (),
-        ) {
-          log::error! ("Failed to run process '{}': {}", cmd.join (" "), error);
-        }
-      }
+      Action::Launch (cmd) => process::run_or_message_box (
+        &cmd
+          .iter ()
+          .map (std::ops::Deref::deref)
+          .collect::<Vec<&str>> (),
+      ),
       Action::Generic (f) => {
         f ();
       }
