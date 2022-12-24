@@ -121,8 +121,7 @@ impl Drawing_Context {
       cairo::Surface::from_raw_full (cairo_surface_raw).expect ("Failed to create cairo surface");
     let cairo_context =
       cairo::Context::new (&cairo_surface).expect ("Failed to create cairo context");
-    let pango_layout =
-      pangocairo::create_layout (&cairo_context).expect ("Failed to create pango layout");
+    let pango_layout = pangocairo::create_layout (&cairo_context);
     Self {
       drawable,
       gc: XCreateGC (display.as_raw (), root.handle (), 0, std::ptr::null_mut ()),
@@ -184,12 +183,7 @@ impl Drawing_Context {
       .unwrap ()
       .render_document (
         &self.cairo_context,
-        &cairo::Rectangle {
-          x: x as f64,
-          y: y as f64,
-          width: w as f64,
-          height: h as f64,
-        },
+        &cairo::Rectangle::new (x as f64, y as f64, w as f64, h as f64),
       )
       .unwrap ();
   }

@@ -13,12 +13,12 @@ log = "0.4.16"
 log4rs = "1.1.1"
 rand = "0.8.5"
 libc = "0.2.65"
-cairo-sys-rs = "0.15.1"
-cairo-rs = { version = "0.15.12", features = ["xlib"] }
-pango = "0.15.10"
-pangocairo = "0.15.1"
+cairo-sys-rs = "0.16.3"
+cairo-rs = { version = "0.16.3", features = ["xlib"] }
+pango = "0.16.3"
+pangocairo = "0.16.3"
 chrono = "0.4.19"
-librsvg = { git="https://gitlab.gnome.org/GNOME/librsvg" }
+librsvg = { version="2.55.1", git="https://gitlab.gnome.org/GNOME/librsvg" }
 zbus = "3.4.0"
 futures = "0.3.1"
 gtk = "0.16.1"

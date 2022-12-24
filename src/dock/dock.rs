@@ -65,11 +65,8 @@ unsafe fn create_drawing_context (
   };
   let context =
     Context::new (&surface).unwrap_or_else (|_| fatal_error ("Failed to create cairo context"));
-  let layout = pangocairo::create_layout (&context)
-    .unwrap_or_else (|| fatal_error ("Failed to create pango layout"));
-
+  let layout = pangocairo::create_layout (&context);
   context.set_operator (cairo::Operator::Source);
-
   Drawing_Context::from_parts (pixmap, gc, surface, context, layout)
 }
 

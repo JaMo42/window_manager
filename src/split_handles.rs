@@ -76,11 +76,8 @@ impl Common {
     };
     let context =
       Context::new (&surface).unwrap_or_else (|_| fatal_error ("Failed to create cairo context"));
-    let layout = pangocairo::create_layout (&context)
-      .unwrap_or_else (|| fatal_error ("Failed to create pango layout"));
-
+    let layout = pangocairo::create_layout (&context);
     context.set_operator (cairo::Operator::Source);
-
     let dc = Drawing_Context::from_parts (pixmap, gc, surface, context, layout);
 
     // Round the width to the closest multiple of 15, this is done to prevent
