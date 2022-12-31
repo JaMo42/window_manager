@@ -1,4 +1,4 @@
-use super::{window::To_XWindow, *};
+use super::{window::ToXWindow, *};
 use std::ffi::{CStr, CString};
 use x11::xinerama::{XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo};
 
@@ -134,11 +134,11 @@ impl Display {
   }
 
   /// Creates a `Scoped_Grab` for the display
-  pub fn scoped_grab(&self) -> Scoped_Grab {
-    Scoped_Grab::new(self.connection)
+  pub fn scoped_grab(&self) -> ScopedGrab {
+    ScopedGrab::new(self.connection)
   }
 
-  pub fn set_input_focus<W: To_XWindow>(&self, window: W) {
+  pub fn set_input_focus<W: ToXWindow>(&self, window: W) {
     unsafe {
       XSetInputFocus(
         self.connection,
@@ -196,7 +196,7 @@ impl Display {
     }
   }
 
-  pub fn grab_button_for(&self, button: u32, mods: u32, window: impl To_XWindow) {
+  pub fn grab_button_for(&self, button: u32, mods: u32, window: impl ToXWindow) {
     unsafe {
       XGrabButton(
         self.connection,
@@ -217,7 +217,7 @@ impl Display {
     self.grab_button_for(button, mods, self.root);
   }
 
-  pub fn ungrab_button_for(&self, button: u32, mods: u32, window: impl To_XWindow) {
+  pub fn ungrab_button_for(&self, button: u32, mods: u32, window: impl ToXWindow) {
     unsafe {
       XUngrabButton(self.connection, button, mods, window.to_xwindow());
     }
@@ -255,9 +255,9 @@ impl Display {
     }
   }
 
-  pub fn scoped_pointer_grab(&self, mask: i64, cursor: Cursor) -> Option<Scoped_Pointer_Grab> {
+  pub fn scoped_pointer_grab(&self, mask: i64, cursor: Cursor) -> Option<ScopedPointerGrab> {
     if self.grab_pointer(mask, cursor) {
-      Some(Scoped_Pointer_Grab {
+      Some(ScopedPointerGrab {
         display: self.connection,
       })
     } else {
@@ -324,7 +324,7 @@ impl Display {
     unsafe { XGetSelectionOwner(self.connection, selection) }
   }
 
-  pub fn set_selection_ownder<W: To_XWindow>(&self, selection: Atom, owner: W) {
+  pub fn set_selection_ownder<W: ToXWindow>(&self, selection: Atom, owner: W) {
     unsafe {
       XSetSelectionOwner(self.connection, selection, owner.to_xwindow(), CurrentTime);
     }
@@ -369,7 +369,7 @@ impl Display {
     }
   }
 
-  pub fn get_transient_for_hint(&self, window: impl To_XWindow) -> Option<XWindow> {
+  pub fn get_transient_for_hint(&self, window: impl ToXWindow) -> Option<XWindow> {
     let mut trans: XWindow = XNone;
     if unsafe { XGetTransientForHint(self.connection, window.to_xwindow(), &mut trans) } != 0 {
       Some(trans)
@@ -379,28 +379,28 @@ impl Display {
   }
 }
 
-pub trait To_XDisplay {
+pub trait ToXDisplay {
   fn to_xdisplay(&self) -> XDisplay;
 }
 
-impl To_XDisplay for Display {
+impl ToXDisplay for Display {
   fn to_xdisplay(&self) -> XDisplay {
     self.as_raw()
   }
 }
 
-impl To_XDisplay for XDisplay {
+impl ToXDisplay for XDisplay {
   fn to_xdisplay(&self) -> XDisplay {
     *self
   }
 }
 
 /// Grabs the display when created, ungrabs it when dropped
-pub struct Scoped_Grab {
+pub struct ScopedGrab {
   display: XDisplay,
 }
 
-impl Scoped_Grab {
+impl ScopedGrab {
   fn new(display: XDisplay) -> Self {
     unsafe {
       XGrabServer(display);
@@ -409,7 +409,7 @@ impl Scoped_Grab {
   }
 }
 
-impl Drop for Scoped_Grab {
+impl Drop for ScopedGrab {
   fn drop(&mut self) {
     unsafe {
       XUngrabServer(self.display);
@@ -417,11 +417,11 @@ impl Drop for Scoped_Grab {
   }
 }
 
-pub struct Scoped_Pointer_Grab {
+pub struct ScopedPointerGrab {
   display: XDisplay,
 }
 
-impl Drop for Scoped_Pointer_Grab {
+impl Drop for ScopedPointerGrab {
   fn drop(&mut self) {
     unsafe {
       XUngrabPointer(self.display, CurrentTime);

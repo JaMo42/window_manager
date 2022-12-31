@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::core::*;
-use crate::draw::{resources, Alignment, Svg_Resource};
+use crate::draw::{resources, Alignment, SvgResource};
 use crate::ewmh;
 use crate::platform;
 use crate::property;
@@ -20,7 +20,7 @@ unsafe fn create_window() -> Window {
     .build();
   ewmh::set_window_type(window, property::Net::WMWindowTypeDock);
   set_window_opacity(window, (*config).bar_opacity);
-  set_window_kind(window, Window_Kind::Status_Bar);
+  set_window_kind(window, WindowKind::Status_Bar);
   window.map();
   window
 }
@@ -45,7 +45,7 @@ pub trait Widget {
 
 unsafe fn draw_icon_and_text(
   string: &str,
-  icon: Option<&'static mut Svg_Resource>,
+  icon: Option<&'static mut SvgResource>,
   color: Option<Color>,
   height: u32,
 ) -> u32 {
@@ -146,7 +146,7 @@ impl Battery {
     }
   }
 
-  unsafe fn get_icon(status: &str, capacity: u32) -> (&'static mut Svg_Resource, Color) {
+  unsafe fn get_icon(status: &str, capacity: u32) -> (&'static mut SvgResource, Color) {
     let c = (*config).colors.bar_text;
     if status == "Charging" || status == "Not charging" {
       (&mut resources::battery_charging, c)

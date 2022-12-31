@@ -1,14 +1,14 @@
 use super::display::Display;
-use super::window::{To_XWindow, Window};
+use super::window::{ToXWindow, Window};
 use super::*;
 
 #[derive(Copy, Clone)]
-pub struct Window_Attributes {
+pub struct WindowAttributes {
   attributes: XSetWindowAttributes,
   valuemask: c_ulong,
 }
 
-impl Window_Attributes {
+impl WindowAttributes {
   pub fn new() -> Self {
     Self {
       attributes: unsafe { std::mem::MaybeUninit::zeroed().assume_init() },
@@ -111,7 +111,7 @@ impl Window_Attributes {
   }
 }
 
-pub struct Window_Builder {
+pub struct WindowBuilder {
   display: XDisplay,
   parent: XWindow,
   x: i32,
@@ -122,10 +122,10 @@ pub struct Window_Builder {
   depth: i32,
   class: u32,
   visual: *mut Visual,
-  attributes: Window_Attributes,
+  attributes: WindowAttributes,
 }
 
-impl Window_Builder {
+impl WindowBuilder {
   pub fn new(display: &Display) -> Self {
     Self {
       display: display.as_raw(),
@@ -138,11 +138,11 @@ impl Window_Builder {
       depth: CopyFromParent,
       class: InputOutput as u32,
       visual: CopyFromParent as *mut Visual,
-      attributes: Window_Attributes::new(),
+      attributes: WindowAttributes::new(),
     }
   }
 
-  pub fn parent<W: To_XWindow>(&mut self, handle: W) -> &mut Self {
+  pub fn parent<W: ToXWindow>(&mut self, handle: W) -> &mut Self {
     self.parent = handle.to_xwindow();
     self
   }
@@ -181,7 +181,7 @@ impl Window_Builder {
 
   pub fn attributes<F>(&mut self, f: F) -> &mut Self
   where
-    F: FnOnce(&mut Window_Attributes),
+    F: FnOnce(&mut WindowAttributes),
   {
     f(&mut self.attributes);
     self

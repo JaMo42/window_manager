@@ -10,16 +10,16 @@ pub fn ignore_sigchld(cfg: bool) {
   }
 }
 
-struct Scoped_Default_SigChld;
+struct ScopedDefaultSigChld;
 
-impl Scoped_Default_SigChld {
+impl ScopedDefaultSigChld {
   fn new() -> Self {
     ignore_sigchld(false);
     Self {}
   }
 }
 
-impl Drop for Scoped_Default_SigChld {
+impl Drop for ScopedDefaultSigChld {
   fn drop(&mut self) {
     ignore_sigchld(true);
   }
@@ -93,7 +93,7 @@ pub fn run_or_message_box(cmd: &[impl AsRef<str>]) {
 }
 
 pub fn run_and_await(cmd: &[&str]) -> Result<ExitStatus> {
-  let _guard = Scoped_Default_SigChld::new();
+  let _guard = ScopedDefaultSigChld::new();
   Command::new(cmd[0])
     .args(&cmd[1..])
     .stdout(Stdio::null())
@@ -102,7 +102,7 @@ pub fn run_and_await(cmd: &[&str]) -> Result<ExitStatus> {
 }
 
 pub fn run_and_await_with_output(cmd: &[&str]) -> Result<String> {
-  let _guard = Scoped_Default_SigChld::new();
+  let _guard = ScopedDefaultSigChld::new();
   Command::new(cmd[0])
     .args(&cmd[1..])
     .stderr(Stdio::null())

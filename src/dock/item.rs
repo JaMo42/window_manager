@@ -1,8 +1,8 @@
 use crate::action;
 use crate::client::Client;
-use crate::context_menu::{Context_Menu, Indicator};
-use crate::desktop_entry::Desktop_Entry;
-use crate::draw::{self, Drawing_Context, Svg_Resource};
+use crate::context_menu::{ContextMenu, Indicator};
+use crate::desktop_entry::DesktopEntry;
+use crate::draw::{self, DrawingContext, SvgResource};
 use crate::error::message_box;
 use crate::geometry::Geometry;
 use crate::process::{run_or_message_box, split_commandline};
@@ -13,7 +13,7 @@ use crate::{core::*, window_title};
 use std::ptr::NonNull;
 use x11::xlib::*;
 
-unsafe fn get_icon(entry: Option<&Desktop_Entry>) -> Option<Box<Svg_Resource>> {
+unsafe fn get_icon(entry: Option<&DesktopEntry>) -> Option<Box<SvgResource>> {
   let maybe_name_or_path = entry.and_then(|d| d.icon.clone());
   if let Some(app_icon) = maybe_name_or_path.and_then(|name| {
     // Same as `draw::get_app_icon` but we already have the desktop entry so
@@ -23,7 +23,7 @@ unsafe fn get_icon(entry: Option<&Desktop_Entry>) -> Option<Box<Svg_Resource>> {
     } else {
       format!("{}/48x48/apps/{}.svg", (*config).icon_theme, name)
     };
-    Svg_Resource::open(&icon_path)
+    SvgResource::open(&icon_path)
   }) {
     Some(app_icon)
   } else {
@@ -58,11 +58,11 @@ fn get_title_and_unsaved_changes(client: &Client) -> (String, bool) {
 pub struct Item {
   // Name of the .desktop file, used of the entry does not specify a name
   app_name: String,
-  desktop_entry: Option<Desktop_Entry>,
-  action_icons: Vec<Option<Box<Svg_Resource>>>,
+  desktop_entry: Option<DesktopEntry>,
+  action_icons: Vec<Option<Box<SvgResource>>>,
   instances: Vec<NonNull<Client>>,
   window: Window,
-  icon: Box<Svg_Resource>,
+  icon: Box<SvgResource>,
   size: u32,
   command: Vec<String>,
   geometry: Geometry,
@@ -81,9 +81,9 @@ impl Item {
     size: u32,
     x: i32,
     y: i32,
-    dc: &mut Drawing_Context,
+    dc: &mut DrawingContext,
   ) -> Option<Box<Self>> {
-    let de = Desktop_Entry::new(app_name);
+    let de = DesktopEntry::new(app_name);
     if de.is_none() && is_pinned {
       message_box(
         "Application not found",
@@ -118,7 +118,7 @@ impl Item {
         }
       }
     }
-    set_window_kind(window, Window_Kind::Dock_Item);
+    set_window_kind(window, WindowKind::Dock_Item);
     window.map();
     window.clear();
     let command = if let Some(de) = &de {
@@ -151,7 +151,7 @@ impl Item {
     self.window.destroy();
   }
 
-  unsafe fn draw_indicator(&self, dc: &mut Drawing_Context) {
+  unsafe fn draw_indicator(&self, dc: &mut DrawingContext) {
     if !self.instances.is_empty() {
       let h = self.geometry.h / 16;
       let w = self.geometry.w / 4;
@@ -165,7 +165,7 @@ impl Item {
     }
   }
 
-  pub unsafe fn redraw(&mut self, dc: &mut Drawing_Context, hovered: bool) {
+  pub unsafe fn redraw(&mut self, dc: &mut DrawingContext, hovered: bool) {
     self.hovered = true;
     let icon_size = self.size * (*config).dock_icon_size / 100;
     let icon_position = (self.size - icon_size) as i32 / 2;
@@ -273,7 +273,7 @@ impl Item {
 
   pub unsafe fn context_menu(&mut self) {
     let this = self as *mut Self;
-    let mut menu = Context_Menu::new(Box::new(move |selection| {
+    let mut menu = ContextMenu::new(Box::new(move |selection| {
       if let Some(choice) = selection {
         Self::context_action(&mut *this, choice);
       }
@@ -329,7 +329,7 @@ impl Item {
             menu.action(action.name.clone()).icon(
               self.action_icons[index]
                 .as_mut()
-                .map(|icon| &mut *(icon.as_mut() as *mut Svg_Resource)),
+                .map(|icon| &mut *(icon.as_mut() as *mut SvgResource)),
             );
           })
           .for_each(drop);

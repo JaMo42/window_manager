@@ -168,7 +168,7 @@ pub struct Config {
   pub border_width: c_int,
   pub workspace_count: usize,
   pub meta_window_classes: Vec<String>,
-  pub colors: Color_Scheme,
+  pub colors: ColorScheme,
   pub bar_font: FontDescription,
   pub bar_opacity: u32,
   pub bar_time_format: String,
@@ -233,7 +233,7 @@ impl Config {
       colors: if let Some(name) = theme.colors {
         E!(parse_color_scheme(name))
       } else {
-        unsafe { Color_Scheme::new(&Color_Scheme_Config::new(), &BTreeMap::new())? }
+        unsafe { ColorScheme::new(&ColorSchemeConfig::new(), &BTreeMap::new())? }
       },
       bar_font: FontDescription::from_string(&bar_.font.unwrap_or_else(|| "sans 14".to_string())),
       bar_opacity: bar_.opacity.unwrap_or(100).clamp(0, 100),

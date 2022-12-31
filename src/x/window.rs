@@ -1,5 +1,5 @@
-use super::display::To_XDisplay;
-use super::window_builder::{Window_Attributes, Window_Builder};
+use super::display::ToXDisplay;
+use super::window_builder::{WindowAttributes, WindowBuilder};
 use super::*;
 
 #[derive(Copy, Clone)]
@@ -21,15 +21,15 @@ impl Window {
     }
   }
 
-  pub fn from_handle<D: To_XDisplay>(display: &D, handle: XWindow) -> Self {
+  pub fn from_handle<D: ToXDisplay>(display: &D, handle: XWindow) -> Self {
     Self {
       display: display.to_xdisplay() as usize,
       handle,
     }
   }
 
-  pub fn builder(display: &Display) -> Window_Builder {
-    Window_Builder::new(display)
+  pub fn builder(display: &Display) -> WindowBuilder {
+    WindowBuilder::new(display)
   }
 
   pub fn destroy(&self) {
@@ -92,8 +92,8 @@ impl Window {
     }
   }
 
-  pub fn change_attributes(&self, f: fn(&mut Window_Attributes)) {
-    let mut builder = Window_Attributes::new();
+  pub fn change_attributes(&self, f: fn(&mut WindowAttributes)) {
+    let mut builder = WindowAttributes::new();
     f(&mut builder);
     let (mut attributes, valuemask) = builder.build();
     unsafe {
@@ -115,7 +115,7 @@ impl Window {
     }
   }
 
-  pub fn reparent<W: To_XWindow>(&self, parent: W, x: c_int, y: c_int) {
+  pub fn reparent<W: ToXWindow>(&self, parent: W, x: c_int, y: c_int) {
     unsafe {
       XReparentWindow(self.display(), self.handle, parent.to_xwindow(), x, y);
     }
@@ -265,17 +265,17 @@ impl Window {
   }
 }
 
-pub trait To_XWindow {
+pub trait ToXWindow {
   fn to_xwindow(&self) -> XWindow;
 }
 
-impl To_XWindow for Window {
+impl ToXWindow for Window {
   fn to_xwindow(&self) -> XWindow {
     self.handle
   }
 }
 
-impl To_XWindow for XWindow {
+impl ToXWindow for XWindow {
   fn to_xwindow(&self) -> XWindow {
     *self
   }

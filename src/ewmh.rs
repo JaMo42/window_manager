@@ -1,5 +1,5 @@
 use crate::action;
-use crate::client::{Client, Client_Geometry};
+use crate::client::{Client, ClientGeometry};
 use crate::core::*;
 use crate::event::{mouse_move, mouse_resize};
 use crate::geometry::Geometry;
@@ -149,7 +149,7 @@ unsafe fn net_wm_moveresize(client: &mut Client, event: &XClientMessageEvent) {
 
 unsafe fn net_moveresize_window(client: &mut Client, event: &XClientMessageEvent) {
   client.snap_state = SNAP_NONE;
-  client.move_and_resize(Client_Geometry::Frame(Geometry::from_parts(
+  client.move_and_resize(ClientGeometry::Frame(Geometry::from_parts(
     event.data.get_long(1) as i32,
     event.data.get_long(2) as i32,
     event.data.get_long(3) as u32,

@@ -1,5 +1,5 @@
 use crate::action::{move_snap_flags, snap, snap_geometry};
-use crate::client::{decorated_frame_offset, Client, Client_Geometry};
+use crate::client::{decorated_frame_offset, Client, ClientGeometry};
 use crate::core::*;
 use crate::error::fatal_error;
 use crate::ewmh;
@@ -126,7 +126,7 @@ impl Geometry {
     y: i32,
     x_static_threshhold: i32,
     y_static_threshhold: i32,
-  ) -> Point_Offset {
+  ) -> PointOffset {
     let x_inside = x - self.x;
     let y_inside = y - self.y;
     let x_offset = if x_inside > x_static_threshhold {
@@ -139,7 +139,7 @@ impl Geometry {
     } else {
       Offset::Static(y_inside)
     };
-    Point_Offset {
+    PointOffset {
       x: x_offset,
       y: y_offset,
     }
@@ -216,7 +216,7 @@ impl Preview {
     self.window.map()
   }
 
-  pub fn ensure_unsnapped(&mut self, mouse_x: i32, mouse_y: i32, offset: &Point_Offset) {
+  pub fn ensure_unsnapped(&mut self, mouse_x: i32, mouse_y: i32, offset: &PointOffset) {
     if self.is_snapped {
       let (x_offset, y_offset) = offset.inside(&self.original_geometry);
       self.geometry.x = mouse_x - x_offset;
@@ -279,7 +279,7 @@ impl Preview {
     self.snap_geometry = snap_geometry(self.snap_flags, monitor, self.workspace);
   }
 
-  pub unsafe fn apply_normal_hints(&mut self, hints: &property::Normal_Hints, keep_height: bool) {
+  pub unsafe fn apply_normal_hints(&mut self, hints: &property::NormalHints, keep_height: bool) {
     let g;
     // Apply resize increment
     if let Some((winc, hinc)) = hints.resize_inc() {
@@ -351,7 +351,7 @@ impl Preview {
         workspaces[client.workspace].remove_snapped_client(client);
       }
       client.snap_state = SNAP_NONE;
-      client.move_and_resize(Client_Geometry::Frame(self.final_geometry));
+      client.move_and_resize(ClientGeometry::Frame(self.final_geometry));
       client.save_geometry();
       ewmh::set_net_wm_state(client, &[]);
     }
@@ -371,12 +371,12 @@ pub enum Offset {
   Percent(f32),
 }
 
-pub struct Point_Offset {
+pub struct PointOffset {
   x: Offset,
   y: Offset,
 }
 
-impl Point_Offset {
+impl PointOffset {
   pub fn inside(&self, geometry: &Geometry) -> (i32, i32) {
     let x = match self.x {
       Offset::Static(offset) => offset,

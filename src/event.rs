@@ -3,17 +3,17 @@ use crate::config::*;
 use crate::context_menu;
 use crate::core::*;
 use crate::process;
-use crate::property::{atom, Net, Normal_Hints};
-use crate::split_handles::Split_Handles;
+use crate::property::{atom, Net, NormalHints};
+use crate::split_handles::SplitHandles;
 use crate::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
-use x::{window::To_XWindow, Window, XFalse, XNone};
+use x::{window::ToXWindow, Window, XFalse, XNone};
 
 const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 10;
 
-pub unsafe fn win2client<W: To_XWindow>(window: W) -> Option<&'static mut Client> {
+pub unsafe fn win2client<W: ToXWindow>(window: W) -> Option<&'static mut Client> {
   let mut data: XPointer = std::ptr::null_mut();
   if window.to_xwindow() == XNone
     || window.to_xwindow() == root.handle()
@@ -31,36 +31,36 @@ pub unsafe fn button_press(event: &XButtonEvent) {
   if context_menu::click(event) {
     return;
   }
-  if is_kind(event.subwindow, Window_Kind::Meta_Or_Unmanaged) {
+  if is_kind(event.subwindow, WindowKind::Meta_Or_Unmanaged) {
     return;
   }
   // Check for windows for which we have ButtonPressMask set
   if let Some(kind) = get_window_kind(event.window) {
     let mut handled = true;
     match kind {
-      Window_Kind::Root => {
+      WindowKind::Root => {
         if cfg!(feature = "xdnd-hack") && event.subwindow == XNone {
           xdnd::ensure_hack_stopped();
         }
         handled = false;
       }
-      Window_Kind::Status_Bar => {
+      WindowKind::Status_Bar => {
         bar.click(event);
       }
-      Window_Kind::Dock_Item => {
+      WindowKind::Dock_Item => {
         dock::click_item(event);
       }
       // See `dock::create_show_window` as to why we need handle these
-      Window_Kind::Dock_Show | Window_Kind::Dock => {}
-      Window_Kind::Frame_Button => {
+      WindowKind::Dock_Show | WindowKind::Dock => {}
+      WindowKind::Frame_Button => {
         if let Some(client) = win2client(event.window) {
           client.click(event.window);
         }
       }
-      Window_Kind::Notification => {
+      WindowKind::Notification => {
         notifications::maybe_close(event.window);
       }
-      Window_Kind::Split_Handle => {
+      WindowKind::Split_Handle => {
         split_handles::click(event);
       }
       _ => {
@@ -75,7 +75,7 @@ pub unsafe fn button_press(event: &XButtonEvent) {
       return;
     }
   }
-  if is_kind(event.subwindow, Window_Kind::Status_Bar) {
+  if is_kind(event.subwindow, WindowKind::Status_Bar) {
     bar.click(event);
     return;
   }
@@ -123,7 +123,7 @@ pub unsafe fn motion(event: &XMotionEvent) {
       }
     }
     mouse_held = 0;
-  } else if is_kind(event.window, Window_Kind::Context_Menu) {
+  } else if is_kind(event.window, WindowKind::Context_Menu) {
     context_menu::motion(event);
   } else {
     // Ignore all subsequent MotionNotify events
@@ -164,7 +164,7 @@ pub unsafe fn mouse_move(client: &mut Client) {
   );
   let preview = Rc::new(RefCell::new(preview));
   let client = Rc::new(RefCell::new(client));
-  mouse::Tracked_Motion::new()
+  mouse::TrackedMotion::new()
     .rate(MOUSE_MOVE_RESIZE_RATE)
     .activation_threshold(MOUSE_MOVE_ACTIVATION_THRESHHOLD, &mut || {
       preview.borrow_mut().show();
@@ -195,7 +195,7 @@ pub unsafe fn mouse_move(client: &mut Client) {
     })
     .cancel_on_escape()
     .on_finish(&mut |reason| {
-      if matches!(reason, mouse::Finish_Reason::Finish(_, _)) {
+      if matches!(reason, mouse::FinishReason::Finish(_, _)) {
         preview.borrow_mut().finish(&mut client.borrow_mut());
       } else {
         preview.borrow_mut().cancel();
@@ -209,7 +209,7 @@ pub unsafe fn mouse_resize(client: &mut Client, lock_width: bool, lock_height: b
   let mut dy = 0;
   let width_mul = !lock_width as i32;
   let height_mul = !lock_height as i32;
-  let normal_hints = Normal_Hints::get(client.window);
+  let normal_hints = NormalHints::get(client.window);
   let preview = Preview::create(
     if client.is_snapped() {
       client.saved_geometry()
@@ -219,7 +219,7 @@ pub unsafe fn mouse_resize(client: &mut Client, lock_width: bool, lock_height: b
     client.workspace,
   );
   let preview = Rc::new(RefCell::new(preview));
-  mouse::Tracked_Motion::new()
+  mouse::TrackedMotion::new()
     .rate(MOUSE_MOVE_RESIZE_RATE)
     .activation_threshold(MOUSE_MOVE_ACTIVATION_THRESHHOLD, &mut || {
       preview.borrow_mut().show();
@@ -239,7 +239,7 @@ pub unsafe fn mouse_resize(client: &mut Client, lock_width: bool, lock_height: b
       preview.update();
     })
     .on_finish(&mut |reason| {
-      if matches!(reason, mouse::Finish_Reason::Finish(_, _)) {
+      if matches!(reason, mouse::FinishReason::Finish(_, _)) {
         preview.borrow_mut().finish(client);
       } else {
         preview.borrow_mut().cancel();
@@ -265,7 +265,7 @@ pub unsafe fn key_press(event: &XKeyEvent) {
   }
   last_key_and_state = key_and_state;
   last_time = event.time;
-  if is_kind(event.window, Window_Kind::Context_Menu) {
+  if is_kind(event.window, WindowKind::Context_Menu) {
     context_menu::key_press(event);
   }
   if let Some(action) = (*config).get(event.keycode, event.state) {
@@ -305,14 +305,14 @@ pub unsafe fn map_request(event: &XMapRequestEvent) {
   // New client
   let window = Window::from_handle(&display, event.window);
   let name = window_title(window);
-  let maybe_class_hints = property::Class_Hints::new(window);
+  let maybe_class_hints = property::ClassHints::new(window);
   if maybe_class_hints
     .as_ref()
     .map(|h| h.is_meta())
     .unwrap_or_else(|| name == "window_manager_bar")
   {
     meta_windows.push(window);
-    set_window_kind(window, Window_Kind::Meta_Or_Unmanaged);
+    set_window_kind(window, WindowKind::Meta_Or_Unmanaged);
     window.map();
     log::info!("New meta window: {} ({})", name, window);
   } else {
@@ -350,7 +350,7 @@ pub unsafe fn map_request(event: &XMapRequestEvent) {
       }
     }
     // Set size
-    c.move_and_resize(Client_Geometry::Client(g));
+    c.move_and_resize(ClientGeometry::Client(g));
     c.save_geometry();
     // Add client
     if target_workspace == active_workspace {
@@ -409,7 +409,7 @@ pub unsafe fn configure_notify(event: &XConfigureEvent) {
         }
         workspace.splits.clear();
         for m in 0..monitors::count() {
-          workspace.splits.push(Split_Handles::with_percentages(
+          workspace.splits.push(SplitHandles::with_percentages(
             index,
             monitors::at_index(m),
             old
@@ -440,7 +440,7 @@ pub unsafe fn configure_request(event: &XConfigureRequestEvent) {
     if event.value_mask & CWHeight as u64 != 0 {
       g.h = event.height as u32;
     }
-    client.move_and_resize(Client_Geometry::Client(g));
+    client.move_and_resize(ClientGeometry::Client(g));
     if !client.is_snapped() {
       client.save_geometry();
     }
@@ -517,7 +517,7 @@ pub unsafe fn mapping_notify(event: &XMappingEvent) {
 
 pub unsafe fn destroy_notify(event: &XDestroyWindowEvent) {
   let window = Window::from_handle(&display, event.window);
-  if is_kind(window, Window_Kind::Tray_Client) {
+  if is_kind(window, WindowKind::Tray_Client) {
     bar::tray.maybe_remove_client(event.window);
     return;
   }
@@ -540,7 +540,7 @@ pub unsafe fn expose(event: &XExposeEvent) {
 
 pub unsafe fn crossing(event: &XCrossingEvent) {
   if let Some(kind) = get_window_kind(event.window) {
-    use Window_Kind::*;
+    use WindowKind::*;
     match kind {
       Frame_Button => {
         if let Some(client) = win2client(event.window) {

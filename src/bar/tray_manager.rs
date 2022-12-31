@@ -1,4 +1,4 @@
-use super::tray_client::Tray_Client;
+use super::tray_client::TrayClient;
 use super::xembed;
 use crate::as_static::AsStaticRef;
 use crate::core::*;
@@ -17,16 +17,16 @@ const OPCODE_REQUEST_DOCK: c_uint = 0;
 //const OPCODE_BEGIN_MESSAGE: c_uint = 1;
 //const OPCODE_CANCEL_MESSAGE: c_uint = 2;
 
-pub struct Tray_Manager {
+pub struct TrayManager {
   window: Window,
-  clients: Vec<Tray_Client>,
+  clients: Vec<TrayClient>,
   notify_thread: Option<thread::JoinHandle<()>>,
   current_mapped_count: usize,
   height: u32,
   is_mapped: bool,
 }
 
-impl Tray_Manager {
+impl TrayManager {
   pub const fn new() -> Self {
     Self {
       window: Window::uninit(),
@@ -87,7 +87,7 @@ impl Tray_Manager {
       .build();
     meta_windows.push(window);
     crate::ewmh::set_window_type(window, property::Net::WMWindowTypeDock);
-    crate::set_window_kind(window, Window_Kind::Meta_Or_Unmanaged);
+    crate::set_window_kind(window, WindowKind::Meta_Or_Unmanaged);
     if (*config).bar_opacity != 100 {
       let atom = display.intern_atom("_NET_WM_WINDOW_OPACITY");
       let value = 42949672u32 * (*config).bar_opacity as u32;
@@ -194,7 +194,7 @@ impl Tray_Manager {
   }
 
   /// Finds a client by its window
-  pub unsafe fn find_client(&mut self, window: XWindow) -> Option<&mut Tray_Client> {
+  pub unsafe fn find_client(&mut self, window: XWindow) -> Option<&mut TrayClient> {
     self
       .find_client_index(window)
       .map(|idx| &mut self.clients[idx])
@@ -244,7 +244,7 @@ impl Tray_Manager {
   unsafe fn dock(&mut self, window: XWindow) {
     let client_idx = self.clients.len() as i32;
 
-    self.clients.push(Tray_Client::new(window, self.height));
+    self.clients.push(TrayClient::new(window, self.height));
     let client = self.clients.last_mut().unwrap();
     let window = client.window();
 

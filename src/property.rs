@@ -90,52 +90,52 @@ pub enum Other {
   Last,
 }
 
-pub trait Into_Atom {
+pub trait IntoAtom {
   unsafe fn into_atom(self) -> Atom;
 }
 
-impl Into_Atom for Net {
+impl IntoAtom for Net {
   unsafe fn into_atom(self) -> Atom {
     net[self as usize]
   }
 }
 
-impl Into_Atom for WM {
+impl IntoAtom for WM {
   unsafe fn into_atom(self) -> Atom {
     wm[self as usize]
   }
 }
 
-impl Into_Atom for XEmbed {
+impl IntoAtom for XEmbed {
   unsafe fn into_atom(self) -> Atom {
     xembed[self as usize]
   }
 }
 
-impl Into_Atom for Other {
+impl IntoAtom for Other {
   unsafe fn into_atom(self) -> Atom {
     other[self as usize]
   }
 }
 
-impl Into_Atom for Atom {
+impl IntoAtom for Atom {
   unsafe fn into_atom(self) -> Atom {
     self
   }
 }
 
-pub struct Class_Hints {
+pub struct ClassHints {
   pub class: String,
   pub name: String,
 }
 
-impl Class_Hints {
-  pub unsafe fn new(window: Window) -> Option<Class_Hints> {
+impl ClassHints {
+  pub unsafe fn new(window: Window) -> Option<ClassHints> {
     let mut class_hints: XClassHint = zeroed!();
     if XGetClassHint(display.as_raw(), window.handle(), &mut class_hints) == 0 {
       None
     } else {
-      let result = Some(Class_Hints {
+      let result = Some(ClassHints {
         class: string_from_ptr!(class_hints.res_class),
         name: string_from_ptr!(class_hints.res_name),
       });
@@ -260,15 +260,15 @@ pub unsafe fn init_set_root_properties() {
   set_cardinal!(root, Net::CurrentDesktop, active_workspace);
 }
 
-pub unsafe fn atom<P: Into_Atom>(property: P) -> Atom {
+pub unsafe fn atom<P: IntoAtom>(property: P) -> Atom {
   property.into_atom()
 }
 
-pub unsafe fn delete<P: Into_Atom>(window: Window, property: P) {
+pub unsafe fn delete<P: IntoAtom>(window: Window, property: P) {
   XDeleteProperty(display.as_raw(), window.handle(), property.into_atom());
 }
 
-pub unsafe fn set<P: Into_Atom, T>(
+pub unsafe fn set<P: IntoAtom, T>(
   window: Window,
   property: P,
   type_: Atom,
@@ -288,7 +288,7 @@ pub unsafe fn set<P: Into_Atom, T>(
   );
 }
 
-pub unsafe fn append<P: Into_Atom, T>(
+pub unsafe fn append<P: IntoAtom, T>(
   window: Window,
   property: P,
   type_: Atom,
@@ -309,7 +309,7 @@ pub unsafe fn append<P: Into_Atom, T>(
 }
 
 #[allow(dead_code)]
-pub struct Property_Data {
+pub struct PropertyData {
   actual_type: Atom,
   format: c_int,
   nitems: c_ulong,
@@ -318,7 +318,7 @@ pub struct Property_Data {
 }
 
 #[allow(dead_code)]
-impl Property_Data {
+impl PropertyData {
   pub fn actual_type(&self) -> Atom {
     self.actual_type
   }
@@ -345,19 +345,19 @@ impl Property_Data {
   }
 }
 
-impl Drop for Property_Data {
+impl Drop for PropertyData {
   fn drop(&mut self) {
     unsafe { XFree(self.data as *mut c_void) };
   }
 }
 
-pub unsafe fn get<P: Into_Atom>(
+pub unsafe fn get<P: IntoAtom>(
   window: Window,
   property: P,
   offset: usize,
   length: usize,
   type_: Atom,
-) -> Option<Property_Data> {
+) -> Option<PropertyData> {
   let mut actual_type: Atom = XNone;
   let mut format: c_int = 0;
   let mut nitems: c_ulong = 0;
@@ -378,7 +378,7 @@ pub unsafe fn get<P: Into_Atom>(
     &mut data,
   );
   if status == Success as i32 && !data.is_null() {
-    Some(Property_Data {
+    Some(PropertyData {
       actual_type,
       format,
       nitems,
@@ -390,30 +390,30 @@ pub unsafe fn get<P: Into_Atom>(
   }
 }
 
-pub unsafe fn get_data_for_scalar<T, P: Into_Atom>(
+pub unsafe fn get_data_for_scalar<T, P: IntoAtom>(
   window: Window,
   property: P,
   type_: Atom,
   offset: usize,
-) -> Option<Property_Data> {
+) -> Option<PropertyData> {
   let long_length = std::mem::size_of::<T>() / 4;
   let long_offset = (offset * std::mem::size_of::<T>()) / 4;
   get(window, property, long_offset, long_length, type_)
 }
 
-pub unsafe fn get_data_for_array<T, P: Into_Atom>(
+pub unsafe fn get_data_for_array<T, P: IntoAtom>(
   window: Window,
   property: P,
   type_: Atom,
   length: usize,
   offset: usize,
-) -> Option<Property_Data> {
+) -> Option<PropertyData> {
   let long_length = (length * std::mem::size_of::<T>()) / 4;
   let long_offset = (offset * std::mem::size_of::<T>()) / 4;
   get(window, property, long_offset, long_length, type_)
 }
 
-pub unsafe fn get_string<P: Into_Atom>(window: Window, property: P) -> Option<String> {
+pub unsafe fn get_string<P: IntoAtom>(window: Window, property: P) -> Option<String> {
   const MAX_LENGTH: usize = 1024;
   get_data_for_array::<c_char, _>(
     window,
@@ -425,22 +425,22 @@ pub unsafe fn get_string<P: Into_Atom>(window: Window, property: P) -> Option<St
   .map(|d| d.as_string())
 }
 
-pub unsafe fn get_atom<P: Into_Atom>(window: Window, property: P) -> Atom {
+pub unsafe fn get_atom<P: IntoAtom>(window: Window, property: P) -> Atom {
   get_data_for_scalar::<Atom, _>(window, property, XA_ATOM, 0)
     .map(|data| data.value())
     .unwrap_or(XNone)
 }
 
 #[derive(Copy, Clone)]
-pub struct Normal_Hints {
+pub struct NormalHints {
   min_size: Option<(u32, u32)>,
   max_size: Option<(u32, u32)>,
   resize_inc: Option<(u32, u32)>,
   aspect_ratio: Option<(f64, f64)>,
 }
 
-impl Normal_Hints {
-  pub unsafe fn get(window: Window) -> Option<Normal_Hints> {
+impl NormalHints {
+  pub unsafe fn get(window: Window) -> Option<NormalHints> {
     let hints = XAllocSizeHints();
     macro_rules! get_field {
       ($field_1:ident, $field_2:ident, $flag:ident) => {
@@ -456,7 +456,7 @@ impl Normal_Hints {
       XFree(hints as *mut c_void);
       return None;
     }
-    let mut result = Normal_Hints {
+    let mut result = NormalHints {
       min_size: get_field!(min_width, min_height, PMinSize),
       max_size: get_field!(max_width, max_height, PMaxSize),
       resize_inc: get_field!(width_inc, height_inc, PResizeInc),
@@ -517,7 +517,7 @@ pub const MWM_HINTS_DECORATIONS: c_ulong = 1 << 1;
 // MotifWmHints
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
-pub struct Motif_Hints {
+pub struct MotifHints {
   pub flags: c_ulong,
   pub functions: c_ulong,
   pub decorations: c_ulong,
@@ -525,9 +525,9 @@ pub struct Motif_Hints {
   pub status: c_ulong,
 }
 
-impl Motif_Hints {
+impl MotifHints {
   pub unsafe fn get(window: Window) -> Option<Self> {
     let atom = atom(Other::MotfifWMHints);
-    get_data_for_scalar::<Motif_Hints, _>(window, atom, atom, 0).map(|data| data.value())
+    get_data_for_scalar::<MotifHints, _>(window, atom, atom, 0).map(|data| data.value())
   }
 }

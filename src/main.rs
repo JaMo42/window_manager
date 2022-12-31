@@ -49,12 +49,12 @@ use crate::core::*;
 use bar::Bar;
 use client::*;
 use config::*;
-use draw::Drawing_Context;
+use draw::DrawingContext;
 use geometry::*;
 use property::Net;
-use update_thread::Update_Thread;
+use update_thread::UpdateThread;
 use workspace::*;
-use x::{window::To_XWindow, Display, Window, XDisplay, XNone, XWindow};
+use x::{window::ToXWindow, Display, Window, XDisplay, XNone, XWindow};
 
 mod paths {
   pub static mut config: String = String::new();
@@ -200,9 +200,9 @@ unsafe fn init() {
   if cfg!(feature = "bar") {
     bar = Bar::create();
     bar.build();
-    bar::tray = bar::tray_manager::Tray_Manager::create(bar.height);
+    bar::tray = bar::tray_manager::TrayManager::create(bar.height);
     if (*config).bar_update_interval > 0 {
-      bar::update_thread = Some(Update_Thread::new(
+      bar::update_thread = Some(UpdateThread::new(
         (*config).bar_update_interval,
         bar::update,
       ));
@@ -432,44 +432,44 @@ unsafe fn update_client_list() {
   }
 }
 
-unsafe fn get_window_kind<W: To_XWindow>(window: W) -> Option<Window_Kind> {
+unsafe fn get_window_kind<W: ToXWindow>(window: W) -> Option<WindowKind> {
   let window = window.to_xwindow();
   let mut data: XPointer = std::ptr::null_mut();
   if window == root.handle() {
-    Some(Window_Kind::Root)
+    Some(WindowKind::Root)
   } else if window == XNone
     || XFindContext(display.as_raw(), window, wm_winkind_context, &mut data) != 0
   {
     None
   } else if !data.is_null() {
     // Can't do conversions in the match
-    const kind_root: usize = Window_Kind::Root as usize;
-    const kind_client: usize = Window_Kind::Client as usize;
-    const kind_frame: usize = Window_Kind::Frame as usize;
-    const kind_frame_button: usize = Window_Kind::Frame_Button as usize;
-    const kind_status_bar: usize = Window_Kind::Status_Bar as usize;
-    const kind_notification: usize = Window_Kind::Notification as usize;
-    const kind_meta_or_unmanaged: usize = Window_Kind::Meta_Or_Unmanaged as usize;
-    const kind_tray_client: usize = Window_Kind::Tray_Client as usize;
-    const kind_dock: usize = Window_Kind::Dock as usize;
-    const kind_dock_item: usize = Window_Kind::Dock_Item as usize;
-    const kind_dock_show: usize = Window_Kind::Dock_Show as usize;
-    const kind_context_menu: usize = Window_Kind::Context_Menu as usize;
-    const kind_split_handle: usize = Window_Kind::Split_Handle as usize;
+    const kind_root: usize = WindowKind::Root as usize;
+    const kind_client: usize = WindowKind::Client as usize;
+    const kind_frame: usize = WindowKind::Frame as usize;
+    const kind_frame_button: usize = WindowKind::Frame_Button as usize;
+    const kind_status_bar: usize = WindowKind::Status_Bar as usize;
+    const kind_notification: usize = WindowKind::Notification as usize;
+    const kind_meta_or_unmanaged: usize = WindowKind::Meta_Or_Unmanaged as usize;
+    const kind_tray_client: usize = WindowKind::Tray_Client as usize;
+    const kind_dock: usize = WindowKind::Dock as usize;
+    const kind_dock_item: usize = WindowKind::Dock_Item as usize;
+    const kind_dock_show: usize = WindowKind::Dock_Show as usize;
+    const kind_context_menu: usize = WindowKind::Context_Menu as usize;
+    const kind_split_handle: usize = WindowKind::Split_Handle as usize;
     Some(match data as usize {
-      kind_root => Window_Kind::Root,
-      kind_client => Window_Kind::Client,
-      kind_frame => Window_Kind::Frame,
-      kind_frame_button => Window_Kind::Frame_Button,
-      kind_status_bar => Window_Kind::Status_Bar,
-      kind_notification => Window_Kind::Notification,
-      kind_meta_or_unmanaged => Window_Kind::Meta_Or_Unmanaged,
-      kind_tray_client => Window_Kind::Tray_Client,
-      kind_dock => Window_Kind::Dock,
-      kind_dock_item => Window_Kind::Dock_Item,
-      kind_dock_show => Window_Kind::Dock_Show,
-      kind_context_menu => Window_Kind::Context_Menu,
-      kind_split_handle => Window_Kind::Split_Handle,
+      kind_root => WindowKind::Root,
+      kind_client => WindowKind::Client,
+      kind_frame => WindowKind::Frame,
+      kind_frame_button => WindowKind::Frame_Button,
+      kind_status_bar => WindowKind::Status_Bar,
+      kind_notification => WindowKind::Notification,
+      kind_meta_or_unmanaged => WindowKind::Meta_Or_Unmanaged,
+      kind_tray_client => WindowKind::Tray_Client,
+      kind_dock => WindowKind::Dock,
+      kind_dock_item => WindowKind::Dock_Item,
+      kind_dock_show => WindowKind::Dock_Show,
+      kind_context_menu => WindowKind::Context_Menu,
+      kind_split_handle => WindowKind::Split_Handle,
       _ => {
         my_panic!("Invalid Window_Kind value on {}: {}", window, data as usize);
       }
@@ -479,11 +479,11 @@ unsafe fn get_window_kind<W: To_XWindow>(window: W) -> Option<Window_Kind> {
   }
 }
 
-unsafe fn set_window_kind(window: Window, kind: Window_Kind) {
+unsafe fn set_window_kind(window: Window, kind: WindowKind) {
   window.save_context(wm_winkind_context, kind as usize as XPointer);
 }
 
-unsafe fn is_kind<W: To_XWindow>(window: W, kind: Window_Kind) -> bool {
+unsafe fn is_kind<W: ToXWindow>(window: W, kind: WindowKind) -> bool {
   if let Some(window_kind) = get_window_kind(window) {
     kind == window_kind
   } else {
@@ -566,7 +566,7 @@ fn main() {
     log::trace!("Loading configuration");
     let config_instance = Config::load();
     config = &config_instance;
-    let mut drawing_context_instance = Drawing_Context::new();
+    let mut drawing_context_instance = DrawingContext::new();
     draw = &mut drawing_context_instance;
     draw::load_resources();
     log::trace!("Initializing");

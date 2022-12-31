@@ -5,7 +5,7 @@ use crate::action;
 use crate::client::{decorated_frame_offset, Client};
 use crate::color::Color;
 use crate::core::*;
-use crate::draw::{resources, Svg_Resource};
+use crate::draw::{resources, SvgResource};
 use crate::set_window_kind;
 use crate::x::{Window, XNone};
 use std::ptr::NonNull;
@@ -19,7 +19,7 @@ static mut circle_position: i32 = 0;
 
 pub struct Button {
   owner: NonNull<Client>,
-  icon: &'static mut Svg_Resource,
+  icon: &'static mut SvgResource,
   base_color: Color,
   hovered_color: Color,
   action: unsafe fn(&mut Client),
@@ -29,7 +29,7 @@ pub struct Button {
 impl Button {
   unsafe fn new(
     owner: &mut Client,
-    icon: &'static mut Svg_Resource,
+    icon: &'static mut SvgResource,
     base_color: Color,
     hovered_color: Color,
     action: unsafe fn(&mut Client),
@@ -48,7 +48,7 @@ impl Button {
       })
       .build();
     window.save_context(wm_context, owner as *mut Client as XPointer);
-    set_window_kind(window, Window_Kind::Frame_Button);
+    set_window_kind(window, WindowKind::Frame_Button);
     Self {
       owner: NonNull::new_unchecked(owner as *mut Client),
       icon,

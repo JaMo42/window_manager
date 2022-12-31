@@ -2,9 +2,9 @@ use crate::action;
 use crate::as_static::AsStaticMut;
 use crate::buttons::Button;
 use crate::core::*;
-use crate::desktop_entry::Desktop_Entry;
+use crate::desktop_entry::DesktopEntry;
 use crate::geometry::*;
-use crate::property::{Class_Hints, Motif_Hints, MWM_HINTS_DECORATIONS, WM};
+use crate::property::{ClassHints, MotifHints, MWM_HINTS_DECORATIONS, WM};
 use crate::x::*;
 use crate::*;
 
@@ -31,7 +31,7 @@ unsafe fn create_frame(g: Geometry) -> Window {
 }
 
 /// Specifies how to change the frame and client geometry when resizing a client
-pub enum Client_Geometry {
+pub enum ClientGeometry {
   /// Set the size of the frame (outer window)
   Frame(Geometry),
   /// Set the size of the frame for snapping (applies gaps)
@@ -41,7 +41,7 @@ pub enum Client_Geometry {
 }
 
 #[derive(Copy, Clone)]
-pub enum Frame_Kind {
+pub enum FrameKind {
   // Frame with title bar and buttons, used for normal clients
   Decorated,
   // Frame with only a border, used for popups
@@ -50,47 +50,47 @@ pub enum Frame_Kind {
   None,
 }
 
-impl Frame_Kind {
+impl FrameKind {
   fn get_frame(&self, mut client_geometry: Geometry) -> Geometry {
     match self {
-      Frame_Kind::Decorated => unsafe { client_geometry.get_frame() },
-      Frame_Kind::Border => *client_geometry.expand(unsafe { border_frame_offset.x }),
-      Frame_Kind::None => client_geometry,
+      FrameKind::Decorated => unsafe { client_geometry.get_frame() },
+      FrameKind::Border => *client_geometry.expand(unsafe { border_frame_offset.x }),
+      FrameKind::None => client_geometry,
     }
   }
 
   fn get_client(&self, mut frame_geometry: Geometry) -> Geometry {
     match self {
-      Frame_Kind::Decorated => unsafe { frame_geometry.get_client() },
-      Frame_Kind::Border => *frame_geometry.expand(0 - unsafe { border_frame_offset.x }),
-      Frame_Kind::None => frame_geometry,
+      FrameKind::Decorated => unsafe { frame_geometry.get_client() },
+      FrameKind::Border => *frame_geometry.expand(0 - unsafe { border_frame_offset.x }),
+      FrameKind::None => frame_geometry,
     }
   }
 
   /// Should decorations be drawn on this kind of frame?
   fn should_draw_decorations(&self) -> bool {
-    matches!(self, Frame_Kind::Decorated)
+    matches!(self, FrameKind::Decorated)
   }
 
   /// Should this kind of frame be drawn at all?
   fn should_draw_border(&self) -> bool {
-    !matches!(self, Frame_Kind::None)
+    !matches!(self, FrameKind::None)
   }
 
   fn parent_offset(&self) -> (i32, i32) {
     match self {
-      Frame_Kind::Decorated => unsafe { (decorated_frame_offset.x, decorated_frame_offset.y) },
-      Frame_Kind::Border => unsafe { (border_frame_offset.x, border_frame_offset.y) },
-      Frame_Kind::None => (0, 0),
+      FrameKind::Decorated => unsafe { (decorated_frame_offset.x, decorated_frame_offset.y) },
+      FrameKind::Border => unsafe { (border_frame_offset.x, border_frame_offset.y) },
+      FrameKind::None => (0, 0),
     }
   }
 
   fn frame_offset(&self) -> &'static Geometry {
     static no_offset: Geometry = Geometry::new();
     match self {
-      Frame_Kind::Decorated => unsafe { &decorated_frame_offset },
-      Frame_Kind::Border => unsafe { &border_frame_offset },
-      Frame_Kind::None => &no_offset,
+      FrameKind::Decorated => unsafe { &decorated_frame_offset },
+      FrameKind::Border => unsafe { &border_frame_offset },
+      FrameKind::None => &no_offset,
     }
   }
 }
@@ -112,8 +112,8 @@ pub struct Client {
   left_buttons: Vec<Button>,
   right_buttons: Vec<Button>,
   title_space: i32,
-  frame_kind: Frame_Kind,
-  icon: Option<Box<draw::Svg_Resource>>,
+  frame_kind: FrameKind,
+  icon: Option<Box<draw::SvgResource>>,
   application_id: String,
   last_click_time: Time,
 }
@@ -124,7 +124,7 @@ impl Client {
 
   pub unsafe fn new(window: Window) -> Box<Self> {
     let geometry = get_window_geometry(window);
-    let mut class_hint = Class_Hints::new(window);
+    let mut class_hint = ClassHints::new(window);
 
     if let Some(h) = &mut class_hint {
       if h.name == "Mail" && h.class == "thunderbird-default" {
@@ -141,20 +141,20 @@ impl Client {
     });
     window.set_border_width(0);
 
-    let mut frame_kind = Frame_Kind::Decorated;
+    let mut frame_kind = FrameKind::Decorated;
     let mut is_dialog = false;
 
-    if let Some(motif_hints) = Motif_Hints::get(window) {
+    if let Some(motif_hints) = MotifHints::get(window) {
       if motif_hints.flags & MWM_HINTS_DECORATIONS == MWM_HINTS_DECORATIONS
         && motif_hints.decorations == 0
       {
-        frame_kind = Frame_Kind::None;
+        frame_kind = FrameKind::None;
       }
     } else if property::get_atom(window, Net::WMWindowType)
       == property::atom(Net::WMWindowTypeDialog)
     {
       is_dialog = true;
-      frame_kind = Frame_Kind::Border;
+      frame_kind = FrameKind::Border;
     }
 
     let frame = create_frame(frame_kind.get_frame(geometry));
@@ -170,16 +170,16 @@ impl Client {
     //   4. Use the name
     // 5. Use the window title
     let application_id = property::get_string(window, property::Other::GtkApplicationId)
-      .filter(|gtk_id| Desktop_Entry::entry_name(gtk_id).is_some())
+      .filter(|gtk_id| DesktopEntry::entry_name(gtk_id).is_some())
       .or_else(|| {
         class_hint
           .as_ref()
-          .and_then(|h| Desktop_Entry::entry_name(&h.name))
+          .and_then(|h| DesktopEntry::entry_name(&h.name))
       })
       .or_else(|| {
         class_hint
           .as_ref()
-          .and_then(|h| Desktop_Entry::entry_name(&h.class))
+          .and_then(|h| DesktopEntry::entry_name(&h.class))
       })
       .or_else(|| class_hint.as_ref().map(|h| h.name.clone()))
       .unwrap_or_else(|| window_title(window));
@@ -211,8 +211,8 @@ impl Client {
     let this = result.as_mut() as *mut Client as XPointer;
     window.save_context(wm_context, this);
     frame.save_context(wm_context, this);
-    set_window_kind(window, Window_Kind::Client);
-    set_window_kind(frame, Window_Kind::Frame);
+    set_window_kind(window, WindowKind::Client);
+    set_window_kind(frame, WindowKind::Frame);
 
     ewmh::set_allowed_actions(window, !is_dialog);
     ewmh::set_frame_extents(window, frame_kind.frame_offset());
@@ -253,7 +253,7 @@ impl Client {
     !(self.is_fullscreen || self.is_dialog)
   }
 
-  pub fn icon(&mut self) -> Option<&'static mut draw::Svg_Resource> {
+  pub fn icon(&mut self) -> Option<&'static mut draw::SvgResource> {
     self.icon.as_mut().map(|icon| icon.as_static_mut())
   }
 
@@ -383,7 +383,7 @@ impl Client {
     f(&mut self.prev_geometry);
   }
 
-  pub unsafe fn move_and_resize(&mut self, geom: Client_Geometry) {
+  pub unsafe fn move_and_resize(&mut self, geom: ClientGeometry) {
     let frame_offset = self.frame_kind.frame_offset();
     let fx;
     let fy;
@@ -392,7 +392,7 @@ impl Client {
     let cw;
     let ch;
     match geom {
-      Client_Geometry::Client(g) => {
+      ClientGeometry::Client(g) => {
         fx = g.x - frame_offset.x;
         fy = g.y - frame_offset.y;
         fw = g.w + frame_offset.w;
@@ -400,7 +400,7 @@ impl Client {
         cw = g.w;
         ch = g.h;
       }
-      Client_Geometry::Frame(g) => {
+      ClientGeometry::Frame(g) => {
         fx = g.x;
         fy = g.y;
         fw = g.w;
@@ -408,7 +408,7 @@ impl Client {
         cw = g.w - frame_offset.w;
         ch = g.h - frame_offset.h;
       }
-      Client_Geometry::Snap(g) => {
+      ClientGeometry::Snap(g) => {
         fx = g.x + (*config).gap as i32;
         fy = g.y + (*config).gap as i32;
         fw = g.w - 2 * (*config).gap;
@@ -441,7 +441,7 @@ impl Client {
     if self.is_snapped() {
       workspaces[self.workspace].remove_snapped_client(self);
       self.snap_state = SNAP_NONE;
-      self.move_and_resize(Client_Geometry::Frame(self.prev_geometry));
+      self.move_and_resize(ClientGeometry::Frame(self.prev_geometry));
       ewmh::set_net_wm_state(self, &[]);
     }
   }
@@ -563,7 +563,7 @@ impl Client {
         action::snap(self, self.snap_state);
       } else {
         ewmh::set_net_wm_state(self, &[]);
-        self.move_and_resize(Client_Geometry::Frame(self.prev_geometry));
+        self.move_and_resize(ClientGeometry::Frame(self.prev_geometry));
       }
       self.focus();
     }

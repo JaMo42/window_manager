@@ -1,13 +1,13 @@
 use crate::client::Client;
 use crate::core::*;
 use crate::cursor;
-use crate::draw::Drawing_Context;
+use crate::draw::DrawingContext;
 use crate::error::fatal_error;
 use crate::ewmh;
 use crate::geometry::Geometry;
 use crate::monitors;
 use crate::property::Net;
-use crate::timeout_thread::Repeatable_Timeout_Thread;
+use crate::timeout_thread::RepeatableTimeoutThread;
 use crate::x::Window;
 use crate::{set_window_kind, set_window_opacity};
 use cairo::{Context, Surface};
@@ -48,7 +48,7 @@ unsafe fn create_drawing_context(
   height: u32,
   drawable: Drawable,
   vi: &XVisualInfo,
-) -> Drawing_Context {
+) -> DrawingContext {
   log::trace!("dock: creating drawing context");
   let width = monitors::main().geometry().w;
   let pixmap = XCreatePixmap(display.as_raw(), drawable, width, height, vi.depth as u32);
@@ -67,7 +67,7 @@ unsafe fn create_drawing_context(
     Context::new(&surface).unwrap_or_else(|_| fatal_error("Failed to create cairo context"));
   let layout = pangocairo::create_layout(&context);
   context.set_operator(cairo::Operator::Source);
-  Drawing_Context::from_parts(pixmap, gc, surface, context, layout)
+  DrawingContext::from_parts(pixmap, gc, surface, context, layout)
 }
 
 unsafe fn create_show_window(vi: &XVisualInfo, colormap: Colormap) -> Window {
@@ -99,7 +99,7 @@ unsafe fn create_windows_and_drawing_context(
   y: i32,
   width: u32,
   height: u32,
-) -> (Window, Window, Drawing_Context) {
+) -> (Window, Window, DrawingContext) {
   let vi = display
     .match_visual_info(32, TrueColor)
     .unwrap_or_else(|| fatal_error("No 32bit truecolor visual found"));
@@ -107,14 +107,14 @@ unsafe fn create_windows_and_drawing_context(
 
   let window = create_window(x, y, width, height, &vi, colormap);
   ewmh::set_window_type(window, Net::WMWindowTypeDock);
-  set_window_kind(window, Window_Kind::Dock);
+  set_window_kind(window, WindowKind::Dock);
   window.set_class_hint("Window_manager_dock", "window_manager_dock");
   window.map_raised();
 
   let show_window = create_show_window(&vi, colormap);
   ewmh::set_window_type(show_window, Net::WMWindowTypeDesktop);
   set_window_opacity(show_window, 100);
-  set_window_kind(show_window, Window_Kind::Dock_Show);
+  set_window_kind(show_window, WindowKind::Dock_Show);
   show_window.set_class_hint("Window_manager_dock", "window_manager_dock");
   show_window.map();
 
@@ -130,11 +130,11 @@ pub struct Dock {
   // lifetime.
   #[allow(clippy::vec_box)]
   items: Vec<Box<Item>>,
-  drawing_context: Drawing_Context,
+  drawing_context: DrawingContext,
   // Invisible window at the bottom of the screen which is used to show the dock
   // when it is hovered
   show_window: Window,
-  hide_thread: Repeatable_Timeout_Thread,
+  hide_thread: RepeatableTimeoutThread,
   visible: bool,
   geometry: Geometry,
   keep_open: bool,
@@ -197,7 +197,7 @@ impl Dock {
       items,
       drawing_context: my_draw,
       show_window,
-      hide_thread: Repeatable_Timeout_Thread::new(|| {
+      hide_thread: RepeatableTimeoutThread::new(|| {
         super::the().hide();
       }),
       visible: false,
@@ -292,7 +292,7 @@ impl Dock {
     self.geometry.contains(x, y)
   }
 
-  pub fn drawing_context(&mut self) -> &mut Drawing_Context {
+  pub fn drawing_context(&mut self) -> &mut DrawingContext {
     &mut self.drawing_context
   }
 

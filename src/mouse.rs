@@ -6,30 +6,30 @@ use x11::xlib::*;
 
 const MASK: i64 = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
 
-type Motion_Callback<'a> = &'a mut dyn FnMut(&XMotionEvent, i32, i32);
-type Button_Callback<'a> = &'a mut dyn FnMut(&XButtonEvent) -> bool;
-type Key_Callback<'a> = &'a mut dyn FnMut(&XKeyEvent) -> bool;
-type Finish_Callback<'a> = &'a mut dyn FnMut(Finish_Reason);
-type Actication_Callback<'a> = &'a mut dyn FnMut();
+type MotionCallback<'a> = &'a mut dyn FnMut(&XMotionEvent, i32, i32);
+type ButtonCallback<'a> = &'a mut dyn FnMut(&XButtonEvent) -> bool;
+type KeyCallback<'a> = &'a mut dyn FnMut(&XKeyEvent) -> bool;
+type FinishCallback<'a> = &'a mut dyn FnMut(FinishReason);
+type ActicationCallback<'a> = &'a mut dyn FnMut();
 
 #[derive(Copy, Clone)]
-pub enum Finish_Reason {
+pub enum FinishReason {
   Finish(i32, i32),
   Cancel,
   Failure,
 }
 
-pub struct Tracked_Motion<'a> {
-  on_motion: Option<Motion_Callback<'a>>,
-  on_button_press: Option<Button_Callback<'a>>,
-  on_key_press: Option<Key_Callback<'a>>,
-  on_finish: Option<Finish_Callback<'a>>,
-  on_activation: Option<Actication_Callback<'a>>,
+pub struct TrackedMotion<'a> {
+  on_motion: Option<MotionCallback<'a>>,
+  on_button_press: Option<ButtonCallback<'a>>,
+  on_key_press: Option<KeyCallback<'a>>,
+  on_finish: Option<FinishCallback<'a>>,
+  on_activation: Option<ActicationCallback<'a>>,
   activation_threshold: i32,
   rate: u64,
 }
 
-impl<'a> Tracked_Motion<'a> {
+impl<'a> TrackedMotion<'a> {
   pub fn new() -> Self {
     Self {
       on_motion: None,
@@ -48,18 +48,18 @@ impl<'a> Tracked_Motion<'a> {
   }
 
   /// If the callback returns `true` the operation is cancelled.
-  pub fn on_button_press(&mut self, callback: Button_Callback<'a>) -> &mut Self {
+  pub fn on_button_press(&mut self, callback: ButtonCallback<'a>) -> &mut Self {
     self.on_button_press = Some(callback);
     self
   }
 
   /// If the callback returns `true` the operation is cancelled.
-  pub fn on_key_press(&mut self, callback: Key_Callback<'a>) -> &mut Self {
+  pub fn on_key_press(&mut self, callback: KeyCallback<'a>) -> &mut Self {
     self.on_key_press = Some(callback);
     self
   }
 
-  pub fn on_finish(&mut self, callback: Finish_Callback<'a>) -> &mut Self {
+  pub fn on_finish(&mut self, callback: FinishCallback<'a>) -> &mut Self {
     self.on_finish = Some(callback);
     self
   }
@@ -67,7 +67,7 @@ impl<'a> Tracked_Motion<'a> {
   pub fn activation_threshold(
     &mut self,
     threshold: i32,
-    callback: Actication_Callback<'a>,
+    callback: ActicationCallback<'a>,
   ) -> &mut Self {
     self.on_activation = Some(callback);
     self.activation_threshold = threshold;
@@ -129,7 +129,7 @@ impl<'a> Tracked_Motion<'a> {
         ButtonPress => {
           if let Some(on_button_press) = &mut self.on_button_press {
             if on_button_press(&event.button) {
-              finish_reason = Finish_Reason::Cancel;
+              finish_reason = FinishReason::Cancel;
               break;
             }
           }
@@ -137,13 +137,13 @@ impl<'a> Tracked_Motion<'a> {
         KeyPress => {
           if let Some(on_key_press) = &mut self.on_key_press {
             if on_key_press(&event.key) {
-              finish_reason = Finish_Reason::Cancel;
+              finish_reason = FinishReason::Cancel;
               break;
             }
           }
         }
         ButtonRelease => {
-          finish_reason = Finish_Reason::Finish(event.button.x, event.button.y);
+          finish_reason = FinishReason::Finish(event.button.x, event.button.y);
           break;
         }
         _ => {}
@@ -166,7 +166,7 @@ impl<'a> Tracked_Motion<'a> {
       if self.run_impl(cursor).is_none() {
         // Bailed out early, still need to call on_finish.
         if let Some(on_finish) = self.on_finish.take() {
-          on_finish(Finish_Reason::Failure);
+          on_finish(FinishReason::Failure);
         }
       }
     }

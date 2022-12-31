@@ -2,12 +2,12 @@ use std::sync::mpsc::{self, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-pub struct Timeout_Thread {
+pub struct TimeoutThread {
   handle: JoinHandle<()>,
   sender: Sender<()>,
 }
 
-impl Timeout_Thread {
+impl TimeoutThread {
   pub fn new(delay: u64, function: fn()) -> Self {
     let (tx, rx) = mpsc::channel();
     let duration = Duration::from_millis(delay);
@@ -33,12 +33,12 @@ impl Timeout_Thread {
   }
 }
 
-pub struct Repeatable_Timeout_Thread {
+pub struct RepeatableTimeoutThread {
   function: fn(),
-  thread: Option<Timeout_Thread>,
+  thread: Option<TimeoutThread>,
 }
 
-impl Repeatable_Timeout_Thread {
+impl RepeatableTimeoutThread {
   pub fn new(function: fn()) -> Self {
     Self {
       function,
@@ -51,7 +51,7 @@ impl Repeatable_Timeout_Thread {
       old.cancel();
       old.join();
     }
-    self.thread = Some(Timeout_Thread::new(delay, self.function))
+    self.thread = Some(TimeoutThread::new(delay, self.function))
   }
 
   pub fn cancel(&mut self) {

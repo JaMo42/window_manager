@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::core::*;
-use crate::draw::{Alignment, Drawing_Context};
+use crate::draw::{Alignment, DrawingContext};
 use crate::process::run;
 use crate::x::Window;
 use pango::FontDescription;
@@ -14,7 +14,7 @@ pub unsafe fn fatal_error(text: &str) -> ! {
   let border = 50;
   let height = screen_size.h - 2 * border as u32;
 
-  let mut my_draw = Drawing_Context::new();
+  let mut my_draw = DrawingContext::new();
   let window = Window::builder(&display)
     .size(screen_size.w, screen_size.h)
     .attributes(|attributes| {

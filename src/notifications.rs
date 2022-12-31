@@ -1,5 +1,5 @@
 use crate::core::*;
-use crate::draw::{get_icon, Svg_Resource};
+use crate::draw::{get_icon, SvgResource};
 use crate::ewmh;
 use crate::monitors;
 use crate::property::Net;
@@ -54,7 +54,7 @@ impl Notification {
       .build();
     unsafe {
       ewmh::set_window_type(window, Net::WMWindowTypeNotification);
-      set_window_kind(window, Window_Kind::Notification);
+      set_window_kind(window, WindowKind::Notification);
     }
     let mut this = Self {
       id,
@@ -146,7 +146,7 @@ impl Notification {
     if !self.icon.is_empty() {
       if let Some(mut icon) = if self.icon.starts_with("file://") {
         let pathname = &self.icon[8..];
-        Svg_Resource::open(pathname)
+        SvgResource::open(pathname)
       } else {
         get_icon(&self.icon)
       } {

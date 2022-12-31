@@ -8,16 +8,16 @@ use crate::cursor;
 use crate::ewmh;
 use crate::monitors;
 use crate::property;
-use crate::update_thread::Update_Thread;
+use crate::update_thread::UpdateThread;
 use crate::x::{Window, XWindow};
 use crate::{set_window_kind, set_window_opacity};
-use tray_manager::Tray_Manager;
+use tray_manager::TrayManager;
 use widget::Widget;
 use x11::xlib::*;
 
-pub static mut tray: Tray_Manager = Tray_Manager::new();
+pub static mut tray: TrayManager = TrayManager::new();
 
-pub static mut update_thread: Option<Update_Thread> = None;
+pub static mut update_thread: Option<UpdateThread> = None;
 
 pub struct Bar {
   pub width: u32,
@@ -70,7 +70,7 @@ impl Bar {
     set_window_opacity(window, (*config).bar_opacity);
     // We don't want to interact with the blank part, instead the widgets
     // use `Window_Kind::Status_Bar`.
-    set_window_kind(window, Window_Kind::Meta_Or_Unmanaged);
+    set_window_kind(window, WindowKind::Meta_Or_Unmanaged);
     window.set_class_hint("Window_manager_bar", "window_manager_bar");
     window.map_raised();
     Self {

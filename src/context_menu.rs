@@ -1,6 +1,6 @@
 use crate::core::*;
 use crate::draw::Alignment;
-use crate::draw::Svg_Resource;
+use crate::draw::SvgResource;
 use crate::ewmh;
 use crate::geometry::Geometry;
 use crate::property::Net;
@@ -8,7 +8,7 @@ use crate::set_window_kind;
 use crate::x::{lookup_keysym, Window};
 use x11::xlib::*;
 
-static mut shown: Option<Context_Menu> = None;
+static mut shown: Option<ContextMenu> = None;
 static mut mouse_on_shown: bool = false;
 
 pub enum Indicator {
@@ -45,7 +45,7 @@ pub struct Action {
   name: String,
   info: String,
   index: usize,
-  icon: Option<&'static mut Svg_Resource>,
+  icon: Option<&'static mut SvgResource>,
   indicator: Option<Indicator>,
 }
 
@@ -60,7 +60,7 @@ impl Action {
     }
   }
 
-  pub fn icon(&mut self, icon: Option<&'static mut Svg_Resource>) -> &mut Self {
+  pub fn icon(&mut self, icon: Option<&'static mut SvgResource>) -> &mut Self {
     self.icon = icon;
     self
   }
@@ -92,7 +92,7 @@ impl Item {
   }
 }
 
-pub struct Context_Menu {
+pub struct ContextMenu {
   items: Vec<Item>,
   // Y position of the lower edge of items
   item_positions: Vec<i32>,
@@ -112,7 +112,7 @@ pub struct Context_Menu {
   y: i32,
 }
 
-impl Context_Menu {
+impl ContextMenu {
   const PADDING: u32 = 12;
   const BUTTON_PADDING: u32 = 4;
   const DIVIDER_HEIGHT: u32 = 2;
@@ -172,7 +172,7 @@ impl Context_Menu {
       })
       .build();
     ewmh::set_window_type(window, Net::WMWindowTypePopupMenu);
-    set_window_kind(window, Window_Kind::Context_Menu);
+    set_window_kind(window, WindowKind::Context_Menu);
     self.window = window;
     let (width, height) = self.redraw();
     self.window.resize(width, height);

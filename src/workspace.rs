@@ -5,8 +5,8 @@ use crate::core::*;
 use crate::dock;
 use crate::monitors;
 use crate::property;
-use crate::split_handles::{self, Split_Handles};
-use crate::x::{window::To_XWindow, Window, XNone, XWindow};
+use crate::split_handles::{self, SplitHandles};
+use crate::x::{window::ToXWindow, Window, XNone, XWindow};
 use std::ops::{Deref, DerefMut};
 use x11::xlib::*;
 
@@ -29,7 +29,7 @@ pub struct Workspace {
   pub clients: Vec<Box<Client>>,
   // Each item corresponds the monitor at that index.
   #[allow(clippy::vec_box)] // Same as above
-  pub splits: Vec<Box<Split_Handles>>,
+  pub splits: Vec<Box<SplitHandles>>,
   index: usize,
 }
 
@@ -37,7 +37,7 @@ impl Workspace {
   pub fn new(index: usize) -> Workspace {
     let mut splits = Vec::with_capacity(monitors::count());
     for i in 0..monitors::count() {
-      splits.push(Split_Handles::new(index, monitors::at_index(i)));
+      splits.push(SplitHandles::new(index, monitors::at_index(i)));
     }
     Workspace {
       clients: Vec::new(),
@@ -97,7 +97,7 @@ impl Workspace {
     self.clients[0].focus();
   }
 
-  pub unsafe fn focus<W: To_XWindow>(&mut self, window: W) {
+  pub unsafe fn focus<W: ToXWindow>(&mut self, window: W) {
     let window = window.to_xwindow();
     if window == XNone || root == window {
       log::warn!(

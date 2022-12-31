@@ -4,12 +4,12 @@ use std::time::Duration;
 
 /// Represents a thread that periodically calls a function and can be stopped
 /// or asked to call the function right now at any time.
-pub struct Update_Thread {
+pub struct UpdateThread {
   handle: JoinHandle<()>,
   sender: Sender<u8>,
 }
 
-impl Update_Thread {
+impl UpdateThread {
   const STOP_SIGNAL: u8 = 0;
   const UPDATE_SIGNAL: u8 = 1;
 

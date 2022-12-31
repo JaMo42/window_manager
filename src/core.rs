@@ -1,6 +1,6 @@
 use crate::bar::Bar;
 use crate::config::Config;
-use crate::draw::Drawing_Context;
+use crate::draw::DrawingContext;
 use crate::geometry::Geometry;
 use crate::workspace::Workspace;
 use crate::x::{Display, Window, XNone};
@@ -72,7 +72,7 @@ pub const MOUSE_MOVE_RESIZE_RATE: u64 = 1000 / 30;
 
 #[repr(usize)]
 #[derive(PartialEq, Eq)]
-pub enum Window_Kind {
+pub enum WindowKind {
   Root,
   Client,
   Frame,
@@ -100,7 +100,7 @@ pub static mut screen_size: Geometry = Geometry::new();
 pub static mut mouse_held: c_uint = 0;
 // Windows we do not create clients for and that ignore workspaces (status bars)
 pub static mut meta_windows: Vec<Window> = Vec::new();
-pub static mut draw: *mut Drawing_Context = std::ptr::null_mut();
+pub static mut draw: *mut DrawingContext = std::ptr::null_mut();
 pub static mut bar: Bar = Bar::new();
 pub static mut wm_context: XContext = XNone as XContext;
 pub static mut wm_winkind_context: XContext = XNone as XContext;

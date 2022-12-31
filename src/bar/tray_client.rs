@@ -5,18 +5,18 @@ use crate::set_window_kind;
 use crate::x::{Window, XWindow};
 use x11::xlib::*;
 
-pub struct Tray_Client {
+pub struct TrayClient {
   window: Window,
   xembed_info: xembed::Info,
   size: u32,
   is_mapped: bool,
 }
 
-impl Tray_Client {
+impl TrayClient {
   pub fn new(window: XWindow, size: u32) -> Self {
     let window = Window::from_handle(unsafe { &display }, window);
     unsafe {
-      set_window_kind(window, Window_Kind::Tray_Client);
+      set_window_kind(window, WindowKind::Tray_Client);
     }
     Self {
       window,

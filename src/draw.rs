@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::core::*;
-use crate::desktop_entry::Desktop_Entry;
+use crate::desktop_entry::DesktopEntry;
 use crate::geometry::Geometry;
 use crate::paths;
 use crate::{as_static::AsStaticRef, x::Window};
@@ -10,18 +10,18 @@ use pango::FontDescription;
 use x11::xlib::*;
 
 pub mod resources {
-  use super::Svg_Resource;
-  use crate::icon_group::Icon_Group;
-  pub static mut close_button: Svg_Resource = Svg_Resource::new("close_button.svg");
-  pub static mut maximize_button: Svg_Resource = Svg_Resource::new("maximize_button.svg");
-  pub static mut minimize_button: Svg_Resource = Svg_Resource::new("minimize_button.svg");
-  pub static mut calendar: Svg_Resource = Svg_Resource::new("calendar.svg");
-  pub static mut volume: Svg_Resource = Svg_Resource::new("volume.svg");
-  pub static mut volume_muted: Svg_Resource = Svg_Resource::new("volume_muted.svg");
-  pub static mut battery_full: Svg_Resource = Svg_Resource::new("battery_full.svg");
-  pub static mut battery_critical: Svg_Resource = Svg_Resource::new("battery_critical.svg");
-  pub static mut battery_charging: Svg_Resource = Svg_Resource::new("battery_charging.svg");
-  pub static mut battery_bars: Icon_Group<6> = Icon_Group::new([
+  use super::SvgResource;
+  use crate::icon_group::IconGroup;
+  pub static mut close_button: SvgResource = SvgResource::new("close_button.svg");
+  pub static mut maximize_button: SvgResource = SvgResource::new("maximize_button.svg");
+  pub static mut minimize_button: SvgResource = SvgResource::new("minimize_button.svg");
+  pub static mut calendar: SvgResource = SvgResource::new("calendar.svg");
+  pub static mut volume: SvgResource = SvgResource::new("volume.svg");
+  pub static mut volume_muted: SvgResource = SvgResource::new("volume_muted.svg");
+  pub static mut battery_full: SvgResource = SvgResource::new("battery_full.svg");
+  pub static mut battery_critical: SvgResource = SvgResource::new("battery_critical.svg");
+  pub static mut battery_charging: SvgResource = SvgResource::new("battery_charging.svg");
+  pub static mut battery_bars: IconGroup<6> = IconGroup::new([
     "battery_1_bar.svg",
     "battery_2_bar.svg",
     "battery_3_bar.svg",
@@ -29,10 +29,10 @@ pub mod resources {
     "battery_5_bar.svg",
     "battery_6_bar.svg",
   ]);
-  pub static mut power: Svg_Resource = Svg_Resource::new("power.svg");
+  pub static mut power: SvgResource = SvgResource::new("power.svg");
 }
 
-pub struct Svg_Resource {
+pub struct SvgResource {
   file: &'static str,
   renderer: Option<CairoRenderer<'static>>,
   handle: Option<SvgHandle>,
@@ -41,7 +41,7 @@ pub struct Svg_Resource {
   pattern: Option<cairo::Pattern>,
 }
 
-impl Svg_Resource {
+impl SvgResource {
   pub const fn new(file: &'static str) -> Self {
     Self {
       file,
@@ -74,7 +74,7 @@ impl Svg_Resource {
   }
 }
 
-pub struct Drawing_Context {
+pub struct DrawingContext {
   drawable: Drawable,
   gc: GC,
   cairo_surface: cairo::Surface,
@@ -82,7 +82,7 @@ pub struct Drawing_Context {
   pango_layout: pango::Layout,
 }
 
-impl Drawing_Context {
+impl DrawingContext {
   pub unsafe fn from_parts(
     drawable: Drawable,
     gc: GC,
@@ -146,21 +146,21 @@ impl Drawing_Context {
     XFillRectangle(display.as_raw(), self.drawable, self.gc, x, y, w, h);
   }
 
-  pub unsafe fn rect(&mut self, x: i32, y: i32, w: u32, h: u32) -> Shape_Builder {
-    Shape_Builder::new(
+  pub unsafe fn rect(&mut self, x: i32, y: i32, w: u32, h: u32) -> ShapeBuilder {
+    ShapeBuilder::new(
       &mut self.cairo_context,
       Shape::Rectangle,
       Geometry::from_parts(x, y, w, h),
     )
   }
 
-  pub unsafe fn square(&mut self, x: i32, y: i32, side: u32) -> Shape_Builder {
+  pub unsafe fn square(&mut self, x: i32, y: i32, side: u32) -> ShapeBuilder {
     self.rect(x, y, side, side)
   }
 
   #[allow(dead_code)] // Turns out we only draw circles using their bounding box so far
-  pub unsafe fn circle(&mut self, center_x: i32, center_y: i32, radius: u32) -> Shape_Builder {
-    Shape_Builder::new(
+  pub unsafe fn circle(&mut self, center_x: i32, center_y: i32, radius: u32) -> ShapeBuilder {
+    ShapeBuilder::new(
       &mut self.cairo_context,
       Shape::Ellipse,
       Geometry::from_parts(
@@ -172,11 +172,11 @@ impl Drawing_Context {
     )
   }
 
-  pub unsafe fn shape(&mut self, kind: Shape, bounding_box: Geometry) -> Shape_Builder {
-    Shape_Builder::new(&mut self.cairo_context, kind, bounding_box)
+  pub unsafe fn shape(&mut self, kind: Shape, bounding_box: Geometry) -> ShapeBuilder {
+    ShapeBuilder::new(&mut self.cairo_context, kind, bounding_box)
   }
 
-  pub unsafe fn draw_svg(&mut self, svg: &Svg_Resource, x: i32, y: i32, w: u32, h: u32) {
+  pub unsafe fn draw_svg(&mut self, svg: &SvgResource, x: i32, y: i32, w: u32, h: u32) {
     svg
       .renderer
       .as_ref()
@@ -190,7 +190,7 @@ impl Drawing_Context {
 
   pub unsafe fn draw_colored_svg(
     &mut self,
-    svg: &mut Svg_Resource,
+    svg: &mut SvgResource,
     color: Color,
     x: i32,
     y: i32,
@@ -230,9 +230,9 @@ impl Drawing_Context {
       .set_source_rgb(color.red, color.green, color.blue);
   }
 
-  pub unsafe fn text(&mut self, text: &str) -> Rendered_Text {
+  pub unsafe fn text(&mut self, text: &str) -> RenderedText {
     self.pango_layout.set_text(text);
-    Rendered_Text::from_context(self)
+    RenderedText::from_context(self)
   }
 
   pub unsafe fn render(&mut self, window: Window, xoff: i32, yoff: i32, width: u32, height: u32) {
@@ -291,7 +291,7 @@ impl std::str::FromStr for Alignment {
   }
 }
 
-pub struct Rendered_Text<'a> {
+pub struct RenderedText<'a> {
   layout: &'a mut pango::Layout,
   context: &'a mut cairo::Context,
   width: i32,
@@ -300,8 +300,8 @@ pub struct Rendered_Text<'a> {
   y: i32,
 }
 
-impl<'a> Rendered_Text<'a> {
-  pub unsafe fn from_context(context: &'a mut Drawing_Context) -> Self {
+impl<'a> RenderedText<'a> {
+  pub unsafe fn from_context(context: &'a mut DrawingContext) -> Self {
     let (width, height) = context.pango_layout.size();
     Self {
       layout: &mut context.pango_layout,
@@ -385,7 +385,7 @@ pub enum Shape {
   Ellipse,
 }
 
-pub struct Shape_Builder<'a> {
+pub struct ShapeBuilder<'a> {
   context: &'a mut cairo::Context,
   shape: Shape,
   bounding_box: Geometry,
@@ -398,7 +398,7 @@ pub struct Shape_Builder<'a> {
 }
 
 #[allow(dead_code)]
-impl<'a> Shape_Builder<'a> {
+impl<'a> ShapeBuilder<'a> {
   pub fn new(context: &'a mut cairo::Context, shape: Shape, bounding_box: Geometry) -> Self {
     Self {
       context,
@@ -535,7 +535,7 @@ impl<'a> Shape_Builder<'a> {
 }
 
 pub unsafe fn load_resources() {
-  unsafe fn load_svg(res: &'static mut Svg_Resource) {
+  unsafe fn load_svg(res: &'static mut SvgResource) {
     let loader = librsvg::Loader::new();
     match loader.read_path(format!("{}/{}", paths::resource_dir, res.file)) {
       Ok(handle) => {
@@ -563,19 +563,19 @@ pub unsafe fn load_resources() {
 
 /// Get the icon for an application. The returned value is boxed as svg
 /// resources need to have static lifetime and this is sufficient.
-pub unsafe fn get_app_icon(app_name: &str) -> Option<Box<Svg_Resource>> {
-  let desktop_entry = Desktop_Entry::new(app_name)?;
+pub unsafe fn get_app_icon(app_name: &str) -> Option<Box<SvgResource>> {
+  let desktop_entry = DesktopEntry::new(app_name)?;
   let name = desktop_entry.icon?;
   let icon_path = if name.starts_with('/') {
     name
   } else {
     format!("{}/48x48/apps/{}.svg", (*config).icon_theme, name)
   };
-  Svg_Resource::open(&icon_path)
+  SvgResource::open(&icon_path)
 }
 
 /// Looks for an icon with the given name in the configured theme folder.
-pub unsafe fn get_icon(name: &str) -> Option<Box<Svg_Resource>> {
+pub unsafe fn get_icon(name: &str) -> Option<Box<SvgResource>> {
   let dirs = [
     "apps",
     "actions",
@@ -591,7 +591,7 @@ pub unsafe fn get_icon(name: &str) -> Option<Box<Svg_Resource>> {
   for d in dirs {
     let pathname = format!("{}/48x48/{}/{}.svg", (*config).icon_theme, d, name);
     if std::fs::metadata(&pathname).is_ok() {
-      return Svg_Resource::open(&pathname);
+      return SvgResource::open(&pathname);
     }
   }
   None

@@ -24,7 +24,7 @@ fn get_locale() -> Option<(String, Option<String>, Option<String>)> {
 
 // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions
 #[derive(Default)]
-pub struct Desktop_Action {
+pub struct DesktopAction {
   pub name: String,
   pub exec: Option<String>,
   pub icon: Option<String>,
@@ -32,14 +32,14 @@ pub struct Desktop_Action {
 
 // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#recognized-keys
 #[derive(Default)]
-pub struct Desktop_Entry {
+pub struct DesktopEntry {
   pub name: String,
   pub icon: Option<String>,
   pub exec: Option<String>,
-  pub actions: Vec<Desktop_Action>,
+  pub actions: Vec<DesktopAction>,
 }
 
-impl Desktop_Entry {
+impl DesktopEntry {
   fn find_file(application_name: &str) -> Option<String> {
     const BASE_PATH: &str = "/usr/share/applications";
     let path = format!("{}/{}.desktop", BASE_PATH, application_name);
@@ -102,7 +102,7 @@ impl Desktop_Entry {
     None
   }
 
-  fn read_file(pathname: &str) -> io::Result<Desktop_Entry> {
+  fn read_file(pathname: &str) -> io::Result<DesktopEntry> {
     let entry = parse_entry(pathname)?;
     let de = entry.section("Desktop Entry");
     macro_rules! get {
@@ -110,7 +110,7 @@ impl Desktop_Entry {
         de.attr($attr).map(|s| s.to_owned())
       };
     }
-    let mut result = Desktop_Entry {
+    let mut result = DesktopEntry {
       name: Self::get_localized_name(&de).unwrap_or_else(|| get!("Name").unwrap()),
       icon: get!("Icon"),
       exec: get!("Exec"),
@@ -130,7 +130,7 @@ impl Desktop_Entry {
         let section_name = format!("Desktop Action {}", action);
         let section = entry.section(section_name);
         if let Some(name) = section.attr("Name") {
-          let mut action = Desktop_Action {
+          let mut action = DesktopAction {
             name: Self::get_localized_name(&section).unwrap_or_else(|| name.to_owned()),
             exec: section.attr("Exec").map(|s| s.to_owned()),
             icon: section.attr("Icon").map(|s| s.to_owned()),
@@ -145,7 +145,7 @@ impl Desktop_Entry {
     Ok(result)
   }
 
-  pub fn new(application_name: &str) -> Option<Desktop_Entry> {
+  pub fn new(application_name: &str) -> Option<DesktopEntry> {
     Self::find_file(application_name).and_then(|pathname| match Self::read_file(&pathname) {
       Ok(desktop_entry) => Some(desktop_entry),
       Err(e) => {

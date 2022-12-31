@@ -48,31 +48,31 @@ impl Color {
 }
 
 #[derive(Clone)]
-pub enum Color_Config {
+pub enum ColorConfig {
   Default,
   Hex(String),
   Link(String),
 }
 
-pub struct Color_Scheme_Config {
-  pub cfg: Vec<Color_Config>,
+pub struct ColorSchemeConfig {
+  pub cfg: Vec<ColorConfig>,
 }
 
-impl Color_Scheme_Config {
+impl ColorSchemeConfig {
   pub fn new() -> Self {
-    Color_Scheme_Config {
-      cfg: vec![Color_Config::Default; COLOR_COUNT],
+    ColorSchemeConfig {
+      cfg: vec![ColorConfig::Default; COLOR_COUNT],
     }
   }
 
-  pub fn set(&mut self, elem: &str, cfg: Color_Config) -> Result<(), String> {
+  pub fn set(&mut self, elem: &str, cfg: ColorConfig) -> Result<(), String> {
     self.cfg[unsafe { color_index(elem)? }] = cfg;
     Ok(())
   }
 }
 
 #[repr(C)]
-pub struct Color_Scheme {
+pub struct ColorScheme {
   pub focused: Color,
   pub focused_text: Color,
   pub normal: Color,
@@ -108,7 +108,7 @@ pub struct Color_Scheme {
   pub context_menu_text: Color,
   pub context_menu_divider: Color,
 }
-const COLOR_COUNT: usize = size_of::<Color_Scheme>() / size_of::<Color>();
+const COLOR_COUNT: usize = size_of::<ColorScheme>() / size_of::<Color>();
 const COLOR_NAMES: [&str; COLOR_COUNT] = [
   "window.focused",
   "window.focused_text",
@@ -202,33 +202,33 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
   "bar.text",
 ];
 
-impl std::ops::Index<usize> for Color_Scheme {
+impl std::ops::Index<usize> for ColorScheme {
   type Output = Color;
 
   fn index(&self, index: usize) -> &Color {
-    let p = self as *const Color_Scheme as *const Color;
+    let p = self as *const ColorScheme as *const Color;
     unsafe { &*p.add(index) }
   }
 }
 
-impl std::ops::IndexMut<usize> for Color_Scheme {
+impl std::ops::IndexMut<usize> for ColorScheme {
   fn index_mut(&mut self, index: usize) -> &mut Color {
-    let p = self as *mut Color_Scheme as *mut Color;
+    let p = self as *mut ColorScheme as *mut Color;
     unsafe { &mut *p.add(index) }
   }
 }
 
-impl Color_Scheme {
+impl ColorScheme {
   pub unsafe fn new(
-    cfg: &Color_Scheme_Config,
+    cfg: &ColorSchemeConfig,
     defs: &BTreeMap<String, Color>,
   ) -> Result<Self, String> {
-    let mut result: Color_Scheme = zeroed!();
+    let mut result: ColorScheme = zeroed!();
     let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
     let mut links = Vec::<(usize, usize)>::new();
     for i in 0..COLOR_COUNT {
       match &cfg.cfg[i] {
-        Color_Config::Default => {
+        ColorConfig::Default => {
           if DEFAULT_CONFIG[i].starts_with('#') {
             result[i] = Color::alloc_from_hex(DEFAULT_CONFIG[i]);
             set[i] = true;
@@ -236,11 +236,11 @@ impl Color_Scheme {
             links.push((i, color_index(DEFAULT_CONFIG[i])?));
           }
         }
-        Color_Config::Hex(string) => {
+        ColorConfig::Hex(string) => {
           result[i] = Color::alloc_from_hex(string.as_str());
           set[i] = true;
         }
-        Color_Config::Link(target) => {
+        ColorConfig::Link(target) => {
           if let Some(def) = defs.get(target) {
             result[i] = *def;
             set[i] = true;

@@ -86,7 +86,7 @@ pub unsafe fn snap_no_update(client: &mut Client, flags: u8) {
   } else {
     ewmh::set_net_wm_state(client, &[]);
   }
-  client.move_and_resize(Client_Geometry::Snap(snap_geometry(
+  client.move_and_resize(ClientGeometry::Snap(snap_geometry(
     flags,
     monitors::containing(client),
     client.workspace,
@@ -250,7 +250,7 @@ pub fn move_to_monitor(client: &mut Client, cur: &Monitor, mon: &Monitor) {
       });
       snap(client, client.snap_state);
     } else {
-      client.move_and_resize(Client_Geometry::Frame(g));
+      client.move_and_resize(ClientGeometry::Frame(g));
       client.save_geometry();
     }
     if client.is_snapped() {

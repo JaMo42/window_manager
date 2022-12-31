@@ -1,4 +1,4 @@
-use crate::color::{Color, Color_Config, Color_Scheme, Color_Scheme_Config};
+use crate::color::{Color, ColorConfig, ColorScheme, ColorSchemeConfig};
 use crate::config::{Action, Config, Key};
 use crate::core::*;
 use crate::error::message_box;
@@ -11,7 +11,7 @@ use std::os::raw::c_uint;
 use toml::value::Table;
 
 #[derive(Deserialize, Debug)]
-pub struct Parsed_Config {
+pub struct ParsedConfig {
   pub general: Option<General>,
   pub layout: Option<Layout>,
   pub window: Option<Window>,
@@ -88,7 +88,7 @@ pub struct Dock {
   pub context_show_workspaces: Option<bool>,
 }
 
-pub fn parse(pathname: &str) -> Result<Parsed_Config, toml::de::Error> {
+pub fn parse(pathname: &str) -> Result<ParsedConfig, toml::de::Error> {
   if let Ok(content) = read_to_string(pathname) {
     toml::from_str(&content)
   } else {
@@ -135,7 +135,7 @@ fn parse_color_scheme_defs(
 fn parse_color_scheme_walk(
   table: &Table,
   path: &mut Vec<String>,
-  cfg: &mut Color_Scheme_Config,
+  cfg: &mut ColorSchemeConfig,
 ) -> Result<(), String> {
   for (key, value) in table.iter() {
     if key == "palette" {
@@ -152,9 +152,9 @@ fn parse_color_scheme_walk(
       cfg.set(
         &elem,
         if color_or_link.starts_with('#') {
-          Color_Config::Hex(color_or_link)
+          ColorConfig::Hex(color_or_link)
         } else {
-          Color_Config::Link(color_or_link)
+          ColorConfig::Link(color_or_link)
         },
       )?;
     }
@@ -163,13 +163,13 @@ fn parse_color_scheme_walk(
   Ok(())
 }
 
-pub fn parse_color_scheme(name: String) -> Result<Color_Scheme, String> {
+pub fn parse_color_scheme(name: String) -> Result<ColorScheme, String> {
   macro_rules! E {
     ($result:expr) => {
       $result.map_err(|e| e.to_string())?
     };
   }
-  let mut color_scheme_config = Color_Scheme_Config::new();
+  let mut color_scheme_config = ColorSchemeConfig::new();
   let mut color_defs: BTreeMap<String, Color> = BTreeMap::new();
   let scheme = {
     let pathname = format!("{}/{}.toml", unsafe { &paths::colors_dir }, name);
@@ -186,7 +186,7 @@ pub fn parse_color_scheme(name: String) -> Result<Color_Scheme, String> {
   }
   let mut path = Vec::new();
   parse_color_scheme_walk(&scheme, &mut path, &mut color_scheme_config)?;
-  unsafe { Color_Scheme::new(&color_scheme_config, &color_defs) }
+  unsafe { ColorScheme::new(&color_scheme_config, &color_defs) }
 }
 
 fn str2mod(s: &str, m: c_uint) -> c_uint {

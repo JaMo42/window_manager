@@ -37,7 +37,7 @@ impl Tooltip {
       })
       .build();
     ewmh::set_window_type(self.window, Net::WMWindowTypeTooltip);
-    set_window_kind(self.window, Window_Kind::Meta_Or_Unmanaged);
+    set_window_kind(self.window, WindowKind::Meta_Or_Unmanaged);
   }
 
   unsafe fn move_and_resize(&mut self, x: i32, y: i32, w: u32, h: u32) {

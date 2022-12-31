@@ -5,12 +5,12 @@ use crate::as_static::AsStaticMut;
 use crate::color::Color;
 use crate::core::*;
 use crate::cursor;
-use crate::draw::Drawing_Context;
+use crate::draw::DrawingContext;
 use crate::error::fatal_error;
 use crate::ewmh;
 use crate::geometry::Geometry;
 use crate::monitors::{self, Monitor};
-use crate::mouse::{Finish_Reason, Tracked_Motion};
+use crate::mouse::{FinishReason, TrackedMotion};
 use crate::property::Net;
 use crate::set_window_kind;
 use crate::x::{self, Window, XNone, XWindow};
@@ -43,7 +43,7 @@ static mut g_context: XContext = XNone as i32;
 struct Common {
   vi: XVisualInfo,
   colormap: Colormap,
-  draw: Drawing_Context,
+  draw: DrawingContext,
   width: u32,
   width_offset: i32,
 }
@@ -77,7 +77,7 @@ impl Common {
       Context::new(&surface).unwrap_or_else(|_| fatal_error("Failed to create cairo context"));
     let layout = pangocairo::create_layout(&context);
     context.set_operator(cairo::Operator::Source);
-    let dc = Drawing_Context::from_parts(pixmap, gc, surface, context, layout);
+    let dc = DrawingContext::from_parts(pixmap, gc, surface, context, layout);
 
     // Round the width to the closest multiple of 15, this is done to prevent
     // uneven positioning/sizing of the white lines on the handles as their
@@ -128,7 +128,7 @@ pub enum Role {
   Right,
 }
 
-struct Split_Handle {
+struct SplitHandle {
   window: Window,
   geometry: Geometry,
   role: Role,
@@ -136,7 +136,7 @@ struct Split_Handle {
   monitor: usize,
 }
 
-impl Split_Handle {
+impl SplitHandle {
   fn new(geometry: Geometry, role: Role, workspace: usize, monitor: usize) -> Box<Self> {
     let common = common();
     let window = Window::builder(unsafe { &display })
@@ -156,7 +156,7 @@ impl Split_Handle {
       .build();
     unsafe {
       ewmh::set_window_type(window, Net::WMWindowTypeDesktop);
-      set_window_kind(window, Window_Kind::Split_Handle);
+      set_window_kind(window, WindowKind::Split_Handle);
       if g_context == XNone as i32 {
         g_context = x::unique_context();
       }
@@ -273,10 +273,10 @@ impl Split_Handle {
 }
 
 /// All 3 split handles on a monitor
-pub struct Split_Handles {
-  vertical_handle: Box<Split_Handle>,
-  left_handle: Box<Split_Handle>,
-  right_handle: Box<Split_Handle>,
+pub struct SplitHandles {
+  vertical_handle: Box<SplitHandle>,
+  left_handle: Box<SplitHandle>,
+  right_handle: Box<SplitHandle>,
   geometry: Geometry,
   vertical: i32,
   left: i32,
@@ -287,7 +287,7 @@ pub struct Split_Handles {
   pub right_clients: u32,
 }
 
-impl Split_Handles {
+impl SplitHandles {
   pub fn with_percentages(
     workspace: usize,
     mon: &Monitor,
@@ -298,19 +298,19 @@ impl Split_Handles {
     let vertical = (g.w as f64 * percentages.0) as i32;
     let left = (g.h as f64 * percentages.1) as i32;
     let right = (g.h as f64 * percentages.2) as i32;
-    let vertical_handle = Split_Handle::new(
+    let vertical_handle = SplitHandle::new(
       Geometry::from_parts(g.x + vertical - width_offset(), g.y, width(), g.h),
       Role::Vertical,
       workspace,
       mon.index(),
     );
-    let left_handle = Split_Handle::new(
+    let left_handle = SplitHandle::new(
       Geometry::from_parts(g.x, g.y + left - width_offset(), vertical as u32, width()),
       Role::Left,
       workspace,
       mon.index(),
     );
-    let right_handle = Split_Handle::new(
+    let right_handle = SplitHandle::new(
       Geometry::from_parts(
         g.x + vertical,
         g.y + right - width_offset(),
@@ -432,11 +432,11 @@ impl Split_Handles {
   }
 }
 
-fn xwindow_to_split_handle(window: XWindow) -> &'static mut Split_Handle {
+fn xwindow_to_split_handle(window: XWindow) -> &'static mut SplitHandle {
   unsafe {
     (Window::from_handle(&display, window)
       .find_context(g_context)
-      .unwrap() as *mut Split_Handle)
+      .unwrap() as *mut SplitHandle)
       .as_static_mut()
   }
 }
@@ -451,7 +451,7 @@ pub fn crossing(event: &XCrossingEvent) {
   unsafe { display.sync(false) };
 }
 
-fn get_sticky_points(handle: &Split_Handle) -> Vec<i32> {
+fn get_sticky_points(handle: &SplitHandle) -> Vec<i32> {
   let area = monitors::at_index(handle.monitor).window_area();
   let offset;
   let size;
@@ -499,7 +499,7 @@ pub unsafe fn click(event: &XButtonEvent) {
     }
   };
   let handle = Rc::new(RefCell::new(handle));
-  Tracked_Motion::new()
+  TrackedMotion::new()
     .on_motion(&mut |motion: &XMotionEvent, _last_x, _last_y| {
       let mut handle = handle.borrow_mut();
       let is_shift = motion.state & MOD_SHIFT != 0;
@@ -524,7 +524,7 @@ pub unsafe fn click(event: &XButtonEvent) {
       let mut handle = handle.borrow_mut();
       // Use the handles geometry instead of the finish coordinates to we don't
       // need to apply contraints here again.
-      if matches!(finish_reason, Finish_Reason::Finish(_, _)) {
+      if matches!(finish_reason, FinishReason::Finish(_, _)) {
         let pos = if handle.is_horizontal() {
           handle.geometry.y
         } else {
