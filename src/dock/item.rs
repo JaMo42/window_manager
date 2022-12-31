@@ -338,10 +338,9 @@ impl Item {
 
       menu.action("Launch".to_string());
     }
-
-    if let Some(active) = self.instances.first() {
+    if let Some(focused) = self.instances.get(self.focused_instance) {
       menu.action(
-        if active.as_ref().is_minimized {
+        if focused.as_ref().is_minimized {
           "Show"
         } else {
           "Hide"
