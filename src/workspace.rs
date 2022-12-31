@@ -6,7 +6,7 @@ use crate::dock;
 use crate::monitors;
 use crate::property;
 use crate::split_handles::{self, SplitHandles};
-use crate::x::{window::ToXWindow, Window, XNone, XWindow};
+use crate::x::{window::AsXWindow, Window, XNone, XWindow};
 use std::ops::{Deref, DerefMut};
 use x11::xlib::*;
 
@@ -97,8 +97,8 @@ impl Workspace {
     self.clients[0].focus();
   }
 
-  pub unsafe fn focus<W: ToXWindow>(&mut self, window: W) {
-    let window = window.to_xwindow();
+  pub unsafe fn focus<W: AsXWindow>(&mut self, window: W) {
+    let window = window.as_xwindow();
     if window == XNone || root == window {
       log::warn!(
         "Tried to focus {}",

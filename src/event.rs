@@ -9,15 +9,15 @@ use crate::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
-use x::{window::ToXWindow, Window, XFalse, XNone};
+use x::{window::AsXWindow, Window, XFalse, XNone};
 
 const MOUSE_MOVE_ACTIVATION_THRESHHOLD: i32 = 10;
 
-pub unsafe fn win2client<W: ToXWindow>(window: W) -> Option<&'static mut Client> {
+pub unsafe fn win2client<W: AsXWindow>(window: W) -> Option<&'static mut Client> {
   let mut data: XPointer = std::ptr::null_mut();
-  if window.to_xwindow() == XNone
-    || window.to_xwindow() == root.handle()
-    || XFindContext(display.as_raw(), window.to_xwindow(), wm_context, &mut data) != 0
+  if window.as_xwindow() == XNone
+    || window.as_xwindow() == root.handle()
+    || XFindContext(display.as_raw(), window.as_xwindow(), wm_context, &mut data) != 0
   {
     None
   } else if !data.is_null() {

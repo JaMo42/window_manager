@@ -1,5 +1,5 @@
 use super::display::Display;
-use super::window::{ToXWindow, Window};
+use super::window::{AsXWindow, Window};
 use super::*;
 
 #[derive(Copy, Clone)]
@@ -142,8 +142,8 @@ impl WindowBuilder {
     }
   }
 
-  pub fn parent<W: ToXWindow>(&mut self, handle: W) -> &mut Self {
-    self.parent = handle.to_xwindow();
+  pub fn parent<W: AsXWindow>(&mut self, handle: W) -> &mut Self {
+    self.parent = handle.as_xwindow();
     self
   }
 

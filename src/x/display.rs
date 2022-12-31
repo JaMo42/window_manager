@@ -1,4 +1,4 @@
-use super::{window::ToXWindow, *};
+use super::{window::AsXWindow, *};
 use std::ffi::{CStr, CString};
 use x11::xinerama::{XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo};
 
@@ -138,11 +138,11 @@ impl Display {
     ScopedGrab::new(self.connection)
   }
 
-  pub fn set_input_focus<W: ToXWindow>(&self, window: W) {
+  pub fn set_input_focus<W: AsXWindow>(&self, window: W) {
     unsafe {
       XSetInputFocus(
         self.connection,
-        window.to_xwindow(),
+        window.as_xwindow(),
         RevertToParent,
         CurrentTime,
       );
@@ -196,13 +196,13 @@ impl Display {
     }
   }
 
-  pub fn grab_button_for(&self, button: u32, mods: u32, window: impl ToXWindow) {
+  pub fn grab_button_for(&self, button: u32, mods: u32, window: impl AsXWindow) {
     unsafe {
       XGrabButton(
         self.connection,
         button,
         mods,
-        window.to_xwindow(),
+        window.as_xwindow(),
         XTrue,
         (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
         GrabModeAsync,
@@ -217,9 +217,9 @@ impl Display {
     self.grab_button_for(button, mods, self.root);
   }
 
-  pub fn ungrab_button_for(&self, button: u32, mods: u32, window: impl ToXWindow) {
+  pub fn ungrab_button_for(&self, button: u32, mods: u32, window: impl AsXWindow) {
     unsafe {
-      XUngrabButton(self.connection, button, mods, window.to_xwindow());
+      XUngrabButton(self.connection, button, mods, window.as_xwindow());
     }
   }
 
@@ -324,9 +324,9 @@ impl Display {
     unsafe { XGetSelectionOwner(self.connection, selection) }
   }
 
-  pub fn set_selection_ownder<W: ToXWindow>(&self, selection: Atom, owner: W) {
+  pub fn set_selection_ownder<W: AsXWindow>(&self, selection: Atom, owner: W) {
     unsafe {
-      XSetSelectionOwner(self.connection, selection, owner.to_xwindow(), CurrentTime);
+      XSetSelectionOwner(self.connection, selection, owner.as_xwindow(), CurrentTime);
     }
   }
 
@@ -369,9 +369,9 @@ impl Display {
     }
   }
 
-  pub fn get_transient_for_hint(&self, window: impl ToXWindow) -> Option<XWindow> {
+  pub fn get_transient_for_hint(&self, window: impl AsXWindow) -> Option<XWindow> {
     let mut trans: XWindow = XNone;
-    if unsafe { XGetTransientForHint(self.connection, window.to_xwindow(), &mut trans) } != 0 {
+    if unsafe { XGetTransientForHint(self.connection, window.as_xwindow(), &mut trans) } != 0 {
       Some(trans)
     } else {
       None
@@ -379,18 +379,18 @@ impl Display {
   }
 }
 
-pub trait ToXDisplay {
-  fn to_xdisplay(&self) -> XDisplay;
+pub trait AsXDisplay {
+  fn as_xdisplay(&self) -> XDisplay;
 }
 
-impl ToXDisplay for Display {
-  fn to_xdisplay(&self) -> XDisplay {
+impl AsXDisplay for Display {
+  fn as_xdisplay(&self) -> XDisplay {
     self.as_raw()
   }
 }
 
-impl ToXDisplay for XDisplay {
-  fn to_xdisplay(&self) -> XDisplay {
+impl AsXDisplay for XDisplay {
+  fn as_xdisplay(&self) -> XDisplay {
     *self
   }
 }

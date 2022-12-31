@@ -1,4 +1,4 @@
-use super::display::ToXDisplay;
+use super::display::AsXDisplay;
 use super::window_builder::{WindowAttributes, WindowBuilder};
 use super::*;
 
@@ -21,9 +21,9 @@ impl Window {
     }
   }
 
-  pub fn from_handle<D: ToXDisplay>(display: &D, handle: XWindow) -> Self {
+  pub fn from_handle<D: AsXDisplay>(display: &D, handle: XWindow) -> Self {
     Self {
-      display: display.to_xdisplay() as usize,
+      display: display.as_xdisplay() as usize,
       handle,
     }
   }
@@ -115,9 +115,9 @@ impl Window {
     }
   }
 
-  pub fn reparent<W: ToXWindow>(&self, parent: W, x: c_int, y: c_int) {
+  pub fn reparent<W: AsXWindow>(&self, parent: W, x: c_int, y: c_int) {
     unsafe {
-      XReparentWindow(self.display(), self.handle, parent.to_xwindow(), x, y);
+      XReparentWindow(self.display(), self.handle, parent.as_xwindow(), x, y);
     }
   }
 
@@ -265,18 +265,18 @@ impl Window {
   }
 }
 
-pub trait ToXWindow {
-  fn to_xwindow(&self) -> XWindow;
+pub trait AsXWindow {
+  fn as_xwindow(&self) -> XWindow;
 }
 
-impl ToXWindow for Window {
-  fn to_xwindow(&self) -> XWindow {
+impl AsXWindow for Window {
+  fn as_xwindow(&self) -> XWindow {
     self.handle
   }
 }
 
-impl ToXWindow for XWindow {
-  fn to_xwindow(&self) -> XWindow {
+impl AsXWindow for XWindow {
+  fn as_xwindow(&self) -> XWindow {
     *self
   }
 }

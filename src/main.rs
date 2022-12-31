@@ -54,7 +54,7 @@ use geometry::*;
 use property::Net;
 use update_thread::UpdateThread;
 use workspace::*;
-use x::{window::ToXWindow, Display, Window, XDisplay, XNone, XWindow};
+use x::{window::AsXWindow, Display, Window, XDisplay, XNone, XWindow};
 
 mod paths {
   pub static mut config: String = String::new();
@@ -432,8 +432,8 @@ unsafe fn update_client_list() {
   }
 }
 
-unsafe fn get_window_kind<W: ToXWindow>(window: W) -> Option<WindowKind> {
-  let window = window.to_xwindow();
+unsafe fn get_window_kind<W: AsXWindow>(window: W) -> Option<WindowKind> {
+  let window = window.as_xwindow();
   let mut data: XPointer = std::ptr::null_mut();
   if window == root.handle() {
     Some(WindowKind::Root)
@@ -483,7 +483,7 @@ unsafe fn set_window_kind(window: Window, kind: WindowKind) {
   window.save_context(wm_winkind_context, kind as usize as XPointer);
 }
 
-unsafe fn is_kind<W: ToXWindow>(window: W, kind: WindowKind) -> bool {
+unsafe fn is_kind<W: AsXWindow>(window: W, kind: WindowKind) -> bool {
   if let Some(window_kind) = get_window_kind(window) {
     kind == window_kind
   } else {
