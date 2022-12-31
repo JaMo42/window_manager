@@ -1,7 +1,7 @@
 use crate::action;
 use crate::client::Client;
 use crate::context_menu::{ContextMenu, Indicator};
-use crate::desktop_entry::DesktopEntry;
+use crate::desktop_entry::{DesktopAction, DesktopEntry};
 use crate::draw::{self, DrawingContext, SvgResource};
 use crate::error::message_box;
 use crate::geometry::Geometry;
@@ -271,6 +271,66 @@ impl Item {
     }
   }
 
+  unsafe fn add_instances_to_menu(&mut self, menu: &mut ContextMenu) {
+    if !self.instances.is_empty() {
+      let mut all_on_current_workspace = true;
+      for i in self.instances.iter() {
+        if i.as_ref().workspace != active_workspace {
+          all_on_current_workspace = false;
+          break;
+        }
+      }
+      let add_instance = |(index, client): (usize, &mut NonNull<Client>)| {
+        let (title, unsaved) = get_title_and_unsaved_changes(client.as_mut());
+        let indicator = if index == self.focused_instance {
+          Some(Indicator::Check)
+        } else if client.as_ref().is_urgent {
+          Some(Indicator::Exclamation)
+        } else if unsaved {
+          Some(Indicator::Circle)
+        } else if client.as_ref().is_minimized {
+          Some(Indicator::Diamond)
+        } else {
+          None
+        };
+        let info = if (*config).dock_context_show_workspaces && !all_on_current_workspace {
+          format!(" ({})", client.as_ref().workspace + 1)
+        } else {
+          String::new()
+        };
+        menu
+          .action(title)
+          .icon(client.as_mut().icon())
+          .indicator(indicator)
+          .info(info);
+      };
+      self
+        .instances
+        .iter_mut()
+        .enumerate()
+        .map(add_instance)
+        .for_each(drop);
+      menu.divider();
+    }
+  }
+
+  /// Adds actions provided by the desktop entry to the menu.
+  unsafe fn add_actions_to_menu(&mut self, menu: &mut ContextMenu) {
+    if let Some(de) = &self.desktop_entry {
+      let add_action = |(index, action): (usize, &DesktopAction)| {
+        menu.action(action.name.clone()).icon(
+          self.action_icons[index]
+            .as_mut()
+            .map(|icon| &mut *(icon.as_mut() as *mut SvgResource)),
+        );
+      };
+      if !de.actions.is_empty() {
+        de.actions.iter().enumerate().map(add_action).for_each(drop);
+        menu.divider();
+      }
+    }
+  }
+
   pub unsafe fn context_menu(&mut self) {
     let this = self as *mut Self;
     let mut menu = ContextMenu::new(Box::new(move |selection| {
@@ -281,61 +341,11 @@ impl Item {
         super::the().keep_open(false);
       }
     }));
-    if !self.instances.is_empty() {
-      let mut all_on_current_workspace = true;
-      for i in self.instances.iter() {
-        if i.as_ref().workspace != active_workspace {
-          all_on_current_workspace = false;
-          break;
-        }
-      }
-      self
-        .instances
-        .iter_mut()
-        .enumerate()
-        .map(|(index, client)| {
-          let (title, unsaved) = get_title_and_unsaved_changes(client.as_mut());
-          menu
-            .action(title)
-            .icon(client.as_mut().icon())
-            .indicator(if index == self.focused_instance {
-              Some(Indicator::Check)
-            } else if client.as_ref().is_urgent {
-              Some(Indicator::Exclamation)
-            } else if unsaved {
-              Some(Indicator::Circle)
-            } else if client.as_ref().is_minimized {
-              Some(Indicator::Diamond)
-            } else {
-              None
-            })
-            .info(
-              if (*config).dock_context_show_workspaces && !all_on_current_workspace {
-                format!(" ({})", client.as_ref().workspace + 1)
-              } else {
-                String::new()
-              },
-            );
-        })
-        .for_each(drop);
-      menu.divider();
-    }
-    if let Some(de) = &self.desktop_entry {
-      if !de.actions.is_empty() {
-        de.actions
-          .iter()
-          .enumerate()
-          .map(|(index, action)| {
-            menu.action(action.name.clone()).icon(
-              self.action_icons[index]
-                .as_mut()
-                .map(|icon| &mut *(icon.as_mut() as *mut SvgResource)),
-            );
-          })
-          .for_each(drop);
-        menu.divider();
-      }
+    self.add_instances_to_menu(&mut menu);
+    self.add_actions_to_menu(&mut menu);
 
+    // Builtin actions
+    if self.desktop_entry.is_some() {
       menu.action("Launch".to_string());
     }
     if let Some(focused) = self.instances.get(self.focused_instance) {
