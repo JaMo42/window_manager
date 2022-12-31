@@ -9,34 +9,34 @@ pub struct Display {
 }
 
 impl Display {
-  pub const fn uninit () -> Self {
+  pub const fn uninit() -> Self {
     Self {
-      connection: std::ptr::null_mut (),
+      connection: std::ptr::null_mut(),
       screen: 0,
       root: XNone,
     }
   }
 
-  pub fn connect (name: Option<&str>) -> Self {
+  pub fn connect(name: Option<&str>) -> Self {
     let connection;
     let root;
     let screen;
 
     unsafe {
-      connection = XOpenDisplay (
+      connection = XOpenDisplay(
         name
-          .map (|s| s.as_ptr () as *const c_char)
-          .unwrap_or (std::ptr::null ()),
+          .map(|s| s.as_ptr() as *const c_char)
+          .unwrap_or(std::ptr::null()),
       );
-      if connection.is_null () {
+      if connection.is_null() {
         let name = name
-          .map (|s| s.to_string ())
-          .or_else (|| std::env::var ("DISPLAY").ok ())
-          .unwrap_or_default ();
-        panic! ("Could not open display: {}", name);
+          .map(|s| s.to_string())
+          .or_else(|| std::env::var("DISPLAY").ok())
+          .unwrap_or_default();
+        panic!("Could not open display: {}", name);
       }
-      root = XDefaultRootWindow (connection);
-      screen = XDefaultScreen (connection);
+      root = XDefaultRootWindow(connection);
+      screen = XDefaultScreen(connection);
     }
 
     Self {
@@ -46,120 +46,120 @@ impl Display {
     }
   }
 
-  pub fn root (&self) -> XWindow {
+  pub fn root(&self) -> XWindow {
     self.root
   }
 
-  pub fn default_screen (&self) -> i32 {
+  pub fn default_screen(&self) -> i32 {
     self.screen
   }
 
-  pub fn width (&self) -> u32 {
-    unsafe { XDisplayWidth (self.connection, self.screen) as u32 }
+  pub fn width(&self) -> u32 {
+    unsafe { XDisplayWidth(self.connection, self.screen) as u32 }
   }
 
-  pub fn height (&self) -> u32 {
-    unsafe { XDisplayHeight (self.connection, self.screen) as u32 }
+  pub fn height(&self) -> u32 {
+    unsafe { XDisplayHeight(self.connection, self.screen) as u32 }
   }
 
-  pub fn size (&self) -> (u32, u32) {
-    (self.width (), self.height ())
+  pub fn size(&self) -> (u32, u32) {
+    (self.width(), self.height())
   }
 
-  pub fn default_visual (&self) -> *mut Visual {
-    unsafe { XDefaultVisual (self.connection, self.screen) }
+  pub fn default_visual(&self) -> *mut Visual {
+    unsafe { XDefaultVisual(self.connection, self.screen) }
   }
 
-  pub fn default_colormap (&self) -> Colormap {
-    unsafe { XDefaultColormap (self.connection, self.screen) }
+  pub fn default_colormap(&self) -> Colormap {
+    unsafe { XDefaultColormap(self.connection, self.screen) }
   }
 
-  pub fn default_depth (&self) -> u32 {
-    unsafe { XDefaultDepth (self.connection, self.screen) as u32 }
+  pub fn default_depth(&self) -> u32 {
+    unsafe { XDefaultDepth(self.connection, self.screen) as u32 }
   }
 
-  pub fn close (&mut self) {
-    if !self.connection.is_null () {
+  pub fn close(&mut self) {
+    if !self.connection.is_null() {
       unsafe {
-        XCloseDisplay (self.connection);
+        XCloseDisplay(self.connection);
       }
-      self.connection = std::ptr::null_mut ();
+      self.connection = std::ptr::null_mut();
     }
   }
 
-  pub fn as_raw (&self) -> XDisplay {
+  pub fn as_raw(&self) -> XDisplay {
     self.connection
   }
 
-  pub fn flush (&self) {
+  pub fn flush(&self) {
     unsafe {
-      XFlush (self.connection);
+      XFlush(self.connection);
     }
   }
 
-  pub fn sync (&self, discard_events: bool) {
+  pub fn sync(&self, discard_events: bool) {
     unsafe {
-      XSync (self.connection, discard_events as i32);
+      XSync(self.connection, discard_events as i32);
     }
   }
 
-  pub fn next_event (&self, event_out: &mut XEvent) {
+  pub fn next_event(&self, event_out: &mut XEvent) {
     unsafe {
-      XNextEvent (self.connection, event_out);
+      XNextEvent(self.connection, event_out);
     }
   }
 
-  pub fn mask_event (&self, mask: i64, event_out: &mut XEvent) {
+  pub fn mask_event(&self, mask: i64, event_out: &mut XEvent) {
     unsafe {
-      XMaskEvent (self.connection, mask, event_out);
+      XMaskEvent(self.connection, mask, event_out);
     }
   }
 
-  pub fn push_event (&self, event: &mut XEvent) {
+  pub fn push_event(&self, event: &mut XEvent) {
     unsafe {
-      XPutBackEvent (self.connection, event);
+      XPutBackEvent(self.connection, event);
     }
   }
 
-  pub fn grab (&self) {
+  pub fn grab(&self) {
     unsafe {
-      XGrabServer (self.connection);
+      XGrabServer(self.connection);
     }
   }
 
-  pub fn ungrab (&self) {
+  pub fn ungrab(&self) {
     unsafe {
-      XUngrabServer (self.connection);
+      XUngrabServer(self.connection);
     }
   }
 
   /// Creates a `Scoped_Grab` for the display
-  pub fn scoped_grab (&self) -> Scoped_Grab {
-    Scoped_Grab::new (self.connection)
+  pub fn scoped_grab(&self) -> Scoped_Grab {
+    Scoped_Grab::new(self.connection)
   }
 
-  pub fn set_input_focus<W: To_XWindow> (&self, window: W) {
+  pub fn set_input_focus<W: To_XWindow>(&self, window: W) {
     unsafe {
-      XSetInputFocus (
+      XSetInputFocus(
         self.connection,
-        window.to_xwindow (),
+        window.to_xwindow(),
         RevertToParent,
         CurrentTime,
       );
     }
   }
 
-  pub fn get_modifier_mapping (&self) -> *mut XModifierKeymap {
-    unsafe { XGetModifierMapping (self.connection) }
+  pub fn get_modifier_mapping(&self) -> *mut XModifierKeymap {
+    unsafe { XGetModifierMapping(self.connection) }
   }
 
-  pub fn keysym_to_keycode (&self, sym: KeySym) -> u8 {
-    unsafe { XKeysymToKeycode (self.connection, sym) }
+  pub fn keysym_to_keycode(&self, sym: KeySym) -> u8 {
+    unsafe { XKeysymToKeycode(self.connection, sym) }
   }
 
-  pub fn grab_key (&self, code: u32, modifiers: u32) {
+  pub fn grab_key(&self, code: u32, modifiers: u32) {
     unsafe {
-      XGrabKey (
+      XGrabKey(
         self.connection,
         code as i32,
         modifiers,
@@ -171,17 +171,17 @@ impl Display {
     }
   }
 
-  pub fn ungrab_key (&self, code: u32, modifiers: u32) {
+  pub fn ungrab_key(&self, code: u32, modifiers: u32) {
     unsafe {
-      XUngrabKey (self.connection, code as i32, modifiers, self.root);
+      XUngrabKey(self.connection, code as i32, modifiers, self.root);
     }
   }
 
-  pub fn grab_keyboard (&self, window: Window) {
+  pub fn grab_keyboard(&self, window: Window) {
     unsafe {
-      XGrabKeyboard (
+      XGrabKeyboard(
         self.connection,
-        window.handle (),
+        window.handle(),
         XFalse,
         GrabModeAsync,
         GrabModeAsync,
@@ -190,19 +190,19 @@ impl Display {
     }
   }
 
-  pub fn ungrab_keyboard (&self) {
+  pub fn ungrab_keyboard(&self) {
     unsafe {
-      XUngrabKeyboard (self.connection, CurrentTime);
+      XUngrabKeyboard(self.connection, CurrentTime);
     }
   }
 
-  pub fn grab_button_for (&self, button: u32, mods: u32, window: impl To_XWindow) {
+  pub fn grab_button_for(&self, button: u32, mods: u32, window: impl To_XWindow) {
     unsafe {
-      XGrabButton (
+      XGrabButton(
         self.connection,
         button,
         mods,
-        window.to_xwindow (),
+        window.to_xwindow(),
         XTrue,
         (ButtonPressMask | ButtonReleaseMask | PointerMotionMask) as u32,
         GrabModeAsync,
@@ -213,23 +213,23 @@ impl Display {
     }
   }
 
-  pub fn grab_button (&self, button: u32, mods: u32) {
-    self.grab_button_for (button, mods, self.root);
+  pub fn grab_button(&self, button: u32, mods: u32) {
+    self.grab_button_for(button, mods, self.root);
   }
 
-  pub fn ungrab_button_for (&self, button: u32, mods: u32, window: impl To_XWindow) {
+  pub fn ungrab_button_for(&self, button: u32, mods: u32, window: impl To_XWindow) {
     unsafe {
-      XUngrabButton (self.connection, button, mods, window.to_xwindow ());
+      XUngrabButton(self.connection, button, mods, window.to_xwindow());
     }
   }
 
-  pub fn ungrab_button (&self, button: u32, mods: u32) {
-    self.ungrab_button_for (button, mods, self.root);
+  pub fn ungrab_button(&self, button: u32, mods: u32) {
+    self.ungrab_button_for(button, mods, self.root);
   }
 
-  pub fn grab_pointer (&self, mask: i64, cursor: Cursor) -> bool {
+  pub fn grab_pointer(&self, mask: i64, cursor: Cursor) -> bool {
     unsafe {
-      XGrabPointer (
+      XGrabPointer(
         self.connection,
         self.root,
         XFalse,
@@ -243,21 +243,21 @@ impl Display {
     }
   }
 
-  pub fn ungrab_pointer (&self) {
+  pub fn ungrab_pointer(&self) {
     unsafe {
-      XUngrabPointer (self.connection, CurrentTime);
+      XUngrabPointer(self.connection, CurrentTime);
     }
   }
 
-  pub fn allow_events (&self, mode: i32) {
+  pub fn allow_events(&self, mode: i32) {
     unsafe {
-      XAllowEvents (self.connection, mode, CurrentTime);
+      XAllowEvents(self.connection, mode, CurrentTime);
     }
   }
 
-  pub fn scoped_pointer_grab (&self, mask: i64, cursor: Cursor) -> Option<Scoped_Pointer_Grab> {
-    if self.grab_pointer (mask, cursor) {
-      Some (Scoped_Pointer_Grab {
+  pub fn scoped_pointer_grab(&self, mask: i64, cursor: Cursor) -> Option<Scoped_Pointer_Grab> {
+    if self.grab_pointer(mask, cursor) {
+      Some(Scoped_Pointer_Grab {
         display: self.connection,
       })
     } else {
@@ -265,7 +265,7 @@ impl Display {
     }
   }
 
-  pub fn query_pointer_position (&self) -> Option<(i32, i32)> {
+  pub fn query_pointer_position(&self) -> Option<(i32, i32)> {
     let mut x: c_int = 0;
     let mut y: c_int = 0;
     // Dummy values
@@ -273,7 +273,7 @@ impl Display {
     let mut u: c_uint = 0;
     let mut w: XWindow = XNone;
     if unsafe {
-      XQueryPointer (
+      XQueryPointer(
         self.connection,
         self.root,
         &mut w,
@@ -286,93 +286,93 @@ impl Display {
       )
     } == XTrue
     {
-      Some ((x, y))
+      Some((x, y))
     } else {
       None
     }
   }
 
-  pub fn intern_atom (&self, name: &str) -> Atom {
+  pub fn intern_atom(&self, name: &str) -> Atom {
     unsafe {
-      let cstr = CString::new (name).unwrap ();
-      XInternAtom (self.connection, cstr.as_ptr (), XFalse)
+      let cstr = CString::new(name).unwrap();
+      XInternAtom(self.connection, cstr.as_ptr(), XFalse)
     }
   }
 
-  pub fn get_atom_name (&self, atom: Atom) -> String {
+  pub fn get_atom_name(&self, atom: Atom) -> String {
     unsafe {
-      CStr::from_ptr (XGetAtomName (self.connection, atom))
-        .to_str ()
-        .unwrap ()
-        .to_owned ()
+      CStr::from_ptr(XGetAtomName(self.connection, atom))
+        .to_str()
+        .unwrap()
+        .to_owned()
     }
   }
 
-  pub fn create_simple_window (&self) -> Window {
-    Window::from_handle (&self.connection, unsafe {
-      XCreateSimpleWindow (self.connection, self.root, 0, 0, 1, 1, 0, 0, 0)
+  pub fn create_simple_window(&self) -> Window {
+    Window::from_handle(&self.connection, unsafe {
+      XCreateSimpleWindow(self.connection, self.root, 0, 0, 1, 1, 0, 0, 0)
     })
   }
 
-  pub fn map_window (&self, window: XWindow) {
+  pub fn map_window(&self, window: XWindow) {
     unsafe {
-      XMapWindow (self.connection, window);
+      XMapWindow(self.connection, window);
     }
   }
 
-  pub fn get_selection_owner (&self, selection: Atom) -> XWindow {
-    unsafe { XGetSelectionOwner (self.connection, selection) }
+  pub fn get_selection_owner(&self, selection: Atom) -> XWindow {
+    unsafe { XGetSelectionOwner(self.connection, selection) }
   }
 
-  pub fn set_selection_ownder<W: To_XWindow> (&self, selection: Atom, owner: W) {
+  pub fn set_selection_ownder<W: To_XWindow>(&self, selection: Atom, owner: W) {
     unsafe {
-      XSetSelectionOwner (self.connection, selection, owner.to_xwindow (), CurrentTime);
+      XSetSelectionOwner(self.connection, selection, owner.to_xwindow(), CurrentTime);
     }
   }
 
-  pub fn create_font_cursor (&self, shape: u32) -> Cursor {
-    unsafe { XCreateFontCursor (self.connection, shape) }
+  pub fn create_font_cursor(&self, shape: u32) -> Cursor {
+    unsafe { XCreateFontCursor(self.connection, shape) }
   }
 
-  pub fn free_cursor (&self, cursor: Cursor) {
+  pub fn free_cursor(&self, cursor: Cursor) {
     unsafe {
-      XFreeCursor (self.connection, cursor);
+      XFreeCursor(self.connection, cursor);
     }
   }
 
-  pub fn match_visual_info (&self, depth: i32, class: i32) -> Option<XVisualInfo> {
+  pub fn match_visual_info(&self, depth: i32, class: i32) -> Option<XVisualInfo> {
     unsafe {
-      let mut vi: XVisualInfo = std::mem::MaybeUninit::zeroed ().assume_init ();
-      if XMatchVisualInfo (self.connection, self.screen, depth, class, &mut vi) != 0 {
-        Some (vi)
+      let mut vi: XVisualInfo = std::mem::MaybeUninit::zeroed().assume_init();
+      if XMatchVisualInfo(self.connection, self.screen, depth, class, &mut vi) != 0 {
+        Some(vi)
       } else {
         None
       }
     }
   }
 
-  pub fn create_colormap (&self, visual: *mut Visual, alloc: i32) -> Colormap {
-    unsafe { XCreateColormap (self.connection, self.root, visual, alloc) }
+  pub fn create_colormap(&self, visual: *mut Visual, alloc: i32) -> Colormap {
+    unsafe { XCreateColormap(self.connection, self.root, visual, alloc) }
   }
 
-  pub fn query_screens (&self) -> Option<Vec<XineramaScreenInfo>> {
+  pub fn query_screens(&self) -> Option<Vec<XineramaScreenInfo>> {
     unsafe {
-      if XineramaIsActive (self.connection) == XTrue {
+      if XineramaIsActive(self.connection) == XTrue {
         let mut len = 0;
-        let data = XineramaQueryScreens (self.connection, &mut len);
-        let result = std::slice::from_raw_parts (data, len as usize).to_vec ();
-        XFree (data as *mut c_void);
-        Some (result)
+        let data = XineramaQueryScreens(self.connection, &mut len);
+        let result = std::slice::from_raw_parts(data, len as usize).to_vec();
+        XFree(data as *mut c_void);
+        Some(result)
       } else {
         None
       }
     }
   }
 
-  pub fn get_transient_for_hint (&self, window: impl To_XWindow) -> Option<XWindow> {
+  pub fn get_transient_for_hint(&self, window: impl To_XWindow) -> Option<XWindow> {
     let mut trans: XWindow = XNone;
-    if unsafe { XGetTransientForHint (self.connection, window.to_xwindow (), &mut trans) } != 0 {
-      Some (trans)
+    if unsafe { XGetTransientForHint(self.connection, window.to_xwindow(), &mut trans) } != 0 {
+      Some(trans)
     } else {
       None
     }
@@ -380,17 +380,17 @@ impl Display {
 }
 
 pub trait To_XDisplay {
-  fn to_xdisplay (&self) -> XDisplay;
+  fn to_xdisplay(&self) -> XDisplay;
 }
 
 impl To_XDisplay for Display {
-  fn to_xdisplay (&self) -> XDisplay {
-    self.as_raw ()
+  fn to_xdisplay(&self) -> XDisplay {
+    self.as_raw()
   }
 }
 
 impl To_XDisplay for XDisplay {
-  fn to_xdisplay (&self) -> XDisplay {
+  fn to_xdisplay(&self) -> XDisplay {
     *self
   }
 }
@@ -401,18 +401,18 @@ pub struct Scoped_Grab {
 }
 
 impl Scoped_Grab {
-  fn new (display: XDisplay) -> Self {
+  fn new(display: XDisplay) -> Self {
     unsafe {
-      XGrabServer (display);
+      XGrabServer(display);
     }
     Self { display }
   }
 }
 
 impl Drop for Scoped_Grab {
-  fn drop (&mut self) {
+  fn drop(&mut self) {
     unsafe {
-      XUngrabServer (self.display);
+      XUngrabServer(self.display);
     }
   }
 }
@@ -422,9 +422,9 @@ pub struct Scoped_Pointer_Grab {
 }
 
 impl Drop for Scoped_Pointer_Grab {
-  fn drop (&mut self) {
+  fn drop(&mut self) {
     unsafe {
-      XUngrabPointer (self.display, CurrentTime);
+      XUngrabPointer(self.display, CurrentTime);
     }
   }
 }

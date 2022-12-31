@@ -6,7 +6,7 @@ use x11::xlib::*;
 
 pub type XDisplay = *mut x11::xlib::Display;
 pub type XWindow = x11::xlib::Window;
-pub type Error_Handler = unsafe extern "C" fn (XDisplay, *mut XErrorEvent) -> i32;
+pub type Error_Handler = unsafe extern "C" fn(XDisplay, *mut XErrorEvent) -> i32;
 
 pub const XNone: c_ulong = 0;
 pub const XFalse: c_int = 0;
@@ -20,25 +20,25 @@ pub mod window_builder;
 pub use display::Display;
 pub use window::Window;
 
-pub fn set_error_handler (f: Error_Handler) -> Option<Error_Handler> {
-  unsafe { XSetErrorHandler (Some (f)) }
+pub fn set_error_handler(f: Error_Handler) -> Option<Error_Handler> {
+  unsafe { XSetErrorHandler(Some(f)) }
 }
 
-pub fn unique_context () -> XContext {
-  unsafe { XUniqueContext () }
+pub fn unique_context() -> XContext {
+  unsafe { XUniqueContext() }
 }
 
-pub fn string_to_keysym (string: &str) -> KeySym {
+pub fn string_to_keysym(string: &str) -> KeySym {
   unsafe {
-    let c_str = CString::new (string).unwrap ();
-    XStringToKeysym (c_str.as_ptr ())
+    let c_str = CString::new(string).unwrap();
+    XStringToKeysym(c_str.as_ptr())
   }
 }
 
-pub fn lookup_keysym (event: &XKeyEvent) -> KeySym {
-  unsafe { XLookupKeysym (event as *const XKeyEvent as *mut XKeyEvent, 0) }
+pub fn lookup_keysym(event: &XKeyEvent) -> KeySym {
+  unsafe { XLookupKeysym(event as *const XKeyEvent as *mut XKeyEvent, 0) }
 }
 
-pub fn init_threads () -> Status {
-  unsafe { XInitThreads () }
+pub fn init_threads() -> Status {
+  unsafe { XInitThreads() }
 }

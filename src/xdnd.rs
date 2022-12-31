@@ -1,4 +1,4 @@
-use super::core::*;
+use crate::core::*;
 use crate::x::XNone;
 use x11::xfixes::*;
 use x11::xlib::*;
@@ -11,11 +11,11 @@ const XFixesSetSelectionOwnerNotifyMask: u64 = 1 << 0;
 
 static mut hack_active: bool = false;
 
-pub fn get_selection_notify_event_type () -> i32 {
+pub fn get_selection_notify_event_type() -> i32 {
   let mut event_base = 0;
   let mut error_base = 0;
   unsafe {
-    if XFixesQueryExtension (display.as_raw (), &mut event_base, &mut error_base) == True {
+    if XFixesQueryExtension(display.as_raw(), &mut event_base, &mut error_base) == True {
       event_base + XFixesSelectionNotify
     } else {
       -1
@@ -23,21 +23,21 @@ pub fn get_selection_notify_event_type () -> i32 {
   }
 }
 
-pub unsafe fn listen () {
-  let selection = display.intern_atom ("XdndSelection");
-  XFixesSelectSelectionInput (
-    display.as_raw (),
-    display.root (),
+pub unsafe fn listen() {
+  let selection = display.intern_atom("XdndSelection");
+  XFixesSelectSelectionInput(
+    display.as_raw(),
+    display.root(),
     selection,
     XFixesSetSelectionOwnerNotifyMask,
   );
 }
 
-pub fn selection_notify (event: &XFixesSelectionNotifyEvent) {
+pub fn selection_notify(event: &XFixesSelectionNotifyEvent) {
   if event.owner == XNone {
-    unsafe { hack_end () };
+    unsafe { hack_end() };
   } else {
-    unsafe { hack_start () };
+    unsafe { hack_start() };
   }
 }
 
@@ -54,34 +54,34 @@ pub fn selection_notify (event: &XFixesSelectionNotifyEvent) {
 // something from chromium onto itself), for this reason `hack_end` will also
 // be called whenever the root window is clicked as an easy way to fix clients.
 
-unsafe fn hack_start () {
+unsafe fn hack_start() {
   if hack_active {
     return;
   }
-  log::trace! ("XDND hack: reparenting all clients to root");
-  for client in workspaces[active_workspace].iter ().rev () {
-    let g = client.client_geometry ();
-    client.frame.raise ();
-    client.window.reparent (root, g.x, g.y);
+  log::trace!("XDND hack: reparenting all clients to root");
+  for client in workspaces[active_workspace].iter().rev() {
+    let g = client.client_geometry();
+    client.frame.raise();
+    client.window.reparent(root, g.x, g.y);
   }
-  display.flush ();
+  display.flush();
   hack_active = true;
 }
 
-unsafe fn hack_end () {
+unsafe fn hack_end() {
   if !hack_active {
     return;
   }
-  log::trace! ("XDND hack: reparenting all clients back into their frame");
-  for client in workspaces[active_workspace].iter ().rev () {
-    let offset = client.frame_offset ();
-    client.window.reparent (client.frame, offset.x, offset.y);
+  log::trace!("XDND hack: reparenting all clients back into their frame");
+  for client in workspaces[active_workspace].iter().rev() {
+    let offset = client.frame_offset();
+    client.window.reparent(client.frame, offset.x, offset.y);
   }
-  workspaces[active_workspace].focus_client (0);
-  display.flush ();
+  workspaces[active_workspace].focus_client(0);
+  display.flush();
   hack_active = false;
 }
 
-pub fn ensure_hack_stopped () {
-  unsafe { hack_end () };
+pub fn ensure_hack_stopped() {
+  unsafe { hack_end() };
 }

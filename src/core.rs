@@ -1,30 +1,27 @@
-use super::bar::Bar;
-use super::config::Config;
-use super::draw::Drawing_Context;
-use super::geometry::Geometry;
-use super::workspace::Workspace;
+use crate::bar::Bar;
+use crate::config::Config;
+use crate::draw::Drawing_Context;
+use crate::geometry::Geometry;
+use crate::workspace::Workspace;
 use crate::x::{Display, Window, XNone};
 use std::os::raw::*;
 use x11::xlib::*;
 
 macro_rules! c_str {
   ($s:expr) => {
-    std::ffi::CString::new ($s).unwrap ().as_ptr ()
+    std::ffi::CString::new($s).unwrap().as_ptr()
   };
 }
 
 macro_rules! string_from_ptr {
   ($ptr:expr) => {
-    std::ffi::CStr::from_ptr ($ptr)
-      .to_str ()
-      .unwrap ()
-      .to_owned ()
+    std::ffi::CStr::from_ptr($ptr).to_str().unwrap().to_owned()
   };
 }
 
 macro_rules! zeroed {
   () => {
-    std::mem::MaybeUninit::zeroed ().assume_init ()
+    std::mem::MaybeUninit::zeroed().assume_init()
   };
 }
 
@@ -43,14 +40,14 @@ macro_rules! my_panic {
 
 macro_rules! log_error {
   ($result:expr) => {
-    if let Err (error) = $result {
-      log::error! ("{}", error);
+    if let Err(error) = $result {
+      log::error!("{}", error);
     }
   };
 
   ($result:expr, $what:expr) => {
-    if let Err (error) = $result {
-      log::error! ("{}: {}", $what, error);
+    if let Err(error) = $result {
+      log::error!("{}: {}", $what, error);
     }
   };
 }
@@ -91,19 +88,19 @@ pub enum Window_Kind {
   Split_Handle,
 }
 
-pub static mut display: Display = Display::uninit ();
-pub static mut root: Window = Window::uninit ();
-pub static mut workspaces: Vec<Workspace> = Vec::new ();
+pub static mut display: Display = Display::uninit();
+pub static mut root: Window = Window::uninit();
+pub static mut workspaces: Vec<Workspace> = Vec::new();
 pub static mut active_workspace: usize = 0;
 pub static mut running: bool = false;
-pub static mut quit_reason: String = String::new ();
+pub static mut quit_reason: String = String::new();
 // Need to store as pointer since it contains a HashMap
-pub static mut config: *const Config = std::ptr::null_mut ();
-pub static mut screen_size: Geometry = Geometry::new ();
+pub static mut config: *const Config = std::ptr::null_mut();
+pub static mut screen_size: Geometry = Geometry::new();
 pub static mut mouse_held: c_uint = 0;
 // Windows we do not create clients for and that ignore workspaces (status bars)
-pub static mut meta_windows: Vec<Window> = Vec::new ();
-pub static mut draw: *mut Drawing_Context = std::ptr::null_mut ();
-pub static mut bar: Bar = Bar::new ();
+pub static mut meta_windows: Vec<Window> = Vec::new();
+pub static mut draw: *mut Drawing_Context = std::ptr::null_mut();
+pub static mut bar: Bar = Bar::new();
 pub static mut wm_context: XContext = XNone as XContext;
 pub static mut wm_winkind_context: XContext = XNone as XContext;

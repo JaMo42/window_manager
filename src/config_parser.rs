@@ -1,9 +1,9 @@
-use super::color::{Color, Color_Config, Color_Scheme, Color_Scheme_Config};
-use super::config::{Action, Config, Key};
-use super::core::*;
-use super::error::message_box;
-use super::paths;
-use super::process::split_commandline;
+use crate::color::{Color, Color_Config, Color_Scheme, Color_Scheme_Config};
+use crate::config::{Action, Config, Key};
+use crate::core::*;
+use crate::error::message_box;
+use crate::paths;
+use crate::process::split_commandline;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fs::read_to_string;
@@ -88,109 +88,109 @@ pub struct Dock {
   pub context_show_workspaces: Option<bool>,
 }
 
-pub fn parse (pathname: &str) -> Result<Parsed_Config, toml::de::Error> {
-  if let Ok (content) = read_to_string (pathname) {
-    toml::from_str (&content)
+pub fn parse(pathname: &str) -> Result<Parsed_Config, toml::de::Error> {
+  if let Ok(content) = read_to_string(pathname) {
+    toml::from_str(&content)
   } else {
     let default_config = "[keys.bindings]\n'Mod+Shift+Q' = \"quit\"\n'Mod+Return' = \"$ xterm\"";
-    message_box (
+    message_box(
       "Config file not found",
       "Win+Shift+Q has been bound to quit.\nWin+Return launches xterm.",
     );
-    toml::from_str (default_config)
+    toml::from_str(default_config)
   }
 }
 
-pub fn parse_key_bindings (table: &Table, cfg: &mut Config, m: u32) {
-  for (key, action) in table.iter () {
-    let (mods, key) = mods_and_key_from_string (key, m);
-    let action = action.as_str ().unwrap ();
-    if let Some (commandline) = action.strip_prefix ('$') {
-      cfg.add (
-        Key::from_str (&key, mods),
-        Action::Launch (split_commandline (commandline)),
+pub fn parse_key_bindings(table: &Table, cfg: &mut Config, m: u32) {
+  for (key, action) in table.iter() {
+    let (mods, key) = mods_and_key_from_string(key, m);
+    let action = action.as_str().unwrap();
+    if let Some(commandline) = action.strip_prefix('$') {
+      cfg.add(
+        Key::from_str(&key, mods),
+        Action::Launch(split_commandline(commandline)),
       );
     } else {
-      cfg.add (Key::from_str (&key, mods), Action::from_str (action));
+      cfg.add(Key::from_str(&key, mods), Action::from_str(action));
     }
   }
 }
 
-fn parse_color_scheme_defs (
+fn parse_color_scheme_defs(
   palette: &Table,
   defs: &mut BTreeMap<String, Color>,
 ) -> Result<(), String> {
-  for (name, color) in palette.iter () {
-    defs.insert (name.to_owned (), unsafe {
-      Color::alloc_from_hex (
+  for (name, color) in palette.iter() {
+    defs.insert(name.to_owned(), unsafe {
+      Color::alloc_from_hex(
         color
-          .as_str ()
-          .ok_or_else (|| "Color values must be strings".to_string ())?,
+          .as_str()
+          .ok_or_else(|| "Color values must be strings".to_string())?,
       )
     });
   }
-  Ok (())
+  Ok(())
 }
 
-fn parse_color_scheme_walk (
+fn parse_color_scheme_walk(
   table: &Table,
   path: &mut Vec<String>,
   cfg: &mut Color_Scheme_Config,
 ) -> Result<(), String> {
-  for (key, value) in table.iter () {
+  for (key, value) in table.iter() {
     if key == "palette" {
       continue;
-    } else if value.is_table () {
-      path.push (key.clone ());
-      parse_color_scheme_walk (value.as_table ().unwrap (), path, cfg)?;
+    } else if value.is_table() {
+      path.push(key.clone());
+      parse_color_scheme_walk(value.as_table().unwrap(), path, cfg)?;
     } else {
-      let elem = format! ("{}.{}", path.join ("."), key);
+      let elem = format!("{}.{}", path.join("."), key);
       let color_or_link = value
-        .as_str ()
-        .ok_or_else (|| "Color values must be strings".to_string ())?
-        .to_owned ();
-      cfg.set (
+        .as_str()
+        .ok_or_else(|| "Color values must be strings".to_string())?
+        .to_owned();
+      cfg.set(
         &elem,
-        if color_or_link.starts_with ('#') {
-          Color_Config::Hex (color_or_link)
+        if color_or_link.starts_with('#') {
+          Color_Config::Hex(color_or_link)
         } else {
-          Color_Config::Link (color_or_link)
+          Color_Config::Link(color_or_link)
         },
       )?;
     }
   }
-  path.pop ();
-  Ok (())
+  path.pop();
+  Ok(())
 }
 
-pub fn parse_color_scheme (name: String) -> Result<Color_Scheme, String> {
+pub fn parse_color_scheme(name: String) -> Result<Color_Scheme, String> {
   macro_rules! E {
     ($result:expr) => {
-      $result.map_err (|e| e.to_string ())?
+      $result.map_err(|e| e.to_string())?
     };
   }
-  let mut color_scheme_config = Color_Scheme_Config::new ();
-  let mut color_defs: BTreeMap<String, Color> = BTreeMap::new ();
+  let mut color_scheme_config = Color_Scheme_Config::new();
+  let mut color_defs: BTreeMap<String, Color> = BTreeMap::new();
   let scheme = {
-    let pathname = format! ("{}/{}.toml", unsafe { &paths::colors_dir }, name);
-    let content = E! (read_to_string (&pathname));
-    E! (toml::from_str::<Table> (&content))
+    let pathname = format!("{}/{}.toml", unsafe { &paths::colors_dir }, name);
+    let content = E!(read_to_string(&pathname));
+    E!(toml::from_str::<Table>(&content))
   };
-  if let Some (palette) = scheme.get ("palette") {
-    parse_color_scheme_defs (
+  if let Some(palette) = scheme.get("palette") {
+    parse_color_scheme_defs(
       palette
-        .as_table ()
-        .ok_or_else (|| "Palette must be a table".to_string ())?,
+        .as_table()
+        .ok_or_else(|| "Palette must be a table".to_string())?,
       &mut color_defs,
     )?;
   }
-  let mut path = Vec::new ();
-  parse_color_scheme_walk (&scheme, &mut path, &mut color_scheme_config)?;
-  unsafe { Color_Scheme::new (&color_scheme_config, &color_defs) }
+  let mut path = Vec::new();
+  parse_color_scheme_walk(&scheme, &mut path, &mut color_scheme_config)?;
+  unsafe { Color_Scheme::new(&color_scheme_config, &color_defs) }
 }
 
-fn str2mod (s: &str, m: c_uint) -> c_uint {
-  match s.trim () {
+fn str2mod(s: &str, m: c_uint) -> c_uint {
+  match s.trim() {
     "Win" => MOD_WIN,
     "Shift" => MOD_SHIFT,
     "Alt" => MOD_ALT,
@@ -200,23 +200,23 @@ fn str2mod (s: &str, m: c_uint) -> c_uint {
   }
 }
 
-pub fn modifiers_from_string (s: &str) -> c_uint {
+pub fn modifiers_from_string(s: &str) -> c_uint {
   let mut mods = 0;
-  for mod_str in s.split ('+') {
-    mods |= str2mod (mod_str, 0);
+  for mod_str in s.split('+') {
+    mods |= str2mod(mod_str, 0);
   }
   mods
 }
 
-fn mods_and_key_from_string (s: &str, user_mod: c_uint) -> (c_uint, String) {
+fn mods_and_key_from_string(s: &str, user_mod: c_uint) -> (c_uint, String) {
   let mut mods = 0;
-  let mut key = String::new ();
-  let mut it = s.split ('+').peekable ();
-  while let Some (i) = it.next () {
-    if it.peek ().is_some () {
-      mods |= str2mod (i, user_mod);
+  let mut key = String::new();
+  let mut it = s.split('+').peekable();
+  while let Some(i) = it.next() {
+    if it.peek().is_some() {
+      mods |= str2mod(i, user_mod);
     } else {
-      key = i.to_string ();
+      key = i.to_string();
     }
   }
   (mods, key)

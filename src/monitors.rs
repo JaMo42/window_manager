@@ -11,7 +11,7 @@ pub struct Monitor {
 }
 
 impl Monitor {
-  pub fn new (number: i32, geometry: Geometry) -> Self {
+  pub fn new(number: i32, geometry: Geometry) -> Self {
     Self {
       number,
       geometry,
@@ -20,8 +20,8 @@ impl Monitor {
     }
   }
 
-  fn set_window_area (&mut self, margin: (i32, i32, i32, i32)) {
-    self.window_area = Geometry::from_parts (
+  fn set_window_area(&mut self, margin: (i32, i32, i32, i32)) {
+    self.window_area = Geometry::from_parts(
       self.geometry.x + margin.2,
       self.geometry.y + margin.0,
       self.geometry.w - (margin.2 + margin.3) as u32,
@@ -29,32 +29,32 @@ impl Monitor {
     );
   }
 
-  pub fn number (&self) -> i32 {
+  pub fn number(&self) -> i32 {
     self.number
   }
 
-  pub fn geometry (&self) -> &Geometry {
+  pub fn geometry(&self) -> &Geometry {
     &self.geometry
   }
 
-  pub fn window_area (&self) -> &Geometry {
+  pub fn window_area(&self) -> &Geometry {
     &self.window_area
   }
 
-  pub fn index (&self) -> usize {
+  pub fn index(&self) -> usize {
     self.index
   }
 }
 
-static mut monitors: Vec<Monitor> = Vec::new ();
+static mut monitors: Vec<Monitor> = Vec::new();
 static mut max_width: u32 = 0;
 static mut max_height: u32 = 0;
 
-pub unsafe fn query () {
-  if let Some (screens) = display.query_screens () {
-    log::info! ("Monitors:");
-    for screen in screens.iter () {
-      log::info! (
+pub unsafe fn query() {
+  if let Some(screens) = display.query_screens() {
+    log::info!("Monitors:");
+    for screen in screens.iter() {
+      log::info!(
         "  {}: {}x{}+{}+{}",
         screen.screen_number,
         screen.width,
@@ -67,13 +67,13 @@ pub unsafe fn query () {
     max_height = 0;
     let mut index = 0;
     monitors = screens
-      .iter ()
-      .map (|info| {
-        max_width = u32::max (max_width, info.width as u32);
-        max_height = u32::max (max_height, info.height as u32);
-        let mut mon = Monitor::new (
+      .iter()
+      .map(|info| {
+        max_width = u32::max(max_width, info.width as u32);
+        max_height = u32::max(max_height, info.height as u32);
+        let mut mon = Monitor::new(
           info.screen_number,
-          Geometry::from_parts (
+          Geometry::from_parts(
             info.x_org as i32,
             info.y_org as i32,
             info.width as u32,
@@ -84,38 +84,38 @@ pub unsafe fn query () {
         index += 1;
         mon
       })
-      .collect ();
+      .collect();
   } else {
-    log::info! ("Xinerama inacitve");
-    log::info! ("Display size: {}x{}", screen_size.w, screen_size.h);
-    monitors.push (Monitor::new (0, screen_size));
+    log::info!("Xinerama inacitve");
+    log::info!("Display size: {}x{}", screen_size.w, screen_size.h);
+    monitors.push(Monitor::new(0, screen_size));
     max_width = screen_size.w;
     max_height = screen_size.h;
   }
 }
 
-pub fn main () -> &'static Monitor {
+pub fn main() -> &'static Monitor {
   // isn't it always the first?
   unsafe { &monitors }
-    .iter ()
-    .find (|m| m.number () == 0)
-    .unwrap_or_else (|| unsafe { &monitors }.first ().unwrap ())
+    .iter()
+    .find(|m| m.number() == 0)
+    .unwrap_or_else(|| unsafe { &monitors }.first().unwrap())
 }
 
-fn find_closest (x: i32, y: i32) -> &'static Monitor {
-  fn distance (x: i32, y: i32, g: &Geometry) -> f32 {
-    let dx = i32::max (0, i32::max (g.x - x, x - g.x + g.w as i32)) as f32;
-    let dy = i32::max (0, i32::max (g.y - y, y - g.y + g.h as i32)) as f32;
-    (dx * dx + dy * dy).sqrt ()
+fn find_closest(x: i32, y: i32) -> &'static Monitor {
+  fn distance(x: i32, y: i32, g: &Geometry) -> f32 {
+    let dx = i32::max(0, i32::max(g.x - x, x - g.x + g.w as i32)) as f32;
+    let dy = i32::max(0, i32::max(g.y - y, y - g.y + g.h as i32)) as f32;
+    (dx * dx + dy * dy).sqrt()
   }
-  if unsafe { monitors.len () } == 1 {
-    return main ();
+  if unsafe { monitors.len() } == 1 {
+    return main();
   }
   let mut idx = 0;
   unsafe {
-    let mut min_d = distance (x, y, &monitors[0].geometry);
-    for (i, mon) in monitors.iter ().enumerate ().skip (1) {
-      let d = distance (x, y, &mon.geometry);
+    let mut min_d = distance(x, y, &monitors[0].geometry);
+    for (i, mon) in monitors.iter().enumerate().skip(1) {
+      let d = distance(x, y, &mon.geometry);
       if d < min_d {
         min_d = d;
         idx = i;
@@ -127,36 +127,33 @@ fn find_closest (x: i32, y: i32) -> &'static Monitor {
 
 /// Returns the monitor containing the given point. If no monitor contains it
 /// the main monitor is returned.
-pub fn at (x: i32, y: i32) -> &'static Monitor {
+pub fn at(x: i32, y: i32) -> &'static Monitor {
   unsafe { &monitors }
-    .iter ()
-    .find (|m| m.geometry.contains (x, y))
-    .unwrap_or_else (|| find_closest (x, y))
+    .iter()
+    .find(|m| m.geometry.contains(x, y))
+    .unwrap_or_else(|| find_closest(x, y))
 }
 
 /// Gets the monitor containing the client.
-pub fn containing (client: &Client) -> &'static Monitor {
+pub fn containing(client: &Client) -> &'static Monitor {
   // We use the saved geometry so when moving a snapped client we can just
   // move it's saved geometry and re-snap it.
   // For unsnapped windows this is the same as `frame_geometry`.
-  let (x, y) = client.saved_geometry ().center_point ();
-  at (x, y)
+  let (x, y) = client.saved_geometry().center_point();
+  at(x, y)
 }
 
-pub fn get (number: i32) -> Option<&'static Monitor> {
-  unsafe { monitors.iter () }.find (|m| m.number == number)
+pub fn get(number: i32) -> Option<&'static Monitor> {
+  unsafe { monitors.iter() }.find(|m| m.number == number)
 }
 
-pub fn at_index (idx: usize) -> &'static Monitor {
+pub fn at_index(idx: usize) -> &'static Monitor {
   unsafe { &monitors[idx] }
 }
 
-pub fn set_window_areas (
-  main_margin: (i32, i32, i32, i32),
-  secondary_margin: (i32, i32, i32, i32),
-) {
-  for monitor in unsafe { monitors.iter_mut () } {
-    monitor.set_window_area (if monitor.number == 0 {
+pub fn set_window_areas(main_margin: (i32, i32, i32, i32), secondary_margin: (i32, i32, i32, i32)) {
+  for monitor in unsafe { monitors.iter_mut() } {
+    monitor.set_window_area(if monitor.number == 0 {
       main_margin
     } else {
       secondary_margin
@@ -164,19 +161,19 @@ pub fn set_window_areas (
   }
 }
 
-pub unsafe fn update () -> bool {
-  let old = monitors.clone ();
-  monitors.clear ();
-  query ();
-  !(old.len () == monitors.len () && monitors.iter ().zip (&old).all (|(new, old)| new == old))
+pub unsafe fn update() -> bool {
+  let old = monitors.clone();
+  monitors.clear();
+  query();
+  !(old.len() == monitors.len() && monitors.iter().zip(&old).all(|(new, old)| new == old))
 }
 
 /// Maximum width and height of any monitor (both values don't need to come from
 /// the same monitor).
-pub fn max_size () -> (u32, u32) {
+pub fn max_size() -> (u32, u32) {
   unsafe { (max_width, max_height) }
 }
 
-pub fn count () -> usize {
-  unsafe { monitors.len () }
+pub fn count() -> usize {
+  unsafe { monitors.len() }
 }

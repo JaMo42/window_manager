@@ -16,58 +16,58 @@ pub struct Info {
 }
 
 impl Info {
-  pub const fn new () -> Self {
+  pub const fn new() -> Self {
     Self {
       version: 0,
       flags: 0,
     }
   }
 
-  pub unsafe fn query (&mut self, window: Window) -> bool {
+  pub unsafe fn query(&mut self, window: Window) -> bool {
     // TODO: this generates a lot of BadWindow errors for some reason
-    if let Some (data) = property::get_data_for_array::<u32, _> (
+    if let Some(data) = property::get_data_for_array::<u32, _>(
       window,
       XEmbed::Info,
-      property::atom (XEmbed::Info),
+      property::atom(XEmbed::Info),
       2,
       0,
     ) {
-      self.version = data.value_at (0);
-      self.flags = data.value_at (0);
+      self.version = data.value_at(0);
+      self.flags = data.value_at(0);
       true
     } else {
       false
     }
   }
 
-  pub fn version (&self) -> u32 {
+  pub fn version(&self) -> u32 {
     self.version
   }
 
-  pub fn is_mapped (&self) -> bool {
+  pub fn is_mapped(&self) -> bool {
     (self.flags & FLAG_MAPPED) == FLAG_MAPPED
   }
 }
 
-pub unsafe fn send_message (recipient: Window, msg: c_long, d1: c_long, d2: c_long, d3: c_long) {
-  recipient.send_client_message (|message| {
-    message.message_type = property::atom (XEmbed::XEmbed);
+pub unsafe fn send_message(recipient: Window, msg: c_long, d1: c_long, d2: c_long, d3: c_long) {
+  recipient.send_client_message(|message| {
+    message.message_type = property::atom(XEmbed::XEmbed);
     message.format = 32;
-    message.data.set_long (0, CurrentTime as c_long);
-    message.data.set_long (1, msg);
-    message.data.set_long (2, d1);
-    message.data.set_long (3, d2);
-    message.data.set_long (4, d3);
+    message.data.set_long(0, CurrentTime as c_long);
+    message.data.set_long(1, msg);
+    message.data.set_long(2, d1);
+    message.data.set_long(3, d2);
+    message.data.set_long(4, d3);
   });
-  display.sync (false);
+  display.sync(false);
 }
 
-pub unsafe fn embed (window: Window, parent: Window, version: u32) {
-  send_message (
+pub unsafe fn embed(window: Window, parent: Window, version: u32) {
+  send_message(
     window,
     EMBEDDED_NOTIFY,
     0,
-    parent.handle () as c_long,
-    u32::min (version, VERSION) as i64,
+    parent.handle() as c_long,
+    u32::min(version, VERSION) as i64,
   );
 }

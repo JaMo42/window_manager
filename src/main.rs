@@ -57,100 +57,97 @@ use workspace::*;
 use x::{window::To_XWindow, Display, Window, XDisplay, XNone, XWindow};
 
 mod paths {
-  pub static mut config: String = String::new ();
-  pub static mut autostartrc: String = String::new ();
-  pub static mut logfile: String = String::new ();
-  pub static mut resource_dir: String = String::new ();
-  pub static mut colors_dir: String = String::new ();
+  pub static mut config: String = String::new();
+  pub static mut autostartrc: String = String::new();
+  pub static mut logfile: String = String::new();
+  pub static mut resource_dir: String = String::new();
+  pub static mut colors_dir: String = String::new();
 
-  pub unsafe fn load () {
-    let config_dir = if let Ok (xdg_config_home) = std::env::var ("XDG_CONFIG_HOME") {
-      format! ("{}/window_manager", xdg_config_home)
+  pub unsafe fn load() {
+    let config_dir = if let Ok(xdg_config_home) = std::env::var("XDG_CONFIG_HOME") {
+      format!("{}/window_manager", xdg_config_home)
     } else {
-      format! (
-        "{}/.config/window_manager",
-        std::env::var ("HOME").unwrap ()
-      )
+      format!("{}/.config/window_manager", std::env::var("HOME").unwrap())
     };
-    if std::fs::create_dir_all (&config_dir).is_err () {
-      my_panic! ("Could not create configuration directory: {}", config_dir);
+    if std::fs::create_dir_all(&config_dir).is_err() {
+      my_panic!("Could not create configuration directory: {}", config_dir);
     }
-    config = format! ("{}/config.toml", config_dir);
-    autostartrc = format! ("{}/autostartrc", config_dir);
-    logfile = format! ("{}/log.txt", config_dir);
-    resource_dir = format! ("{}/res", config_dir);
-    colors_dir = format! ("{}/colors", config_dir);
+    config = format!("{}/config.toml", config_dir);
+    autostartrc = format!("{}/autostartrc", config_dir);
+    logfile = format!("{}/log.txt", config_dir);
+    resource_dir = format!("{}/res", config_dir);
+    colors_dir = format!("{}/colors", config_dir);
   }
 }
 
-unsafe extern "C" fn x_error (my_display: XDisplay, event: *mut XErrorEvent) -> c_int {
+unsafe extern "C" fn x_error(my_display: XDisplay, event: *mut XErrorEvent) -> c_int {
   const ERROR_TEXT_SIZE: usize = 1024;
   let mut error_text_buf: [c_char; ERROR_TEXT_SIZE] = [0; ERROR_TEXT_SIZE];
   let error_text = &mut error_text_buf as *mut c_char;
-  XGetErrorText (
+  XGetErrorText(
     my_display,
     (*event).error_code as i32,
     error_text,
     ERROR_TEXT_SIZE as i32,
   );
-  let error_msg = string_from_ptr! (error_text);
-  eprintln! ("window_manager|x-error: {}", error_msg);
-  log::error! ("\x1b[31mX Error: {}\x1b[0m", error_msg);
+  let error_msg = string_from_ptr!(error_text);
+  eprintln!("window_manager|x-error: {}", error_msg);
+  log::error!("\x1b[31mX Error: {}\x1b[0m", error_msg);
   0
 }
 
-unsafe fn connect () {
-  x::init_threads ();
-  display = Display::connect (None);
-  root = Window::from_handle (&display, display.root ());
-  screen_size = Geometry::from_parts (0, 0, display.width (), display.height ());
+unsafe fn connect() {
+  x::init_threads();
+  display = Display::connect(None);
+  root = Window::from_handle(&display, display.root());
+  screen_size = Geometry::from_parts(0, 0, display.width(), display.height());
 }
 
-unsafe fn update_numlock_mask () {
-  let modmap = display.get_modifier_mapping ();
+unsafe fn update_numlock_mask() {
+  let modmap = display.get_modifier_mapping();
   numlock_mask = 0;
   'outer: for i in 0..8 {
     for j in 0..(*modmap).max_keypermod {
       let check = *(*modmap)
         .modifiermap
-        .add ((i * (*modmap).max_keypermod + j) as usize);
-      if check == display.keysym_to_keycode (x11::keysym::XK_Num_Lock as KeySym) {
+        .add((i * (*modmap).max_keypermod + j) as usize);
+      if check == display.keysym_to_keycode(x11::keysym::XK_Num_Lock as KeySym) {
         numlock_mask = 1 << i;
         break 'outer;
       }
     }
   }
-  XFreeModifiermap (modmap);
+  XFreeModifiermap(modmap);
 }
 
-unsafe fn grab_key_with_toggle_mods (code: u32, modifiers: u32) {
+unsafe fn grab_key_with_toggle_mods(code: u32, modifiers: u32) {
   for extra in [0, LockMask, numlock_mask, LockMask | numlock_mask] {
-    display.grab_key (code, modifiers | extra);
+    display.grab_key(code, modifiers | extra);
   }
 }
 
-unsafe fn ungrab_key_with_toggle_mods (code: u32, modifiers: u32) {
+unsafe fn ungrab_key_with_toggle_mods(code: u32, modifiers: u32) {
   for extra in [0, LockMask, numlock_mask, LockMask | numlock_mask] {
-    display.ungrab_key (code, modifiers | extra);
+    display.ungrab_key(code, modifiers | extra);
   }
 }
 
-unsafe fn grab_keys () {
-  update_numlock_mask ();
-  display.ungrab_key (AnyKey as u32, AnyModifier);
-  for key in (*config).key_binds.keys () {
-    grab_key_with_toggle_mods (key.code, key.modifiers);
+unsafe fn grab_keys() {
+  update_numlock_mask();
+  display.ungrab_key(AnyKey as u32, AnyModifier);
+  for key in (*config).key_binds.keys() {
+    grab_key_with_toggle_mods(key.code, key.modifiers);
   }
 }
 
-unsafe fn grab_buttons () {
-  display.ungrab_button (AnyButton as u32, AnyModifier);
-  display.grab_button (1, (*config).modifier);
-  display.grab_button (1, (*config).modifier | MOD_SHIFT);
-  display.grab_button (3, (*config).modifier);
+unsafe fn grab_buttons() {
+  display.ungrab_button(AnyButton as u32, AnyModifier);
+  display.grab_button(1, (*config).modifier);
+  display.grab_button(1, (*config).modifier | MOD_SHIFT);
+  display.grab_button(3, (*config).modifier);
 }
 
-unsafe fn select_input (mut mask: c_long) {
+unsafe fn select_input(mut mask: c_long) {
   if mask == 0 {
     mask = SubstructureRedirectMask
       | SubstructureNotifyMask
@@ -160,65 +157,65 @@ unsafe fn select_input (mut mask: c_long) {
       | StructureNotifyMask
       | PropertyChangeMask;
   }
-  root.change_event_mask (mask);
+  root.change_event_mask(mask);
 }
 
-fn run_autostartrc () {
+fn run_autostartrc() {
   use std::process::{Command, Stdio};
   let path = unsafe { &paths::autostartrc };
-  if std::path::Path::new (path).exists () {
-    Command::new ("bash")
-      .arg (path.as_str ())
-      .stdout (Stdio::null ())
-      .stderr (Stdio::null ())
-      .spawn ()
-      .expect ("failed to run autostartrc");
+  if std::path::Path::new(path).exists() {
+    Command::new("bash")
+      .arg(path.as_str())
+      .stdout(Stdio::null())
+      .stderr(Stdio::null())
+      .spawn()
+      .expect("failed to run autostartrc");
   } else {
-    log::info! ("No autostartrc found");
+    log::info!("No autostartrc found");
   }
-  log::info! ("Ran autostartrc");
+  log::info!("Ran autostartrc");
 }
 
-unsafe fn init () {
-  wm_context = x::unique_context ();
-  wm_winkind_context = x::unique_context ();
-  property::load_atoms ();
-  property::init_set_root_properties ();
-  workspaces.reserve ((*config).workspace_count);
+unsafe fn init() {
+  wm_context = x::unique_context();
+  wm_winkind_context = x::unique_context();
+  property::load_atoms();
+  property::init_set_root_properties();
+  workspaces.reserve((*config).workspace_count);
   for _ in 0..(*config).workspace_count {
-    let index = workspaces.len ();
-    workspaces.push (Workspace::new (index));
+    let index = workspaces.len();
+    workspaces.push(Workspace::new(index));
   }
-  workspaces[0].split_handles_visible (true);
-  x::set_error_handler (x_error);
-  root.set_background (&(*config).colors.background);
-  root.clear ();
-  cursor::load_cursors ();
-  grab_keys ();
-  grab_buttons ();
-  select_input (0);
+  workspaces[0].split_handles_visible(true);
+  x::set_error_handler(x_error);
+  root.set_background(&(*config).colors.background);
+  root.clear();
+  cursor::load_cursors();
+  grab_keys();
+  grab_buttons();
+  select_input(0);
   // Ignore SIGCHLD so we don't leave defunct processes behind
-  process::ignore_sigchld (true);
-  run_autostartrc ();
-  if cfg! (feature = "bar") {
-    bar = Bar::create ();
-    bar.build ();
-    bar::tray = bar::tray_manager::Tray_Manager::create (bar.height);
+  process::ignore_sigchld(true);
+  run_autostartrc();
+  if cfg!(feature = "bar") {
+    bar = Bar::create();
+    bar.build();
+    bar::tray = bar::tray_manager::Tray_Manager::create(bar.height);
     if (*config).bar_update_interval > 0 {
-      bar::update_thread = Some (Update_Thread::new (
+      bar::update_thread = Some(Update_Thread::new(
         (*config).bar_update_interval,
         bar::update,
       ));
     }
   }
-  dock::create ();
-  client::set_border_info ();
-  notifications::init ();
-  session_manager::init ();
-  xdnd::listen ();
+  dock::create();
+  client::set_border_info();
+  notifications::init();
+  session_manager::init();
+  xdnd::listen();
 }
 
-const fn event_name (type_: c_int) -> &'static str {
+const fn event_name(type_: c_int) -> &'static str {
   const EVENT_NAMES: [&str; 36] = [
     "",
     "",
@@ -260,17 +257,17 @@ const fn event_name (type_: c_int) -> &'static str {
   EVENT_NAMES[type_ as usize]
 }
 
-unsafe fn handle_unknown_event (event: &XEvent) -> bool {
+unsafe fn handle_unknown_event(event: &XEvent) -> bool {
   use std::sync::Once;
   use x11::xfixes::XFixesSelectionNotifyEvent;
   static mut selection_notify: i32 = -1;
-  static INIT: Once = Once::new ();
-  INIT.call_once (|| {
-    selection_notify = xdnd::get_selection_notify_event_type ();
+  static INIT: Once = Once::new();
+  INIT.call_once(|| {
+    selection_notify = xdnd::get_selection_notify_event_type();
   });
   if event.type_ == selection_notify {
-    if cfg! (feature = "xdnd-hack") {
-      xdnd::selection_notify (&*(event as *const XEvent as *const XFixesSelectionNotifyEvent));
+    if cfg!(feature = "xdnd-hack") {
+      xdnd::selection_notify(&*(event as *const XEvent as *const XFixesSelectionNotifyEvent));
     }
   } else {
     return false;
@@ -278,106 +275,106 @@ unsafe fn handle_unknown_event (event: &XEvent) -> bool {
   true
 }
 
-unsafe fn run () {
-  let mut event: XEvent = zeroed! ();
+unsafe fn run() {
+  let mut event: XEvent = zeroed!();
   running = true;
-  display.sync (false);
+  display.sync(false);
   while running {
-    display.next_event (&mut event);
-    if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
+    display.next_event(&mut event);
+    if std::option_env!("WM_LOG_ALL_EVENTS").is_some() {
       if event.type_ as usize > 35 {
-        log::warn! (
+        log::warn!(
           "\x1b[2mEvent: \x1b[33m{:>2} Greater than LastEvent: {}\x1b[0m",
           event.type_,
           LASTEvent
         );
       } else {
-        log::trace! (
+        log::trace!(
           "\x1b[2mEvent: \x1b[36m{:>2} \x1b[32m{} \x1b[39mby \x1b[36m{}\x1b[0m",
           event.type_,
-          event_name (event.type_),
+          event_name(event.type_),
           event.any.window
         );
       }
     }
     match event.type_ {
-      ButtonPress => event::button_press (&event.button),
-      ButtonRelease => event::button_relase (),
-      ClientMessage => event::client_message (&event.client_message),
-      ConfigureNotify => event::configure_notify (&event.configure),
-      ConfigureRequest => event::configure_request (&event.configure_request),
-      DestroyNotify => event::destroy_notify (&event.destroy_window),
-      EnterNotify => event::crossing (&event.crossing),
-      Expose => event::expose (&event.expose),
-      KeyPress => event::key_press (&event.key),
-      LeaveNotify => event::crossing (&event.crossing),
-      MapNotify => event::map_notify (&event.map),
-      MappingNotify => event::mapping_notify (&event.mapping),
-      MapRequest => event::map_request (&event.map_request),
-      MotionNotify => event::motion (&event.motion),
-      PropertyNotify => event::property_notify (&event.property),
-      UnmapNotify => event::unmap_notify (&event.unmap),
-      SessionManagerEvent => session_manager::manager ().process (),
+      ButtonPress => event::button_press(&event.button),
+      ButtonRelease => event::button_relase(),
+      ClientMessage => event::client_message(&event.client_message),
+      ConfigureNotify => event::configure_notify(&event.configure),
+      ConfigureRequest => event::configure_request(&event.configure_request),
+      DestroyNotify => event::destroy_notify(&event.destroy_window),
+      EnterNotify => event::crossing(&event.crossing),
+      Expose => event::expose(&event.expose),
+      KeyPress => event::key_press(&event.key),
+      LeaveNotify => event::crossing(&event.crossing),
+      MapNotify => event::map_notify(&event.map),
+      MappingNotify => event::mapping_notify(&event.mapping),
+      MapRequest => event::map_request(&event.map_request),
+      MotionNotify => event::motion(&event.motion),
+      PropertyNotify => event::property_notify(&event.property),
+      UnmapNotify => event::unmap_notify(&event.unmap),
+      SessionManagerEvent => session_manager::manager().process(),
       _ => {
-        if handle_unknown_event (&event) {
+        if handle_unknown_event(&event) {
           continue;
         }
-        if std::option_env! ("WM_LOG_ALL_EVENTS").is_some () {
-          log::trace! ("\x1b[2m     : Unhandeled\x1b[0m");
+        if std::option_env!("WM_LOG_ALL_EVENTS").is_some() {
+          log::trace!("\x1b[2m     : Unhandeled\x1b[0m");
         }
       }
     }
   }
 }
 
-unsafe fn cleanup () {
+unsafe fn cleanup() {
   // Close all open clients
-  log::trace! ("Closing clients");
-  for ws in workspaces.iter_mut () {
-    for c in ws.iter_mut () {
-      c.window.kill_client ();
-      c.destroy ();
-      c.window.destroy ();
+  log::trace!("Closing clients");
+  for ws in workspaces.iter_mut() {
+    for c in ws.iter_mut() {
+      c.window.kill_client();
+      c.destroy();
+      c.window.destroy();
     }
   }
   // Close meta windows
-  log::trace! ("Killing meta windows");
-  for w in meta_windows.iter () {
-    w.kill_client ();
-    w.destroy ();
+  log::trace!("Killing meta windows");
+  for w in meta_windows.iter() {
+    w.kill_client();
+    w.destroy();
   }
   // Un-grab keys and buttons
-  log::trace! ("Un-grabbing keys and buttons");
-  for key in (*config).key_binds.keys () {
-    ungrab_key_with_toggle_mods (key.code, key.modifiers);
+  log::trace!("Un-grabbing keys and buttons");
+  for key in (*config).key_binds.keys() {
+    ungrab_key_with_toggle_mods(key.code, key.modifiers);
   }
-  display.ungrab_button (1, (*config).modifier);
-  display.ungrab_button (1, (*config).modifier | MOD_SHIFT);
-  display.ungrab_button (3, (*config).modifier);
+  display.ungrab_button(1, (*config).modifier);
+  display.ungrab_button(1, (*config).modifier | MOD_SHIFT);
+  display.ungrab_button(3, (*config).modifier);
   // Properties
-  log::trace! ("Removing EWMH root properties");
-  property::wm_check_window.destroy ();
-  property::delete (root, Net::ActiveWindow);
+  log::trace!("Removing EWMH root properties");
+  property::wm_check_window.destroy();
+  property::delete(root, Net::ActiveWindow);
   // Components
-  log::trace! ("Freeing cursors");
-  cursor::free_cursors ();
-  log::trace! ("Terminating dbus services");
-  notifications::quit ();
-  session_manager::quit ();
-  log::trace! ("Destroying tooltip window");
-  tooltip::tooltip.destroy ();
-  log::trace! ("Destroying bar");
-  if let Some (t) = bar::update_thread.take () {
-    t.stop ();
+  log::trace!("Freeing cursors");
+  cursor::free_cursors();
+  log::trace!("Terminating dbus services");
+  notifications::quit();
+  session_manager::quit();
+  log::trace!("Destroying tooltip window");
+  tooltip::tooltip.destroy();
+  log::trace!("Destroying bar");
+  if let Some(t) = bar::update_thread.take() {
+    t.stop();
   }
-  bar.destroy ();
-  log::trace! ("Destroying drawing context");
-  (*draw).destroy ();
-  log::trace! ("Destroying dock");
-  dock::destroy ();
+  bar.destroy();
+  log::trace!("Destroying drawing context");
+  (*draw).destroy();
+  log::trace!("Destroying dock");
+  dock::destroy();
 }
 
-fn get_window_geometry (window: Window) -> Geometry {
+fn get_window_geometry(window: Window) -> Geometry {
   let mut x: c_int = 0;
   let mut y: c_int = 0;
   let mut w: c_uint = 0;
@@ -386,9 +383,9 @@ fn get_window_geometry (window: Window) -> Geometry {
   let mut _depth: c_uint = 0;
   let mut _root: XWindow = 0;
   unsafe {
-    XGetGeometry (
-      display.as_raw (),
-      window.handle (),
+    XGetGeometry(
+      display.as_raw(),
+      window.handle(),
       &mut _root,
       &mut x,
       &mut y,
@@ -401,50 +398,50 @@ fn get_window_geometry (window: Window) -> Geometry {
   Geometry { x, y, w, h }
 }
 
-unsafe fn window_title (window: Window) -> String {
+unsafe fn window_title(window: Window) -> String {
   // _NET_WM_NAME
-  if let Some (net_wm_name) = property::get_string (window, Net::WMName) {
+  if let Some(net_wm_name) = property::get_string(window, Net::WMName) {
     net_wm_name
   }
   // XA_WM_NAME
-  else if let Some (xa_wm_name) = property::get_string (window, XA_WM_NAME) {
+  else if let Some(xa_wm_name) = property::get_string(window, XA_WM_NAME) {
     xa_wm_name
   }
   // XFetchName / Default
   else {
-    let mut title_c_str: *mut c_char = std::ptr::null_mut ();
-    XFetchName (display.as_raw (), window.handle (), &mut title_c_str);
-    if title_c_str.is_null () {
-      "?".to_string ()
+    let mut title_c_str: *mut c_char = std::ptr::null_mut();
+    XFetchName(display.as_raw(), window.handle(), &mut title_c_str);
+    if title_c_str.is_null() {
+      "?".to_string()
     } else {
-      let title = string_from_ptr! (title_c_str);
-      XFree (title_c_str as *mut c_void);
+      let title = string_from_ptr!(title_c_str);
+      XFree(title_c_str as *mut c_void);
       title
     }
   }
 }
 
-unsafe fn update_client_list () {
+unsafe fn update_client_list() {
   // We can't delete a window from the client list property so we have to
   // rebuild it when deleting a window
-  property::delete (root, Net::ClientList);
-  for ws in workspaces.iter () {
-    for c in ws.iter () {
-      property::append (root, Net::ClientList, XA_WINDOW, 32, &c.window.handle (), 1);
+  property::delete(root, Net::ClientList);
+  for ws in workspaces.iter() {
+    for c in ws.iter() {
+      property::append(root, Net::ClientList, XA_WINDOW, 32, &c.window.handle(), 1);
     }
   }
 }
 
-unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
-  let window = window.to_xwindow ();
-  let mut data: XPointer = std::ptr::null_mut ();
-  if window == root.handle () {
-    Some (Window_Kind::Root)
+unsafe fn get_window_kind<W: To_XWindow>(window: W) -> Option<Window_Kind> {
+  let window = window.to_xwindow();
+  let mut data: XPointer = std::ptr::null_mut();
+  if window == root.handle() {
+    Some(Window_Kind::Root)
   } else if window == XNone
-    || XFindContext (display.as_raw (), window, wm_winkind_context, &mut data) != 0
+    || XFindContext(display.as_raw(), window, wm_winkind_context, &mut data) != 0
   {
     None
-  } else if !data.is_null () {
+  } else if !data.is_null() {
     // Can't do conversions in the match
     const kind_root: usize = Window_Kind::Root as usize;
     const kind_client: usize = Window_Kind::Client as usize;
@@ -459,7 +456,7 @@ unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
     const kind_dock_show: usize = Window_Kind::Dock_Show as usize;
     const kind_context_menu: usize = Window_Kind::Context_Menu as usize;
     const kind_split_handle: usize = Window_Kind::Split_Handle as usize;
-    Some (match data as usize {
+    Some(match data as usize {
       kind_root => Window_Kind::Root,
       kind_client => Window_Kind::Client,
       kind_frame => Window_Kind::Frame,
@@ -474,7 +471,7 @@ unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
       kind_context_menu => Window_Kind::Context_Menu,
       kind_split_handle => Window_Kind::Split_Handle,
       _ => {
-        my_panic! ("Invalid Window_Kind value on {}: {}", window, data as usize);
+        my_panic!("Invalid Window_Kind value on {}: {}", window, data as usize);
       }
     })
   } else {
@@ -482,12 +479,12 @@ unsafe fn get_window_kind<W: To_XWindow> (window: W) -> Option<Window_Kind> {
   }
 }
 
-unsafe fn set_window_kind (window: Window, kind: Window_Kind) {
-  window.save_context (wm_winkind_context, kind as usize as XPointer);
+unsafe fn set_window_kind(window: Window, kind: Window_Kind) {
+  window.save_context(wm_winkind_context, kind as usize as XPointer);
 }
 
-unsafe fn is_kind<W: To_XWindow> (window: W, kind: Window_Kind) -> bool {
-  if let Some (window_kind) = get_window_kind (window) {
+unsafe fn is_kind<W: To_XWindow>(window: W, kind: Window_Kind) -> bool {
+  if let Some(window_kind) = get_window_kind(window) {
     kind == window_kind
   } else {
     false
@@ -497,110 +494,110 @@ unsafe fn is_kind<W: To_XWindow> (window: W, kind: Window_Kind) -> bool {
 /// Sets the `_NET_WM_WINDOW_OPACITY` property. This has no effect on the
 /// window manager but a compositor may use this to set the opacity of the
 /// entire window.
-unsafe fn set_window_opacity (window: Window, percent: u32) {
+unsafe fn set_window_opacity(window: Window, percent: u32) {
   if percent != 100 {
     let value = 42949672u32 * percent;
-    property::set (window, Net::WMWindowOpacity, XA_CARDINAL, 32, &value, 1);
+    property::set(window, Net::WMWindowOpacity, XA_CARDINAL, 32, &value, 1);
   }
 }
 
 #[allow(dead_code)]
-unsafe fn list_properties (window: Window) {
-  log::info! ("Properties for {} ({})", window_title (window), window);
+unsafe fn list_properties(window: Window) {
+  log::info!("Properties for {} ({})", window_title(window), window);
   let atoms = {
     let mut n = 0;
-    let p = XListProperties (display.as_raw (), window.handle (), &mut n);
-    std::slice::from_raw_parts (p, n as usize)
+    let p = XListProperties(display.as_raw(), window.handle(), &mut n);
+    std::slice::from_raw_parts(p, n as usize)
   };
   for atom in atoms {
-    log::info! ("  {}", display.get_atom_name (*atom));
+    log::info!("  {}", display.get_atom_name(*atom));
   }
 }
 
 /// Remove the hitbox of the given window.
-fn mouse_passthrough (window: Window) {
+fn mouse_passthrough(window: Window) {
   use x11::xfixes::*;
   unsafe {
-    let region = XFixesCreateRegion (display.as_raw (), std::ptr::null_mut (), 0);
+    let region = XFixesCreateRegion(display.as_raw(), std::ptr::null_mut(), 0);
     // 2 = ShapeInput
-    XFixesSetWindowShapeRegion (display.as_raw (), window.handle (), 2, 0, 0, region);
-    XFixesDestroyRegion (display.as_raw (), region);
+    XFixesSetWindowShapeRegion(display.as_raw(), window.handle(), 2, 0, 0, region);
+    XFixesDestroyRegion(display.as_raw(), region);
   }
 }
 
-unsafe fn configure_logging () {
+unsafe fn configure_logging() {
   use log::LevelFilter;
   use log4rs::{
     append::file::FileAppender,
     config::{Appender, Config, Logger, Root},
     encode::pattern::PatternEncoder,
   };
-  let log_file = FileAppender::builder ()
-    .append (false)
-    .encoder (Box::new (PatternEncoder::new ("{l:<5}| {m}\n")))
-    .build (paths::logfile.as_str ())
-    .unwrap ();
-  let log_config = Config::builder ()
-    .appender (Appender::builder ().build ("log_file", Box::new (log_file)))
+  let log_file = FileAppender::builder()
+    .append(false)
+    .encoder(Box::new(PatternEncoder::new("{l:<5}| {m}\n")))
+    .build(paths::logfile.as_str())
+    .unwrap();
+  let log_config = Config::builder()
+    .appender(Appender::builder().build("log_file", Box::new(log_file)))
     // Enable logging for this crate
-    .logger (Logger::builder ().appender ("log_file").build (
+    .logger(Logger::builder().appender("log_file").build(
       "window_manager",
-      if cfg! (debug_assertions) {
+      if cfg!(debug_assertions) {
         LevelFilter::Trace
       } else {
         LevelFilter::Info
       },
     ))
     // librsvg and zbus use the root logger so turn that off
-    .build (Root::builder ().build (LevelFilter::Off))
-    .unwrap ();
-  log4rs::init_config (log_config).unwrap ();
+    .build(Root::builder().build(LevelFilter::Off))
+    .unwrap();
+  log4rs::init_config(log_config).unwrap();
 }
 
-fn main () {
+fn main() {
   unsafe {
-    paths::load ();
-    configure_logging ();
+    paths::load();
+    configure_logging();
     // Run window manager
-    std::env::set_var ("WM", "window_manager");
-    log::trace! ("Connecting to X server");
-    connect ();
-    monitors::query ();
-    log::trace! ("Loading configuration");
-    let config_instance = Config::load ();
+    std::env::set_var("WM", "window_manager");
+    log::trace!("Connecting to X server");
+    connect();
+    monitors::query();
+    log::trace!("Loading configuration");
+    let config_instance = Config::load();
     config = &config_instance;
-    let mut drawing_context_instance = Drawing_Context::new ();
+    let mut drawing_context_instance = Drawing_Context::new();
     draw = &mut drawing_context_instance;
-    draw::load_resources ();
-    log::trace! ("Initializing");
-    init ();
-    log::trace! ("Running");
-    run ();
-    log::trace! ("Cleaning up");
-    cleanup ();
-    log_error! (
-      match quit_reason.as_str () {
+    draw::load_resources();
+    log::trace!("Initializing");
+    init();
+    log::trace!("Running");
+    run();
+    log::trace!("Cleaning up");
+    cleanup();
+    log_error!(
+      match quit_reason.as_str() {
         "logout" => {
-          log::info! ("Logging out");
+          log::info!("Logging out");
           // not implemented
           //system_shutdown::logout ()
-          platform::logout ()
+          platform::logout()
         }
         "restart" => {
-          log::info! ("Rebooting system");
-          system_shutdown::reboot ()
+          log::info!("Rebooting system");
+          system_shutdown::reboot()
         }
         "shutdown" => {
-          log::info! ("Shutting down system");
-          system_shutdown::shutdown ()
+          log::info!("Shutting down system");
+          system_shutdown::shutdown()
         }
-        _ => Ok (()),
+        _ => Ok(()),
       },
       "  Failed:"
     );
     // For some reason this quites the program so we need to handle the quit
     // reasons before
-    log::trace! ("Closing X server connection");
-    display.close ();
+    log::trace!("Closing X server connection");
+    display.close();
   }
 }

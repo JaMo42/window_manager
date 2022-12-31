@@ -1,4 +1,4 @@
-use super::core::display;
+use crate::core::display;
 use std::collections::BTreeMap;
 use std::mem::size_of;
 use x11::xft::{XftColor, XftColorAllocName};
@@ -12,7 +12,7 @@ pub struct Color {
 }
 
 impl Color {
-  pub const fn from_rgb (red: f64, green: f64, blue: f64) -> Self {
+  pub const fn from_rgb(red: f64, green: f64, blue: f64) -> Self {
     Color {
       pixel: 0,
       red,
@@ -21,13 +21,13 @@ impl Color {
     }
   }
 
-  pub unsafe fn alloc_from_hex (hex: &str) -> Self {
-    let mut xcolor: XftColor = zeroed! ();
-    XftColorAllocName (
-      display.as_raw (),
-      display.default_visual (),
-      display.default_colormap (),
-      c_str! (hex),
+  pub unsafe fn alloc_from_hex(hex: &str) -> Self {
+    let mut xcolor: XftColor = zeroed!();
+    XftColorAllocName(
+      display.as_raw(),
+      display.default_visual(),
+      display.default_colormap(),
+      c_str!(hex),
       &mut xcolor,
     );
     Color {
@@ -38,11 +38,11 @@ impl Color {
     }
   }
 
-  pub fn scale (&self, factor: f64) -> Self {
-    Self::from_rgb (
-      (self.red * factor).clamp (0.0, 1.0),
-      (self.green * factor).clamp (0.0, 1.0),
-      (self.blue * factor).clamp (0.0, 1.0),
+  pub fn scale(&self, factor: f64) -> Self {
+    Self::from_rgb(
+      (self.red * factor).clamp(0.0, 1.0),
+      (self.green * factor).clamp(0.0, 1.0),
+      (self.blue * factor).clamp(0.0, 1.0),
     )
   }
 }
@@ -50,8 +50,8 @@ impl Color {
 #[derive(Clone)]
 pub enum Color_Config {
   Default,
-  Hex (String),
-  Link (String),
+  Hex(String),
+  Link(String),
 }
 
 pub struct Color_Scheme_Config {
@@ -59,15 +59,15 @@ pub struct Color_Scheme_Config {
 }
 
 impl Color_Scheme_Config {
-  pub fn new () -> Self {
+  pub fn new() -> Self {
     Color_Scheme_Config {
-      cfg: vec! [Color_Config::Default; COLOR_COUNT],
+      cfg: vec![Color_Config::Default; COLOR_COUNT],
     }
   }
 
-  pub fn set (&mut self, elem: &str, cfg: Color_Config) -> Result<(), String> {
-    self.cfg[unsafe { color_index (elem)? }] = cfg;
-    Ok (())
+  pub fn set(&mut self, elem: &str, cfg: Color_Config) -> Result<(), String> {
+    self.cfg[unsafe { color_index(elem)? }] = cfg;
+    Ok(())
   }
 }
 
@@ -108,7 +108,7 @@ pub struct Color_Scheme {
   pub context_menu_text: Color,
   pub context_menu_divider: Color,
 }
-const COLOR_COUNT: usize = size_of::<Color_Scheme> () / size_of::<Color> ();
+const COLOR_COUNT: usize = size_of::<Color_Scheme>() / size_of::<Color>();
 const COLOR_NAMES: [&str; COLOR_COUNT] = [
   "window.focused",
   "window.focused_text",
@@ -205,78 +205,78 @@ const DEFAULT_CONFIG: [&str; COLOR_COUNT] = [
 impl std::ops::Index<usize> for Color_Scheme {
   type Output = Color;
 
-  fn index (&self, index: usize) -> &Color {
+  fn index(&self, index: usize) -> &Color {
     let p = self as *const Color_Scheme as *const Color;
-    unsafe { &*p.add (index) }
+    unsafe { &*p.add(index) }
   }
 }
 
 impl std::ops::IndexMut<usize> for Color_Scheme {
-  fn index_mut (&mut self, index: usize) -> &mut Color {
+  fn index_mut(&mut self, index: usize) -> &mut Color {
     let p = self as *mut Color_Scheme as *mut Color;
-    unsafe { &mut *p.add (index) }
+    unsafe { &mut *p.add(index) }
   }
 }
 
 impl Color_Scheme {
-  pub unsafe fn new (
+  pub unsafe fn new(
     cfg: &Color_Scheme_Config,
     defs: &BTreeMap<String, Color>,
   ) -> Result<Self, String> {
-    let mut result: Color_Scheme = zeroed! ();
+    let mut result: Color_Scheme = zeroed!();
     let mut set: [bool; COLOR_COUNT] = [false; COLOR_COUNT];
-    let mut links = Vec::<(usize, usize)>::new ();
+    let mut links = Vec::<(usize, usize)>::new();
     for i in 0..COLOR_COUNT {
       match &cfg.cfg[i] {
         Color_Config::Default => {
-          if DEFAULT_CONFIG[i].starts_with ('#') {
-            result[i] = Color::alloc_from_hex (DEFAULT_CONFIG[i]);
+          if DEFAULT_CONFIG[i].starts_with('#') {
+            result[i] = Color::alloc_from_hex(DEFAULT_CONFIG[i]);
             set[i] = true;
           } else {
-            links.push ((i, color_index (DEFAULT_CONFIG[i])?));
+            links.push((i, color_index(DEFAULT_CONFIG[i])?));
           }
         }
-        Color_Config::Hex (string) => {
-          result[i] = Color::alloc_from_hex (string.as_str ());
+        Color_Config::Hex(string) => {
+          result[i] = Color::alloc_from_hex(string.as_str());
           set[i] = true;
         }
-        Color_Config::Link (target) => {
-          if let Some (def) = defs.get (target) {
+        Color_Config::Link(target) => {
+          if let Some(def) = defs.get(target) {
             result[i] = *def;
             set[i] = true;
           } else {
-            links.push ((i, color_index (target.as_str ())?));
+            links.push((i, color_index(target.as_str())?));
           }
         }
       }
     }
 
     let mut did_change = true;
-    while did_change && !links.is_empty () {
+    while did_change && !links.is_empty() {
       did_change = false;
-      for i in (0..links.len ()).rev () {
+      for i in (0..links.len()).rev() {
         if set[links[i].1] {
           result[links[i].0] = result[links[i].1];
           set[links[i].0] = true;
-          links.remove (i);
+          links.remove(i);
           did_change = true;
         }
       }
     }
 
-    if !links.is_empty () {
-      Err ("Unresolved links in color scheme: {}".to_string ())
+    if !links.is_empty() {
+      Err("Unresolved links in color scheme: {}".to_string())
     } else {
-      Ok (result)
+      Ok(result)
     }
   }
 }
 
-unsafe fn color_index (name: &str) -> Result<usize, String> {
-  for (i, color) in COLOR_NAMES.iter ().enumerate () {
+unsafe fn color_index(name: &str) -> Result<usize, String> {
+  for (i, color) in COLOR_NAMES.iter().enumerate() {
     if *color == name {
-      return Ok (i);
+      return Ok(i);
     }
   }
-  Err (format! ("Invalid color name: {}", name))
+  Err(format!("Invalid color name: {}", name))
 }
