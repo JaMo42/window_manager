@@ -118,7 +118,7 @@ impl Item {
         }
       }
     }
-    set_window_kind(window, WindowKind::Dock_Item);
+    set_window_kind(window, WindowKind::DockItem);
     window.map();
     window.clear();
     let command = if let Some(de) = &de {

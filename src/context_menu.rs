@@ -172,7 +172,7 @@ impl ContextMenu {
       })
       .build();
     ewmh::set_window_type(window, Net::WMWindowTypePopupMenu);
-    set_window_kind(window, WindowKind::Context_Menu);
+    set_window_kind(window, WindowKind::ContextMenu);
     self.window = window;
     let (width, height) = self.redraw();
     self.window.resize(width, height);

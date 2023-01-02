@@ -70,7 +70,7 @@ impl Bar {
     set_window_opacity(window, (*config).bar_opacity);
     // We don't want to interact with the blank part, instead the widgets
     // use `Window_Kind::Status_Bar`.
-    set_window_kind(window, WindowKind::Meta_Or_Unmanaged);
+    set_window_kind(window, WindowKind::MetaOrUnmanaged);
     window.set_class_hint("Window_manager_bar", "window_manager_bar");
     window.map_raised();
     Self {

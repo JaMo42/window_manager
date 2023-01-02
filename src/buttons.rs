@@ -48,7 +48,7 @@ impl Button {
       })
       .build();
     window.save_context(wm_context, owner as *mut Client as XPointer);
-    set_window_kind(window, WindowKind::Frame_Button);
+    set_window_kind(window, WindowKind::FrameButton);
     Self {
       owner: NonNull::new_unchecked(owner as *mut Client),
       icon,

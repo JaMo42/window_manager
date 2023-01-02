@@ -16,7 +16,7 @@ impl TrayClient {
   pub fn new(window: XWindow, size: u32) -> Self {
     let window = Window::from_handle(unsafe { &display }, window);
     unsafe {
-      set_window_kind(window, WindowKind::Tray_Client);
+      set_window_kind(window, WindowKind::TrayClient);
     }
     Self {
       window,

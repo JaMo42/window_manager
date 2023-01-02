@@ -114,7 +114,7 @@ unsafe fn create_windows_and_drawing_context(
   let show_window = create_show_window(&vi, colormap);
   ewmh::set_window_type(show_window, Net::WMWindowTypeDesktop);
   set_window_opacity(show_window, 100);
-  set_window_kind(show_window, WindowKind::Dock_Show);
+  set_window_kind(show_window, WindowKind::DockShow);
   show_window.set_class_hint("Window_manager_dock", "window_manager_dock");
   show_window.map();
 

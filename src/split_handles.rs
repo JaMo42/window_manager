@@ -156,7 +156,7 @@ impl SplitHandle {
       .build();
     unsafe {
       ewmh::set_window_type(window, Net::WMWindowTypeDesktop);
-      set_window_kind(window, WindowKind::Split_Handle);
+      set_window_kind(window, WindowKind::SplitHandle);
       if g_context == XNone as i32 {
         g_context = x::unique_context();
       }

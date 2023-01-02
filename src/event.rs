@@ -31,7 +31,7 @@ pub unsafe fn button_press(event: &XButtonEvent) {
   if context_menu::click(event) {
     return;
   }
-  if is_kind(event.subwindow, WindowKind::Meta_Or_Unmanaged) {
+  if is_kind(event.subwindow, WindowKind::MetaOrUnmanaged) {
     return;
   }
   // Check for windows for which we have ButtonPressMask set
@@ -44,15 +44,15 @@ pub unsafe fn button_press(event: &XButtonEvent) {
         }
         handled = false;
       }
-      WindowKind::Status_Bar => {
+      WindowKind::StatusBar => {
         bar.click(event);
       }
-      WindowKind::Dock_Item => {
+      WindowKind::DockItem => {
         dock::click_item(event);
       }
       // See `dock::create_show_window` as to why we need handle these
-      WindowKind::Dock_Show | WindowKind::Dock => {}
-      WindowKind::Frame_Button => {
+      WindowKind::DockShow | WindowKind::Dock => {}
+      WindowKind::FrameButton => {
         if let Some(client) = win2client(event.window) {
           client.click(event.window);
         }
@@ -60,7 +60,7 @@ pub unsafe fn button_press(event: &XButtonEvent) {
       WindowKind::Notification => {
         notifications::maybe_close(event.window);
       }
-      WindowKind::Split_Handle => {
+      WindowKind::SplitHandle => {
         split_handles::click(event);
       }
       _ => {
@@ -75,7 +75,7 @@ pub unsafe fn button_press(event: &XButtonEvent) {
       return;
     }
   }
-  if is_kind(event.subwindow, WindowKind::Status_Bar) {
+  if is_kind(event.subwindow, WindowKind::StatusBar) {
     bar.click(event);
     return;
   }
@@ -123,7 +123,7 @@ pub unsafe fn motion(event: &XMotionEvent) {
       }
     }
     mouse_held = 0;
-  } else if is_kind(event.window, WindowKind::Context_Menu) {
+  } else if is_kind(event.window, WindowKind::ContextMenu) {
     context_menu::motion(event);
   } else {
     // Ignore all subsequent MotionNotify events
@@ -265,7 +265,7 @@ pub unsafe fn key_press(event: &XKeyEvent) {
   }
   last_key_and_state = key_and_state;
   last_time = event.time;
-  if is_kind(event.window, WindowKind::Context_Menu) {
+  if is_kind(event.window, WindowKind::ContextMenu) {
     context_menu::key_press(event);
   }
   if let Some(action) = (*config).get(event.keycode, event.state) {
@@ -312,7 +312,7 @@ pub unsafe fn map_request(event: &XMapRequestEvent) {
     .unwrap_or_else(|| name == "window_manager_bar")
   {
     meta_windows.push(window);
-    set_window_kind(window, WindowKind::Meta_Or_Unmanaged);
+    set_window_kind(window, WindowKind::MetaOrUnmanaged);
     window.map();
     log::info!("New meta window: {} ({})", name, window);
   } else {
@@ -517,7 +517,7 @@ pub unsafe fn mapping_notify(event: &XMappingEvent) {
 
 pub unsafe fn destroy_notify(event: &XDestroyWindowEvent) {
   let window = Window::from_handle(&display, event.window);
-  if is_kind(window, WindowKind::Tray_Client) {
+  if is_kind(window, WindowKind::TrayClient) {
     bar::tray.maybe_remove_client(event.window);
     return;
   }
@@ -542,7 +542,7 @@ pub unsafe fn crossing(event: &XCrossingEvent) {
   if let Some(kind) = get_window_kind(event.window) {
     use WindowKind::*;
     match kind {
-      Frame_Button => {
+      FrameButton => {
         if let Some(client) = win2client(event.window) {
           for b in client.buttons_mut() {
             if b.window == event.window {
@@ -551,7 +551,7 @@ pub unsafe fn crossing(event: &XCrossingEvent) {
           }
         }
       }
-      Status_Bar => {
+      StatusBar => {
         if event.type_ == EnterNotify {
           bar.enter(event.window);
         } else {
@@ -561,16 +561,16 @@ pub unsafe fn crossing(event: &XCrossingEvent) {
       Dock => {
         dock::cross(event);
       }
-      Dock_Item => {
+      DockItem => {
         dock::cross_item(event);
       }
-      Dock_Show => {
+      DockShow => {
         dock::cross_show(event);
       }
-      Context_Menu => {
+      ContextMenu => {
         context_menu::cross(event);
       }
-      Split_Handle => {
+      SplitHandle => {
         split_handles::crossing(event);
       }
       _ => {}

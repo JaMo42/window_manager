@@ -20,7 +20,7 @@ unsafe fn create_window() -> Window {
     .build();
   ewmh::set_window_type(window, property::Net::WMWindowTypeDock);
   set_window_opacity(window, (*config).bar_opacity);
-  set_window_kind(window, WindowKind::Status_Bar);
+  set_window_kind(window, WindowKind::StatusBar);
   window.map();
   window
 }

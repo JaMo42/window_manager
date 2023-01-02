@@ -87,7 +87,7 @@ impl TrayManager {
       .build();
     meta_windows.push(window);
     crate::ewmh::set_window_type(window, property::Net::WMWindowTypeDock);
-    crate::set_window_kind(window, WindowKind::Meta_Or_Unmanaged);
+    crate::set_window_kind(window, WindowKind::MetaOrUnmanaged);
     if (*config).bar_opacity != 100 {
       let atom = display.intern_atom("_NET_WM_WINDOW_OPACITY");
       let value = 42949672u32 * (*config).bar_opacity as u32;

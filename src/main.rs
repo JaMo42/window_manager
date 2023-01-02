@@ -446,30 +446,30 @@ unsafe fn get_window_kind<W: AsXWindow>(window: W) -> Option<WindowKind> {
     const kind_root: usize = WindowKind::Root as usize;
     const kind_client: usize = WindowKind::Client as usize;
     const kind_frame: usize = WindowKind::Frame as usize;
-    const kind_frame_button: usize = WindowKind::Frame_Button as usize;
-    const kind_status_bar: usize = WindowKind::Status_Bar as usize;
+    const kind_frame_button: usize = WindowKind::FrameButton as usize;
+    const kind_status_bar: usize = WindowKind::StatusBar as usize;
     const kind_notification: usize = WindowKind::Notification as usize;
-    const kind_meta_or_unmanaged: usize = WindowKind::Meta_Or_Unmanaged as usize;
-    const kind_tray_client: usize = WindowKind::Tray_Client as usize;
+    const kind_meta_or_unmanaged: usize = WindowKind::MetaOrUnmanaged as usize;
+    const kind_tray_client: usize = WindowKind::TrayClient as usize;
     const kind_dock: usize = WindowKind::Dock as usize;
-    const kind_dock_item: usize = WindowKind::Dock_Item as usize;
-    const kind_dock_show: usize = WindowKind::Dock_Show as usize;
-    const kind_context_menu: usize = WindowKind::Context_Menu as usize;
-    const kind_split_handle: usize = WindowKind::Split_Handle as usize;
+    const kind_dock_item: usize = WindowKind::DockItem as usize;
+    const kind_dock_show: usize = WindowKind::DockShow as usize;
+    const kind_context_menu: usize = WindowKind::ContextMenu as usize;
+    const kind_split_handle: usize = WindowKind::SplitHandle as usize;
     Some(match data as usize {
       kind_root => WindowKind::Root,
       kind_client => WindowKind::Client,
       kind_frame => WindowKind::Frame,
-      kind_frame_button => WindowKind::Frame_Button,
-      kind_status_bar => WindowKind::Status_Bar,
+      kind_frame_button => WindowKind::FrameButton,
+      kind_status_bar => WindowKind::StatusBar,
       kind_notification => WindowKind::Notification,
-      kind_meta_or_unmanaged => WindowKind::Meta_Or_Unmanaged,
-      kind_tray_client => WindowKind::Tray_Client,
+      kind_meta_or_unmanaged => WindowKind::MetaOrUnmanaged,
+      kind_tray_client => WindowKind::TrayClient,
       kind_dock => WindowKind::Dock,
-      kind_dock_item => WindowKind::Dock_Item,
-      kind_dock_show => WindowKind::Dock_Show,
-      kind_context_menu => WindowKind::Context_Menu,
-      kind_split_handle => WindowKind::Split_Handle,
+      kind_dock_item => WindowKind::DockItem,
+      kind_dock_show => WindowKind::DockShow,
+      kind_context_menu => WindowKind::ContextMenu,
+      kind_split_handle => WindowKind::SplitHandle,
       _ => {
         my_panic!("Invalid Window_Kind value on {}: {}", window, data as usize);
       }
