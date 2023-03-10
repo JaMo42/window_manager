@@ -249,7 +249,7 @@ impl TrayManager {
     let window = client.window();
 
     client.query_xembed_info();
-    //let should_map = client.xembed_info ().is_mapped ();
+    let should_map = client.xembed_info ().is_mapped ();
 
     log::trace!("tray: update client attributes");
     window.change_attributes(|attributes| {
@@ -267,14 +267,13 @@ impl TrayManager {
     log::trace!("tray: send xembed notification");
     xembed::embed(window, self.window, client.xembed_info().version());
 
-    // if should_map
-    client.set_mapped(true);
+    if should_map {
+        client.set_mapped(true);
+    }
 
     self.sort_clients();
 
-    // TODO: some clients are never mapped for some reason (observed with `nm-tray`)
-    //if should_map {
-    if true {
+    if should_map {
       log::trace!("tray: map client");
       window.map();
       self.update_mapped_count();

@@ -33,7 +33,7 @@ impl Info {
       0,
     ) {
       self.version = data.value_at(0);
-      self.flags = data.value_at(0);
+      self.flags = data.value_at(1);
       true
     } else {
       false
