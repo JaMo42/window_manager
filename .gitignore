@@ -1,0 +1,9 @@
+/target
+
+# These get created by the window manager
+log.txt
+
+# Created by `./run.sh`
+err
+
+callgrind.out.*

@@ -1,0 +1,33 @@
+[package]
+name = "window_manager"
+version = "1.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ariadne = "0.1.5"
+cairo-rs = { version = "0.16.3", features = ["xcb"] }
+cairo-sys-rs = "0.16.3"
+chrono = { version = "0.4.19", features = ["unstable-locales"] }
+clap = { version = "4.0.23", features = ["derive"] }
+freedesktop_entry_parser = "1.3.0"
+gdk = "0.16.0"
+gio = "0.16.3"
+glib = "0.16.3"
+gtk = "0.16.1"
+include_dir = "0.7.3"
+libc = "0.2.65"
+librsvg = { version="2.55.1", git="https://gitlab.gnome.org/GNOME/librsvg" }
+log = "0.4.16"
+log4rs = "1.1.1"
+pango = { version = "0.16.3", features = ["v1_44"]}
+pangocairo = "0.16.3"
+parking_lot = "0.12.1"
+rand = "0.8.5"
+strsim = "0.10.0"
+system_shutdown = "3.0.0"
+x11 = "2.18.1"
+xcb = { version = "1.2.0", features = ["xlib_xcb", "randr", "render", "debug_atom_names"] }
+xcb-util = { version = "0.4.0", features = ["icccm"] }
+zbus = "3.4.0"

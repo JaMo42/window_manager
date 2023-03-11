@@ -1,0 +1,8 @@
+# Set wallpaper
+feh --bg-fill ~/.config/wallpaper &
+# Run compositor
+picom &
+
+# Startup programs
+ibus-daemon -drx &
+nm-tray &
