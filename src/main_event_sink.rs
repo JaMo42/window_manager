@@ -346,7 +346,7 @@ impl MainEventSink {
             drop(monitors);
             #[rustfmt::skip]
             if (primary_dpmm - old_primary_dpmm).abs() > 0.01
-                && self.config.general.scale_fonts_if_primary_monitor_dpi_changes
+                && self.config.general.scale_base_fonts
             {
                 let factor = primary_dpmm / old_primary_dpmm;
                 self.config.scale_fonts(factor);

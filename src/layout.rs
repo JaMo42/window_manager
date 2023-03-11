@@ -119,7 +119,7 @@ impl Layout for ClientLayout {
     fn new(config: &Config, dc: &DrawingContext, monitor: &Monitor) -> Self {
         let mut title_font = config.window.title_font.clone();
         if config.window.title_font_size > 0 {
-            let percent = config.window.title_font_size_scaling_percent as f64 / 100.0;
+            let percent = config.window.title_font_scaling_percent as f64 / 100.0;
             let scaling_factor = lerp(1.0, monitor.scaling_factor(), percent);
             title_font.set_size(
                 (config.window.title_font_size as f64 * scaling_factor).round() as i32

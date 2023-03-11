@@ -220,7 +220,7 @@ parsed_config! {
             grid_resize: bool = "false",
             grid_resize_grid_size: (u16, u16) = "[16, 9]",
             grid_resize_live: bool = "false",
-            scale_fonts_if_primary_monitor_dpi_changes: bool = "true",
+            scale_base_fonts: bool = "true",
         }
         Layout {
             workspaces: usize = "1",
@@ -230,9 +230,9 @@ parsed_config! {
         }
         Window {
             border: Size = "1mm",
-            title_font: FontDescription = "'sans 14'",
+            title_font: FontDescription = "'sans'",
             title_font_size: u16 = "14",
-            title_font_size_scaling_percent: u16 = "100",
+            title_font_scaling_percent: u16 = "100",
             title_bar_height: Size = "1.1em",
             title_alignment: Alignment = "left",
             left_buttons: Vec<String> = "[]",
@@ -249,7 +249,7 @@ parsed_config! {
             modifier: String = "'Super'",
         }
         Bar {
-            height: Size = "110%",
+            height: Size = "1.1em",
             font: FontDescription = "'sans 14'",
             time_format: String = "'%a %b %e %H:%M %Y'",
             localized_time: bool = "true",
@@ -378,7 +378,7 @@ impl Config {
         fn scale_font(font: &mut FontDescription, factor: f64) {
             font.set_size((font.size() as f64 * factor).round() as i32)
         }
-        let percent = self.window.title_font_size_scaling_percent as f64 / 100.0;
+        let percent = self.window.title_font_scaling_percent as f64 / 100.0;
         let factor = lerp(1.0, factor, percent);
         log::trace!("Scaling fonts by {}%", (factor * 100.0).round() as u16);
         // There were originally not supposed to be mutable and I don't want
