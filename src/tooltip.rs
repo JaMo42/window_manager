@@ -44,8 +44,8 @@ impl Tooltip {
         let height = text.height() + 2 * Self::BORDER + 1;
         let local_rect = Rectangle::new(0, 0, width, height);
         self.window.move_and_resize(at.translate(local_rect));
-        dc.fill_rect(local_rect, self.wm.config.colors.notification_background);
-        text.color(self.wm.config.colors.notification_text).draw();
+        dc.fill_rect(local_rect, self.wm.config.colors.tooltip_background);
+        text.color(self.wm.config.colors.tooltip_text).draw();
         self.window.map();
         self.window.raise();
         dc.render(&self.window, local_rect);
