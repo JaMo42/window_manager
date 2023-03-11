@@ -130,6 +130,7 @@ impl<'a> Parser<'a> {
             *section_path = Some(path);
             // TODO: store section
         } else {
+            let key_location = *scanner.location();
             let key = scanner.some(is_value_char);
             if key.is_empty() {
                 let loc = scanner.location();
@@ -163,6 +164,7 @@ impl<'a> Parser<'a> {
                         *span = real_span;
                     }
                 }
+                error.line.get_or_insert(key_location.line);
                 Err(error)?;
             }
             scanner.skip_space(false);
