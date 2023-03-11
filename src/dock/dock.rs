@@ -307,10 +307,12 @@ impl Dock {
     fn enter(&mut self, event: &EnterNotifyEvent) -> bool {
         match self.wm.get_window_kind(&event.event()) {
             WindowKind::Dock => {
+                self.cancel_hide();
                 self.window.raise();
                 true
             }
             WindowKind::DockShow => {
+                self.cancel_hide();
                 self.show();
                 true
             }
