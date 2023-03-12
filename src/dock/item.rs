@@ -239,7 +239,9 @@ impl Item {
     }
 
     pub fn add_instance(&mut self, client: Arc<Client>) {
+        let handle = client.handle();
         self.instances.push(client);
+        self.update_focus(handle);
     }
 
     fn find_instance(&self, handle: XcbWindow) -> Option<usize> {
