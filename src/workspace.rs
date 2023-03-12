@@ -120,6 +120,7 @@ impl Workspace {
         if let Some(prev) = self.focused() {
             if prev.window().handle() == window {
                 prev.focus();
+                self.display.set_input_focus(prev.handle());
                 return;
             }
             prev.unfocus();
