@@ -381,7 +381,7 @@ impl Config {
         let percent = self.window.title_font_scaling_percent as f64 / 100.0;
         let factor = lerp(1.0, factor, percent);
         log::trace!("Scaling fonts by {}%", (factor * 100.0).round() as u16);
-        // There were originally not supposed to be mutable and I don't want
+        // These were originally not supposed to be mutable and I don't want
         // to put them all in cell types. This should be fine.
         #[allow(clippy::cast_ref_to_mut)]
         let this = unsafe { &mut *(self as *const Self as *mut Self) };

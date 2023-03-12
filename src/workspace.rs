@@ -70,7 +70,6 @@ impl Workspace {
 
     fn focus_client(&self, client: &Client) {
         client.focus();
-        self.display.set_input_focus(client.handle());
         client.send_message(self.display.atoms.wm_take_focus);
         self.root.set_focused_client(Some(client.handle()));
         self.signal_sender
@@ -120,7 +119,6 @@ impl Workspace {
         if let Some(prev) = self.focused() {
             if prev.window().handle() == window {
                 prev.focus();
-                self.display.set_input_focus(prev.handle());
                 return;
             }
             prev.unfocus();

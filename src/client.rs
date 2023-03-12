@@ -569,6 +569,7 @@ impl Client {
     /// focus order, use `Workspace::focus` for that.
     pub fn focus(&self) {
         self.is_focused.set(true);
+        self.display().set_input_focus(self.handle());
         if self.is_urgent.get() {
             self.set_urgency(false);
         }
