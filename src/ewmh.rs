@@ -353,7 +353,8 @@ fn net_wm_state(client: &Client, event: &ClientMessageEvent) {
     } else if is!(display.atoms.net_wm_state_maximized_horz)
         || is!(display.atoms.net_wm_state_maximized_vert)
     {
-        if client.snap_state().is_maximized() {
+        // Maximizing on either axis is treated as a full maximize.
+        if !client.snap_state().is_maximized() {
             action::snap(client, |state| *state = SnapState::Maximized);
         } else {
             client.unsnap();
