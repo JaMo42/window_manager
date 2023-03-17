@@ -18,7 +18,7 @@ impl NormalHints {
             result.min_size = Some((hints.min_width as u16, hints.min_height as u16));
         }
         if hints.flags & PMaxSize == PMaxSize {
-            result.min_size = Some((hints.max_width as u16, hints.max_height as u16));
+            result.max_size = Some((hints.max_width as u16, hints.max_height as u16));
         }
         if hints.flags & PResizeInc == PResizeInc {
             result.resize_inc = Some((hints.width_inc as i16, hints.height_inc as i16));
@@ -59,7 +59,7 @@ impl NormalHints {
                 if keep_height {
                     result.width = (result.height as f64 / (1.0 / ratio)).round() as u16;
                 } else {
-                    result.height = (result.width as f64 / ratio).round() as u16
+                    result.height = (result.width as f64 / ratio).round() as u16;
                 }
             }
         }
