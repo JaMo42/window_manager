@@ -159,6 +159,7 @@ impl Dock {
         self.geometry = self.layout.dock(self.items.len());
         self.window.move_and_resize(self.geometry);
         self.show_window.move_and_resize(self.layout.show_window());
+        self.show_window.clear();
         self.layout_items();
         for i in self.items.iter_mut() {
             i.set_icon_rect(self.layout.icon());
@@ -355,6 +356,14 @@ impl Dock {
     fn click(&mut self, event: &ButtonPressEvent) -> bool {
         match self.wm.get_window_kind(&event.event()) {
             WindowKind::Dock => true,
+            WindowKind::DockShow => {
+                // Under some circumstances the show window loses its
+                // transparency (not sure what caused this when I observed it)
+                // so for now we do this as an easy way to restore it.
+                // TODO: can this be detected with something like exposure events?
+                self.show_window.clear();
+                true
+            }
             WindowKind::DockItem => {
                 let idx = self.find_item_window(event.event());
                 let item = &mut self.items[idx];
