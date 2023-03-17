@@ -248,6 +248,15 @@ impl ClientLayout {
     pub fn title_font(&self) -> &FontDescription {
         &self.title_font
     }
+
+    pub fn min_size(&self) -> (u16, u16) {
+        const INNER_WIDTH: u16 = 160 * 3;
+        const INNER_HEIGHT: u16 = 90 * 3;
+        (
+            self.title_width_offset + INNER_WIDTH,
+            self.decorated_frame_offset.height + INNER_HEIGHT,
+        )
+    }
 }
 
 // Doesn't implement `Layout` as we don't need to create a layout class for it

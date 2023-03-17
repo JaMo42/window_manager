@@ -170,12 +170,12 @@ impl Display {
             .unwrap();
         let mid = self.connection.generate_id();
         self.try_void_request(&CreateColormap {
-                alloc: ColormapAlloc::None,
-                mid,
-                window: screen.root(),
-                visual: vi.visualid as u32,
-            })
-            .or_fatal(self);
+            alloc: ColormapAlloc::None,
+            mid,
+            window: screen.root(),
+            visual: vi.visualid as u32,
+        })
+        .or_fatal(self);
         mid
     }
 

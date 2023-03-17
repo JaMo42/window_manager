@@ -121,7 +121,8 @@ impl Client {
             // TODO: do_not_propagate?
         });
 
-        let geometry = Rectangle::from_parts(window.get_geometry());
+        let geometry = Rectangle::from_parts(window.get_geometry())
+            .clamp_size(layout.min_size(), monitors().primary().window_area().size());
         let frame_kind = if MotifHints::get(&window)
             .map(|motif_hints| motif_hints.has_own_decorations())
             .unwrap_or(false)

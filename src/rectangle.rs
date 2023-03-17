@@ -76,6 +76,22 @@ impl Rectangle {
         self
     }
 
+    /// Clamps the size of the rectangle.
+    pub fn clamp_size(
+        mut self,
+        (min_width, min_height): (u16, u16),
+        (max_width, max_height): (u16, u16),
+    ) -> Self {
+        self.width = self.width.clamp(min_width, max_width);
+        self.height = self.height.clamp(min_height, max_height);
+        self
+    }
+
+    /// Returns the width and height.
+    pub fn size(&self) -> (u16, u16) {
+        (self.width, self.height)
+    }
+
     /// Returns x-coordinate of the right edge.
     pub fn right_edge(&self) -> i16 {
         self.x + self.width as i16
@@ -132,7 +148,7 @@ impl Rectangle {
     }
 
     /// Clamps this rectangles dimensions and position to be entirely inside
-    /// `parent`. Modifies this rectangel and returns a reference to itself.
+    /// `parent`. Modifies this rectangle and returns a reference to itself.
     pub fn clamp_inside(&mut self, parent: &Rectangle) -> &mut Self {
         if self.x < parent.x {
             self.x = parent.x;
