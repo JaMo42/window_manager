@@ -121,7 +121,7 @@ macro_rules! _def_parsed_config {
 }
 
 /// Defines a `PrasedConfig` struct that implements the `Document` trait as well
-/// as auxiallry section types implementing the `Section` trait.
+/// as auxiliary section types implementing the `Section` trait.
 ///
 /// Syntax:
 /// ```

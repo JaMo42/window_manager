@@ -1,6 +1,6 @@
 use crate::{monitors::Monitor, rectangle::Rectangle, split_handles::Splits};
 
-// We have little enought values that we can use an enum instead of bit flags.
+// We have little enough values that we can use an enum instead of bit flags.
 /// A clients snap state
 #[derive(Copy, Clone, Debug)]
 pub enum SnapState {

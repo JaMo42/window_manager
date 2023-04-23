@@ -67,7 +67,7 @@ pub enum ShapeKind {
 
 #[derive(Debug)]
 pub struct ShapeBuilder<'a> {
-    // Needs a display for fatal errors, previsouly results were just unwrapped.
+    // Needs a display for fatal errors, previously results were just unwrapped.
     display: Arc<Display>,
     kind: ShapeKind,
     context: &'a Context,

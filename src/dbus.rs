@@ -4,7 +4,7 @@ async fn get_session_connection() -> Result<zbus::Connection> {
     zbus::Connection::session().await
 }
 
-// Exiplicit name because we already have a lot of `Connection` types floating
+// Explicit name because we already have a lot of `Connection` types floating
 // around and this is nicer than typing `dbus::Connection`.
 /// Synchronous wrapper around `zbus::Connection`
 #[derive(Clone)]

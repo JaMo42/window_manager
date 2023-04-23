@@ -165,7 +165,7 @@ impl WindowManager {
         MutexGuard::map(lock, |workspaces| &mut workspaces[index])
     }
 
-    /// Retrusn a reference to the active workspace.
+    /// Returns a reference to the active workspace.
     pub fn active_workspace(&self) -> MappedMutexGuard<Workspace> {
         self.workspace(self.active_workspace_index())
     }
@@ -276,7 +276,7 @@ impl WindowManager {
     }
 
     /// Dispatches the given signal to all event sinks except the `MainEventSink`.
-    /// Cannot be called from other sinks or an infinite recursion occurrs.
+    /// Cannot be called from other sinks or an infinite recursion occurs.
     fn dispatch_signal(&mut self, signal: Signal) {
         if std::option_env!("WM_LOG_ALL_EVENTS").is_some() {
             log::trace!(
@@ -288,7 +288,7 @@ impl WindowManager {
             sink.signal(&signal);
         }
         // Signals handlers can't stop signal processing so we need deferred
-        // deletion for them. Signals don't happen as ofter as events so the
+        // deletion for them. Signals don't happen as often as events so the
         // performance loss if any doesn't matter.
         for remove in self.remove_sinks.borrow_mut().drain(..) {
             self.remove_event_sink(remove);

@@ -227,7 +227,7 @@ pub enum Offset {
     Percent(f32),
 }
 
-/// Offset of a pint insde a rectangle.
+/// Offset of a pint inside a rectangle.
 #[derive(Debug)]
 pub struct PointOffset {
     x: Offset,

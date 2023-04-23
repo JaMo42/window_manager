@@ -155,7 +155,7 @@ impl Client {
         //   3. Check if a desktop entry exists for the class
         // 4. If the window has a title, check if a desktop entry exists for the window title
         // 5. Use the class hint name, if the window has it
-        // 6. Use the window title, if the wndow has it
+        // 6. Use the window title, if the window has it
         // 7. Give up :(
         let application_id = window
             .get_string_property(display, display.atoms.gtk_application_id)
@@ -614,7 +614,7 @@ impl Client {
     }
 
     /// Process a change in urgency.
-    /// Emites a `UrgencyChanged` signal.
+    /// Emits a `UrgencyChanged` signal.
     fn update_urgency(&self) {
         let wm = self.get_window_manager();
         // TODO: old version only set urgent border if `is_urgent`, was that enough?
@@ -724,7 +724,7 @@ impl Client {
         }
     }
 
-    /// Process a corssing event for one of the buttons of this window.
+    /// Process a crossing event for one of the buttons of this window.
     pub fn cross_button(&self, window: XcbWindow, is_hovered: bool) {
         self.for_each_button(|button| {
             if button == window {
@@ -870,7 +870,7 @@ impl Client {
         });
     }
 
-    /// Positions and resizes all child windows accoring to the given layout,
+    /// Positions and resizes all child windows according to the given layout,
     /// keeping the frame geometry. Does not reconfigure the client or redraw
     /// the border.
     fn layout_children(&self, frame_geometry: Rectangle, layout: &ClientLayout) {

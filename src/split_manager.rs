@@ -26,7 +26,7 @@ pub struct SplitManager {
     wm: Weak<WindowManager>,
     dc: Weak<Mutex<DrawingContext>>,
     current_workspace: usize,
-    /// For the active workspaces, maps window handles of handles to theri
+    /// For the active workspaces, maps window handles of handles to their
     /// monitor index and their role on that monitor.
     active_window_handles: Vec<(XcbWindow, (isize, Role))>,
 }
@@ -105,7 +105,7 @@ impl SplitManager {
 
     fn leave(&self, e: &LeaveNotifyEvent) {
         // When changing the workspace while hovering a split handle we will
-        // process the worksapce change first and then get the `LeaveNotify`
+        // process the workspace change first and then get the `LeaveNotify`
         // event which we can now no longer find the handle for.
         if let Some(handle) = self.find_handle(e.event()) {
             handle.lower_and_clear();

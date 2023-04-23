@@ -62,8 +62,8 @@ impl Display {
         &self.connection
     }
 
-    /// Returns the connection as the type `xcb_util` neebs (`xcb::base::Connection`).
-    /// In our xcb version `xcb::base` is a pirvate module so this function takes
+    /// Returns the connection as the type `xcb_util` needs (`xcb::base::Connection`).
+    /// In our xcb version `xcb::base` is a private module so this function takes
     /// any type and infers the correct one for `xcb_util` calls.
     /// Should never be used for anything else!
     pub fn connection_for_xcb_util<T>(&self) -> &T {

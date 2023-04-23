@@ -339,7 +339,7 @@ impl TrayManager {
         }
     }
 
-    /// Checks the mapped count and reconfigures the tray if neccessary.
+    /// Checks the mapped count and reconfigures the tray if necessary.
     fn update_mapped_count(&mut self) {
         let mapped_count = self.mapped_count();
         if mapped_count != self.current_mapped_count {

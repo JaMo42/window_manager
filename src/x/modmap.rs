@@ -129,7 +129,7 @@ impl ModifierMapping {
 
     /// Clean the state of a key/button event. This removes the bits for toggled
     /// modifiers (CapsLock and NumLock) and translates the other mods to a
-    /// common bit if neccessary (i.e. all bits that indicate that we consider
+    /// common bit if necessary (i.e. all bits that indicate that we consider
     /// to be the Alt key become `XK_Alt_L`).
     pub fn clean_mods(&self, state: KeyButMask) -> KeyButMask {
         state & self.allow_mask

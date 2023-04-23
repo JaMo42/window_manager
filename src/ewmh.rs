@@ -239,7 +239,7 @@ pub enum WindowState {
     /// The window is minimized
     Minimized,
     /// The window is on a different workspace.
-    /// The client never actuall has this state but it is returned by the
+    /// The client never actually has this state but it is returned by the
     /// `state` function of clients.
     OtherWorkspace,
 }

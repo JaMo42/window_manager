@@ -551,7 +551,7 @@ impl<T: Clone> EventSink for ContextMenu<T> {
             WindowKind::ContextMenuItem => {
                 self.item_event(event, source);
             }
-            // Checking if it's our mouse block should not be neccessary as this
+            // Checking if it's our mouse block should not be necessary as this
             // if only a temporary sink and even if there are somehow multiple
             // blocks ours should always be the topmost.
             WindowKind::MouseBlock /*if self.mouse_block.as_ref().unwrap().eq(&source)*/ => {

@@ -72,7 +72,7 @@ impl<L: Layout> LayoutClass<L> {
             .1
     }
 
-    /// Gets the appropiate instance for the given monitor.
+    /// Gets the appropriate instance for the given monitor.
     /// Does not update the checked monitor for `get_if_different`.
     pub fn get(&self, monitor: &Monitor) -> &L {
         self.lookup(MonInfo::new(monitor))

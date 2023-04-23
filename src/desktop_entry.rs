@@ -159,7 +159,7 @@ impl DesktopEntry {
             for action in actions.split(';') {
                 if action.is_empty() {
                     // We get an extra empty element since the actions strings always
-                    // terminated by a samicolon
+                    // terminated by a semicolon
                     break;
                 }
                 let section_name = format!("Desktop Action {}", action);
