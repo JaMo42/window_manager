@@ -16,7 +16,7 @@ use crate::{
     monitors::monitors,
     notifications::{NotificationManager, NotificationProps},
     paths, platform,
-    process::{ignore_sigchld, run_and_await},
+    process::run_and_await,
     session_manager::SessionManager,
     split_manager::SplitManager,
     workspace::Workspace,
@@ -508,7 +508,6 @@ impl WindowManager {
         self.grab_buttons()?;
         self.select_root_events();
         log::trace!("Running autostart script");
-        ignore_sigchld(true);
         self.run_autostartrc();
         self.add_event_sink(SinkStorage::Unique(Box::new(bar::create(this.clone()))));
         self.add_event_sink(SinkStorage::Mutex(Dock::new(this)));
