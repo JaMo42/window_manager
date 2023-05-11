@@ -448,4 +448,24 @@ impl EventSink for MainEventSink {
             log::trace!("Removed client: {client}");
         }
     }
+
+    fn filter(&self) -> &'static [u32] {
+        use xcb::{x::*, BaseEvent};
+        const FILTER: [u32; 13] = [
+            ButtonPressEvent::NUMBER,
+            ButtonReleaseEvent::NUMBER,
+            ClientMessageEvent::NUMBER,
+            ConfigureNotifyEvent::NUMBER,
+            ConfigureRequestEvent::NUMBER,
+            DestroyNotifyEvent::NUMBER,
+            EnterNotifyEvent::NUMBER,
+            KeyPressEvent::NUMBER,
+            LeaveNotifyEvent::NUMBER,
+            MappingNotifyEvent::NUMBER,
+            MapRequestEvent::NUMBER,
+            MotionNotifyEvent::NUMBER,
+            PropertyNotifyEvent::NUMBER,
+        ];
+        return &FILTER;
+    }
 }

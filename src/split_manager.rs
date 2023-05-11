@@ -274,4 +274,14 @@ impl EventSink for SplitManager {
             _ => {}
         }
     }
+
+    fn filter(&self) -> &'static [u32] {
+        use xcb::{x::*, BaseEvent};
+        const FILTER: [u32; 3] = [
+            EnterNotifyEvent::NUMBER,
+            LeaveNotifyEvent::NUMBER,
+            ButtonPressEvent::NUMBER,
+        ];
+        return &FILTER;
+    }
 }

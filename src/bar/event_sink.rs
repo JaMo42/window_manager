@@ -120,4 +120,19 @@ impl event::EventSink for EventSink {
         }
         bar.draw();
     }
+
+    fn filter(&self) -> &'static [u32] {
+        use xcb::{x::*, BaseEvent};
+        const FILTER: [u32; 8] = [
+            EnterNotifyEvent::NUMBER,
+            LeaveNotifyEvent::NUMBER,
+            ButtonPressEvent::NUMBER,
+            ClientMessageEvent::NUMBER,
+            PropertyNotifyEvent::NUMBER,
+            MapNotifyEvent::NUMBER,
+            UnmapNotifyEvent::NUMBER,
+            DestroyNotifyEvent::NUMBER,
+        ];
+        return &FILTER;
+    }
 }

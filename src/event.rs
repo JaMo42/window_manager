@@ -64,9 +64,17 @@ impl SinkStorage {
         let ptr: *const dyn EventSink = match *self {
             Self::Unique(ref boxed) => boxed.as_ref(),
             Self::Shared(ref rc) => rc.as_ptr(),
-            Self::Mutex(ref arc) => &*arc.lock() as *const dyn EventSink,
+            Self::Mutex(ref arc) => arc.data_ptr(),
         };
         ptr as *const c_void as SinkId
+    }
+
+    pub fn filter(&self) -> &'static [u32] {
+        match *self {
+            Self::Unique(ref boxed) => boxed.filter(),
+            Self::Shared(ref rc) => rc.borrow().filter(),
+            Self::Mutex(ref arc) => arc.lock().filter(),
+        }
     }
 }
 
@@ -83,6 +91,8 @@ pub trait EventSink {
     fn accept(&mut self, event: &Event) -> bool;
 
     fn signal(&mut self, _signal: &Signal) {}
+
+    fn filter(&self) -> &'static [u32];
 }
 
 /// Prints only the variant name of the contained event.
@@ -152,5 +162,47 @@ pub fn is_button_press(ev: &Event) -> bool {
         button == BUTTON_1 || button == BUTTON_2 || button == BUTTON_3
     } else {
         false
+    }
+}
+
+pub fn x_event_number(ev: &xcb::x::Event) -> u32 {
+    use xcb::{
+        x::{Event::*, *},
+        BaseEvent,
+    };
+    match ev {
+        KeyPress(_) => KeyPressEvent::NUMBER,
+        KeyRelease(_) => KeyReleaseEvent::NUMBER,
+        ButtonPress(_) => ButtonPressEvent::NUMBER,
+        ButtonRelease(_) => ButtonReleaseEvent::NUMBER,
+        MotionNotify(_) => MotionNotifyEvent::NUMBER,
+        EnterNotify(_) => EnterNotifyEvent::NUMBER,
+        LeaveNotify(_) => LeaveNotifyEvent::NUMBER,
+        FocusIn(_) => FocusInEvent::NUMBER,
+        FocusOut(_) => FocusOutEvent::NUMBER,
+        KeymapNotify(_) => KeymapNotifyEvent::NUMBER,
+        Expose(_) => ExposeEvent::NUMBER,
+        GraphicsExposure(_) => GraphicsExposureEvent::NUMBER,
+        NoExposure(_) => NoExposureEvent::NUMBER,
+        VisibilityNotify(_) => VisibilityNotifyEvent::NUMBER,
+        CreateNotify(_) => CreateNotifyEvent::NUMBER,
+        DestroyNotify(_) => DestroyNotifyEvent::NUMBER,
+        UnmapNotify(_) => UnmapNotifyEvent::NUMBER,
+        MapNotify(_) => MapNotifyEvent::NUMBER,
+        MapRequest(_) => MapRequestEvent::NUMBER,
+        ReparentNotify(_) => ReparentNotifyEvent::NUMBER,
+        ConfigureNotify(_) => ConfigureNotifyEvent::NUMBER,
+        ConfigureRequest(_) => ConfigureRequestEvent::NUMBER,
+        GravityNotify(_) => GravityNotifyEvent::NUMBER,
+        ResizeRequest(_) => ResizeRequestEvent::NUMBER,
+        CirculateNotify(_) => CirculateNotifyEvent::NUMBER,
+        CirculateRequest(_) => CirculateRequestEvent::NUMBER,
+        PropertyNotify(_) => PropertyNotifyEvent::NUMBER,
+        SelectionClear(_) => SelectionClearEvent::NUMBER,
+        SelectionRequest(_) => SelectionRequestEvent::NUMBER,
+        SelectionNotify(_) => SelectionNotifyEvent::NUMBER,
+        ColormapNotify(_) => ColormapNotifyEvent::NUMBER,
+        ClientMessage(_) => ClientMessageEvent::NUMBER,
+        MappingNotify(_) => MappingNotifyEvent::NUMBER,
     }
 }

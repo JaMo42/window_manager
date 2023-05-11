@@ -596,4 +596,15 @@ impl<T: Clone> EventSink for ContextMenu<T> {
             }
         }
     }
+
+    fn filter(&self) -> &'static [u32] {
+        use xcb::{x::*, BaseEvent};
+        const FILTER: [u32; 4] = [
+            ButtonPressEvent::NUMBER,
+            KeyPressEvent::NUMBER,
+            EnterNotifyEvent::NUMBER,
+            LeaveNotifyEvent::NUMBER,
+        ];
+        return &FILTER;
+    }
 }

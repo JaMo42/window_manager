@@ -77,4 +77,14 @@ impl EventSink for SpecialDialog {
         self.mouse_block.raise();
         self.window.stack_above(self.mouse_block.handle());
     }
+
+    fn filter(&self) -> &'static [u32] {
+        use xcb::{x::*, BaseEvent};
+        const FILTER: [u32; 3] = [
+            DestroyNotifyEvent::NUMBER,
+            KeyPressEvent::NUMBER,
+            ButtonPressEvent::NUMBER,
+        ];
+        return &FILTER;
+    }
 }

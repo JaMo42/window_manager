@@ -9,7 +9,8 @@ use crate::{
     dock::Dock,
     draw::{BuiltinResources, DrawingContext},
     error::OrFatal,
-    event::{x_event_source, DisplayEventName, DisplaySignalName, Signal, SinkId, SinkStorage},
+    event::{x_event_source, Signal, SinkId, SinkStorage},
+    event_router::EventRouter,
     ewmh::Root,
     log_error,
     main_event_sink::MainEventSink,
@@ -76,7 +77,7 @@ pub struct WindowManager {
     pub session_manager: Arc<Mutex<SessionManager>>,
     signal_receiver: Receiver<Signal>,
     context_map: Mutex<ContextMap>,
-    event_sinks: RefCell<Vec<SinkStorage>>,
+    event_sinks: RefCell<EventRouter>,
     is_running: Cell<bool>,
     unmanaged: RefCell<Vec<Window>>,
     workspaces: Arc<Mutex<Vec<Workspace>>>,
@@ -114,7 +115,7 @@ impl WindowManager {
             cursors,
             signal_receiver,
             context_map: Mutex::new(ContextMap::new()),
-            event_sinks: RefCell::new(Vec::new()),
+            event_sinks: RefCell::new(EventRouter::new()),
             is_running: Cell::new(true),
             unmanaged: RefCell::new(Vec::new()),
             workspaces: Arc::new(Mutex::new(Vec::new())),
@@ -132,11 +133,12 @@ impl WindowManager {
         SessionManager::register(this.session_manager.clone()).unwrap_or_fatal(&display);
         NotificationManager::register(this.notification_manager.clone()).unwrap_or_fatal(&display);
         let main_event_sink = Box::new(MainEventSink::new(this.clone()));
-        *this.event_sinks.borrow_mut() = vec![
-            SinkStorage::Shared(this.split_manager.clone()),
-            SinkStorage::Mutex(this.notification_manager.clone()),
-            SinkStorage::Unique(main_event_sink),
-        ];
+        {
+            let mut e = this.event_sinks.borrow_mut();
+            e.add(SinkStorage::Unique(main_event_sink));
+            e.add(SinkStorage::Shared(this.split_manager.clone()));
+            e.add(SinkStorage::Mutex(this.notification_manager.clone()));
+        }
         this
     }
 
@@ -237,21 +239,14 @@ impl WindowManager {
     /// Note: if called from an event sink that sink must return `true` from the
     ///       `accept` function to stop iteration over the now modified sink list.
     pub fn add_event_sink(&self, sink: SinkStorage) {
-        // MainEventSink should always be the last one.
-        self.event_sinks.borrow_mut().insert(0, sink);
+        self.event_sinks.borrow_mut().add(sink);
     }
 
     /// Removes the event sink with the given ID.
     /// Note: if called from an event sink that sink must return `true` from the
     ///       `accept` function to stop iteration over the now modified sink list.
     pub fn remove_event_sink(&self, id: SinkId) {
-        let mut sinks = self.event_sinks.borrow_mut();
-        for (i, sink) in sinks.iter().enumerate() {
-            if sink.id() == id {
-                sinks.remove(i);
-                return;
-            }
-        }
+        self.event_sinks.borrow_mut().remove(id);
     }
 
     /// Removes the event sink with the given ID after handling the current
@@ -262,37 +257,22 @@ impl WindowManager {
 
     /// Dispatches the given event to the event sinks.
     fn dispatch_event(&mut self, event: Event) {
-        if std::option_env!("WM_LOG_ALL_EVENTS").is_some() && !matches!(&event, Event::Unknown(_)) {
-            log::trace!("\x1b[2m Event: \x1b[92m{}\x1b[0m", DisplayEventName(&event));
-        }
-        for sink in self.event_sinks.get_mut().iter_mut() {
-            if sink.accept(&event) {
-                return;
-            }
-        }
-        if std::option_env!("WM_LOG_ALL_EVENTS").is_some() && !matches!(&event, Event::Unknown(_)) {
-            log::trace!("\x1b[2m      : Unhandeled\x1b[0m");
-        }
+        let router = self.event_sinks.get_mut();
+        router.dispatch_event(&event);
+        router.update();
     }
 
     /// Dispatches the given signal to all event sinks except the `MainEventSink`.
     /// Cannot be called from other sinks or an infinite recursion occurs.
     fn dispatch_signal(&mut self, signal: Signal) {
-        if std::option_env!("WM_LOG_ALL_EVENTS").is_some() {
-            log::trace!(
-                "\x1b[2mSignal: \x1b[96m{}\x1b[0m",
-                DisplaySignalName(&signal)
-            );
-        }
-        for sink in self.event_sinks.get_mut().iter_mut() {
-            sink.signal(&signal);
-        }
+        self.event_sinks.get_mut().dispatch_signal(signal);
         // Signals handlers can't stop signal processing so we need deferred
         // deletion for them. Signals don't happen as often as events so the
         // performance loss if any doesn't matter.
         for remove in self.remove_sinks.borrow_mut().drain(..) {
             self.remove_event_sink(remove);
         }
+        self.event_sinks.get_mut().update();
     }
 
     /// Stops the mainloop after the current iteration.
@@ -509,8 +489,12 @@ impl WindowManager {
         self.select_root_events();
         log::trace!("Running autostart script");
         self.run_autostartrc();
-        self.add_event_sink(SinkStorage::Unique(Box::new(bar::create(this.clone()))));
-        self.add_event_sink(SinkStorage::Mutex(Dock::new(this)));
+        {
+            let mut e = this.event_sinks.borrow_mut();
+            e.add(SinkStorage::Unique(Box::new(bar::create(this.clone()))));
+            e.add(SinkStorage::Mutex(Dock::new(this)));
+            e.update();
+        }
         Ok(())
     }
 

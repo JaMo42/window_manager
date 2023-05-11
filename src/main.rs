@@ -22,6 +22,7 @@ mod dock;
 mod draw;
 mod error;
 mod event;
+mod event_router;
 mod ewmh;
 mod geometry_preview;
 mod layout;
