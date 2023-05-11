@@ -137,6 +137,7 @@ impl PartialEq for Monitor {
 pub struct Monitors {
     monitors: Vec<Monitor>,
     primary: usize,
+    bar_height: u16,
 }
 
 impl Monitors {
@@ -147,6 +148,7 @@ impl Monitors {
         Self {
             monitors: Vec::new(),
             primary: 0,
+            bar_height: 0,
         }
     }
 
@@ -207,6 +209,13 @@ impl Monitors {
                 secondary_padding
             });
         }
+    }
+
+    pub fn set_bar_height(&mut self, height: u16) {
+        let p = &mut self.monitors[self.primary];
+        p.window_area.y -= self.bar_height as i16;
+        p.window_area.y += height as i16;
+        self.bar_height = height;
     }
 
     /// Print monitors info to log.

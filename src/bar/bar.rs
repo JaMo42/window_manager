@@ -8,7 +8,7 @@ use crate::{
     error::OrFatal,
     event::Signal,
     ewmh::{self, WindowType},
-    monitors::monitors,
+    monitors::monitors_mut,
     rectangle::Rectangle,
     window_manager::{WindowKind, WindowManager},
     x::{Window, XcbWindow},
@@ -46,7 +46,7 @@ impl Bar {
             .drawing_context
             .lock()
             .font_height(Some(&config.bar.font));
-        let monitors = monitors();
+        let mut monitors = monitors_mut();
         let monitor = monitors.primary();
         let height = config.bar.height.resolve(
             Some(monitor.dpmm()),
@@ -56,6 +56,7 @@ impl Bar {
         let visual = *display.truecolor_visual();
         let mut geometry = *monitor.geometry();
         geometry.height = height;
+        monitors.set_bar_height(height);
         let window = Window::builder(display)
             .geometry(geometry)
             .depth(visual.depth)
@@ -247,7 +248,7 @@ impl Bar {
     }
 
     pub fn resize(&mut self) {
-        let monitors = monitors();
+        let mut monitors = monitors_mut();
         let monitor = monitors.primary();
         let font_height = self
             .wm
@@ -266,6 +267,7 @@ impl Bar {
         }
         self.geometry = monitor.geometry().with_height(height);
         self.window.resize(self.geometry.width - width, height);
+        monitors.set_bar_height(height);
         self.wm
             .signal_sender
             .send(Signal::UpdateBar(true))

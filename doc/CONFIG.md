@@ -69,7 +69,7 @@ Key and type | Description | Default
 ---|---|---
 `workspaces` <br> `uint` | number of workspaces. | `1`
 `gaps` <br> `size` | width of inner gaps for snapped windows. | `0`
-`pad` <br> `[uint; 4]` | padding from screen edges for snapped windows, values are [Top, Bottom, Left, Right]. This sets the padding for the main monitor. | `[<bar height>, 0, 0, 0]`
+`pad` <br> `[uint; 4]` | padding from screen edges for snapped windows, values are [Top, Bottom, Left, Right]. This sets the padding for the main monitor. If the bar is enabled its height is added to the top padding. | `[0, 0, 0, 0]`
 `secondary_pad` <br> `[uint; 4]` | like `pad` but for all non-primary monitors. | `[0, 0, 0, 0]`
 
 ### [window]
