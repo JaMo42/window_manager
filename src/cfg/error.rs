@@ -98,7 +98,7 @@ impl Error {
     }
 
     pub fn to_markup(&self, path: &str, source: &str) -> String {
-        let line = self.line.expect("error has no line information") as usize;
+        let line = self.line.expect("error has no line information") ;
         let mut builder = Report::build(ReportKind::Error, path, line).with_message(&self.message);
         if let Some((span, msg)) = self.label.clone() {
             builder.add_label(

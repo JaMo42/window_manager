@@ -123,7 +123,7 @@ impl event::EventSink for EventSink {
 
     fn filter(&self) -> &'static [u32] {
         use xcb::{x::*, BaseEvent};
-        const FILTER: [u32; 8] = [
+        &[
             EnterNotifyEvent::NUMBER,
             LeaveNotifyEvent::NUMBER,
             ButtonPressEvent::NUMBER,
@@ -132,7 +132,6 @@ impl event::EventSink for EventSink {
             MapNotifyEvent::NUMBER,
             UnmapNotifyEvent::NUMBER,
             DestroyNotifyEvent::NUMBER,
-        ];
-        return &FILTER;
+        ]
     }
 }

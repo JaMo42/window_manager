@@ -151,7 +151,7 @@ impl GeometryPreview {
         if w < 0 {
             let ww = -w as u16;
             if self.geometry.width > ww && self.geometry.width - ww >= Self::MIN_WIDTH {
-                self.geometry.width -= ww as u16;
+                self.geometry.width -= ww;
             }
         } else {
             self.geometry.width += w as u16;

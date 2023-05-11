@@ -50,7 +50,7 @@ fn orphan(mut command: Command) -> Result<Child> {
         .stderr(Stdio::null())
         .stdin(Stdio::null());
     let mut pipe_lock = PIPE.lock();
-    let (rx, tx) = pipe_lock.get_or_insert_with(|| AnonPipe::new()).ends();
+    let (rx, tx) = pipe_lock.get_or_insert_with(AnonPipe::new).ends();
     unsafe {
         let pid = libc::fork();
         if pid == 0 {

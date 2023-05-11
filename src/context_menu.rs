@@ -330,7 +330,7 @@ impl<T: Clone> ContextMenu<T> {
                     y += self.layout.action_height as i16;
                 }
                 Item::Divider => {
-                    y += self.layout.divider_space as i16;
+                    y += self.layout.divider_space;
                 }
             }
         }
@@ -356,7 +356,7 @@ impl<T: Clone> ContextMenu<T> {
         for item in self.items.iter() {
             y += self.layout.item_spacing;
             if matches!(item, Item::Divider) {
-                y += self.layout.divider_space as i16;
+                y += self.layout.divider_space;
                 let mut rect = self.layout.divider().with_y(y);
                 rect.y -= rect.height as i16;
                 dc.rect(rect)
@@ -599,12 +599,11 @@ impl<T: Clone> EventSink for ContextMenu<T> {
 
     fn filter(&self) -> &'static [u32] {
         use xcb::{x::*, BaseEvent};
-        const FILTER: [u32; 4] = [
+        &[
             ButtonPressEvent::NUMBER,
             KeyPressEvent::NUMBER,
             EnterNotifyEvent::NUMBER,
             LeaveNotifyEvent::NUMBER,
-        ];
-        return &FILTER;
+        ]
     }
 }

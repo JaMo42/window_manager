@@ -80,11 +80,10 @@ impl EventSink for SpecialDialog {
 
     fn filter(&self) -> &'static [u32] {
         use xcb::{x::*, BaseEvent};
-        const FILTER: [u32; 3] = [
+        &[
             DestroyNotifyEvent::NUMBER,
             KeyPressEvent::NUMBER,
             ButtonPressEvent::NUMBER,
-        ];
-        return &FILTER;
+        ]
     }
 }
