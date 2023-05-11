@@ -491,8 +491,12 @@ impl WindowManager {
         self.run_autostartrc();
         {
             let mut e = this.event_sinks.borrow_mut();
-            e.add(SinkStorage::Unique(Box::new(bar::create(this.clone()))));
-            e.add(SinkStorage::Mutex(Dock::new(this)));
+            if self.config.bar.enable {
+                e.add(SinkStorage::Unique(Box::new(bar::create(this.clone()))));
+            }
+            if self.config.dock.enable {
+                e.add(SinkStorage::Mutex(Dock::new(this)));
+            }
             e.update();
         }
         Ok(())

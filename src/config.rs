@@ -249,6 +249,7 @@ parsed_config! {
             modifier: String = "'Super'",
         }
         Bar {
+            enable: bool = "true",
             height: Size = "1.1em",
             font: FontDescription = "'sans 14'",
             time_format: String = "'%a %b %e %H:%M %Y'",
@@ -257,6 +258,7 @@ parsed_config! {
             update_interval: u64 = "10000",
         }
         Dock {
+            enable: bool = "true",
             height: Size = "10%",
             pinned: Vec<String> = "[]",
             focused_client_on_top: bool = "false",

@@ -1,4 +1,4 @@
-use crate::event::{x_event_number, DisplayEventName, Signal, SinkStorage, DisplaySignalName};
+use crate::event::{x_event_number, DisplayEventName, DisplaySignalName, Signal, SinkStorage};
 use xcb::Event;
 
 const MAX_EVENT_NUMBER: usize = 34;
