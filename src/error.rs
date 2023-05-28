@@ -7,10 +7,7 @@ use crate::{
     x::{randr::main_monitor_geometry, Display, Window},
 };
 use pango::FontDescription;
-use std::{
-    backtrace::{Backtrace, BacktraceStatus},
-    sync::Arc,
-};
+use std::sync::Arc;
 use xcb::{x::EventMask, Event};
 
 /// Shows the given markup message but resumes the program.
@@ -20,12 +17,6 @@ pub fn display_fatal_error(display: &Display, message: String) {
         "Error: {}",
         remove_markup(&message).replace('\n', "\n     | ")
     );
-    let backtrace = Backtrace::capture();
-    if matches!(backtrace.status(), BacktraceStatus::Captured) {
-        let mut text = format!("{}", backtrace);
-        text.pop();
-        log::error!("Backtrace:\n{}", backtrace);
-    }
     // We need an arc for this but in a lot of places where we call this
     // function we don't have access to one.
     // `Arc::from_raw` *should* only be called with a pointer obtained from

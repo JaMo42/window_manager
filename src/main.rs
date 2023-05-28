@@ -3,6 +3,7 @@ use std::{error::Error, sync::Arc};
 type AnyResult<T> = Result<T, Box<dyn Error>>;
 
 mod action;
+mod appinfo;
 mod bar;
 mod button;
 mod cfg;

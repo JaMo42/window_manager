@@ -1,9 +1,9 @@
 use crate::{
     action::{maximize, resnap},
+    appinfo::get_application_id,
     button::Button,
     class_hint::ClassHint,
     color::BorderColor,
-    desktop_entry::DesktopEntry,
     draw::{load_app_icon, Alignment, GradientSpec, Svg},
     error::OrFatal,
     event::Signal,
@@ -147,28 +147,16 @@ impl Client {
         let class_hint = ClassHint::get(&window);
         let class_hint = class_hint.as_ref();
 
-        // Get the application id (first one that matches):
-        // 1. Check if the window has _GTK_APPLICATION_ID set and a desktop entry
-        //    for the ID exists.
-        // If the window has class hints:
-        //   2. Check if a desktop entry exists for the name
-        //   3. Check if a desktop entry exists for the class
-        // 4. If the window has a title, check if a desktop entry exists for the window title
-        // 5. Use the class hint name, if the window has it
-        // 6. Use the window title, if the window has it
-        // 7. Give up :(
-        let application_id = window
-            .get_string_property(display, display.atoms.gtk_application_id)
-            .filter(|gtk_id| DesktopEntry::entry_name(gtk_id).is_some())
-            .or_else(|| class_hint.and_then(|h| DesktopEntry::entry_name(&h.name)))
-            .or_else(|| class_hint.and_then(|h| DesktopEntry::entry_name(&h.class)))
-            .or_else(|| {
-                title
-                    .as_ref()
-                    .and_then(|title| DesktopEntry::entry_name(title))
-            })
-            .or_else(|| class_hint.map(|h| h.name.clone()))
-            .or_else(|| title.clone());
+        let application_id = get_application_id(
+            &[
+                window
+                    .get_string_property(display, display.atoms.gtk_application_id)
+                    .as_deref(),
+                class_hint.map(|h| h.name.as_str()),
+                class_hint.map(|h| h.class.as_str()),
+            ],
+            class_hint.map(|h| h.name.as_str()).or(title.as_deref()),
+        );
 
         let icon = application_id
             .as_ref()

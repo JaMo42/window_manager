@@ -1,5 +1,6 @@
 use crate::{
     action::close_client,
+    appinfo::{self, set_startup_wm_classes},
     bar,
     client::Client,
     config::{Action, Config},
@@ -489,11 +490,15 @@ impl WindowManager {
         self.select_root_events();
         log::trace!("Running autostart script");
         self.run_autostartrc();
+        log::trace!("Caching startup wm classes");
+        set_startup_wm_classes();
         {
             let mut e = this.event_sinks.borrow_mut();
+            log::trace!("bar: creating bar");
             if self.config.bar.enable {
                 e.add(SinkStorage::Unique(Box::new(bar::create(this.clone()))));
             }
+            log::trace!("dock: creating dock");
             if self.config.dock.enable {
                 e.add(SinkStorage::Mutex(Dock::new(this)));
             }

@@ -37,6 +37,7 @@ pub struct DesktopEntry {
     pub name: String,
     pub icon: Option<String>,
     pub exec: Option<String>,
+    pub startup_wm_class: Option<String>,
     pub actions: Vec<DesktopAction>,
 }
 
@@ -68,24 +69,7 @@ impl DesktopEntry {
         static DATA_DIRS: Mutex<Vec<String>> = Mutex::new(Vec::new());
         if DATA_DIRS.lock().is_empty() {
             let mut data_dirs = DATA_DIRS.lock();
-            if let Ok(xdg_data_dirs) = std::env::var("XDG_DATA_DIRS") {
-                *data_dirs = xdg_data_dirs
-                    .split(':')
-                    .filter(|d| std::fs::metadata(d).is_ok())
-                    .map(|d| {
-                        if d.ends_with('/') {
-                            format!("{d}applications")
-                        } else {
-                            format!("{d}/applications")
-                        }
-                    })
-                    .collect();
-            } else {
-                *data_dirs = vec![
-                    "/usr/local/share/applications".to_string(),
-                    "/usr/share/applications".to_string(),
-                ];
-            }
+            *data_dirs = get_desktop_entry_data_dirs();
             log::trace!("desktop file data dirs:");
             for dir in data_dirs.iter() {
                 log::trace!("  - {dir}");
@@ -149,6 +133,7 @@ impl DesktopEntry {
             name: Self::get_localized_name(&de).unwrap_or_else(|| get!("Name").unwrap()),
             icon: get!("Icon"),
             exec: get!("Exec"),
+            startup_wm_class: get!("StartupWMClass"),
             actions: Vec::new(),
         };
         // Expand Exec field codes, this is done specifically for the dock right now
@@ -181,13 +166,19 @@ impl DesktopEntry {
     }
 
     pub fn new(application_name: &str) -> Option<DesktopEntry> {
-        Self::find_file(application_name).and_then(|pathname| match Self::read_file(&pathname) {
+        Self::find_file(application_name)
+            .as_deref()
+            .and_then(Self::new_from_path)
+    }
+
+    pub fn new_from_path(pathname: &str) -> Option<DesktopEntry> {
+        match Self::read_file(&pathname) {
             Ok(desktop_entry) => Some(desktop_entry),
             Err(e) => {
                 log::error!("Could not read {}: {}", pathname, e);
                 None
             }
-        })
+        }
     }
 
     pub fn entry_name(application_name: &str) -> Option<String> {
@@ -199,5 +190,27 @@ impl DesktopEntry {
                     .to_owned(),
             )
         })
+    }
+}
+
+pub fn get_desktop_entry_data_dirs() -> Vec<String> {
+    if let Ok(xdg_data_dirs) = std::env::var("XDG_DATA_DIRS") {
+        xdg_data_dirs
+            .split(':')
+            .filter(|d| std::fs::metadata(d).is_ok())
+            .map(|d| {
+                if d.ends_with('/') {
+                    format!("{d}applications")
+                } else {
+                    format!("{d}/applications")
+                }
+            })
+            .collect()
+    } else {
+        // TODO: don't these need to be validated?
+        vec![
+            "/usr/local/share/applications".to_string(),
+            "/usr/share/applications".to_string(),
+        ]
     }
 }

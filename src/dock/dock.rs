@@ -189,9 +189,10 @@ impl Dock {
     /// Redraw.
     pub fn update(&mut self) {
         let dc = self.wm.drawing_context.lock();
+        let transparent = Color::new(0.0, 0.0, 0.0, 0.0);
         if self.layout.is_offset() {
             let g = self.geometry.at(0, 0);
-            dc.fill_rect(g, Color::new(0.0, 0.0, 0.0, 0.0));
+            dc.fill_rect(g, transparent);
             dc.rect(g)
                 .color(self.wm.config.colors.dock_background)
                 .corner_percent(0.2);
@@ -200,9 +201,9 @@ impl Dock {
             {
                 let corner = corner.ceil() as u16;
                 let clear = Rectangle::new(0, 0, corner, corner);
-                dc.rect(clear).color(Color::new(0.0, 0.0, 0.0, 0.0)).draw();
+                dc.rect(clear).color(transparent).draw();
                 dc.rect(clear.with_x((self.geometry.width - corner) as i16))
-                    .color(Color::new(0.0, 0.0, 0.0, 0.0))
+                    .color(transparent)
                     .draw();
             }
             // We only want rounded corners on the top so we need to draw it ourselves.

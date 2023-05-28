@@ -99,17 +99,17 @@ impl Section for KeyBindings {
                 return Err(SetError::InvalidKey(value_error(
                     "invalid key",
                     format!("`{}` does not name a known key", key),
-                )))
+                )));
             }
-            VerifyModsAndKeyResult::InvalidMod(modifier) => return Err(SetError::InvalidKey(
-                value_error(
-                    "invalid modifier",
-                    format!("`{}` does not name a known modifier", modifier),
-                )
-                .with_help(
-                    "valid modifier names are `Shift`, `Ctrl`, `Mod`, `Win`, `Super`, and `Alt`",
-                ),
-            )),
+            VerifyModsAndKeyResult::InvalidMod(modifier) => {
+                return Err(SetError::InvalidKey(
+          value_error(
+            "invalid modifier",
+            format!("`{}` does not name a known modifier", modifier),
+          )
+          .with_help("valid modifier names are `Shift`, `Ctrl`, `Mod`, `Win`, `Super`, and `Alt`"),
+        ));
+            }
             _ => {}
         };
         let action = Action::parse(scanner).map_err(SetError::InvalidValue)?;
@@ -343,8 +343,11 @@ impl Value for Color {
                 components[3] as f64 / 255.0,
             ))
         } else {
-            Err(value_error("invalid color value", "expected color")
-            .with_help("valid formats are `#RRGGBB`, `#RRGGBBAA`, `rgb(r, g, b)`, and `rgba(r, g, b, a)`"))
+            Err(
+        value_error("invalid color value", "expected color").with_help(
+          "valid formats are `#RRGGBB`, `#RRGGBBAA`, `rgb(r, g, b)`, and `rgba(r, g, b, a)`",
+        ),
+      )
         }
     }
 }
