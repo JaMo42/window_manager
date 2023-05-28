@@ -104,7 +104,6 @@ impl Monitor {
     }
 
     pub fn window_area(&self) -> &Rectangle {
-        assert!(self.geometry != self.window_area);
         &self.window_area
     }
 
@@ -213,7 +212,7 @@ impl Monitors {
 
     pub fn set_bar_height(&mut self, height: u16) {
         let p = &mut self.monitors[self.primary];
-        p.window_area.y -= self.bar_height as i16;
+        p.window_area.height -= height;
         p.window_area.y += height as i16;
         self.bar_height = height;
     }
