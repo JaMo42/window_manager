@@ -106,6 +106,7 @@ impl Dock {
         window.map();
 
         let mut items = Vec::with_capacity(wm.config.dock.pinned.len());
+        let mut all_ok = true;
         for pinned in wm.config.dock.pinned.iter() {
             if let Some(item) = Item::new(
                 &window,
@@ -116,6 +117,8 @@ impl Dock {
                 wm,
             ) {
                 items.push(item);
+            } else {
+                all_ok = false;
             }
         }
         window.raise();
@@ -131,6 +134,10 @@ impl Dock {
             keep_open: true,
             geometry,
         }));
+
+        if !all_ok {
+            this.lock().resize();
+        }
 
         let hide_this = Arc::downgrade(&this);
         this.lock().hide_thread = Some(RepeatableTimeoutThread::new(Arc::new(move || {
@@ -283,16 +290,16 @@ impl Dock {
     }
 
     /// Finds the item of an existing client.
-    fn find_client_item(&self, client: &Client) -> usize {
+    fn find_client_item(&self, client: &Client) -> Option<usize> {
         if let Some(app_id) = client.application_id() {
-            self.find_item_name(app_id).unwrap()
+            self.find_item_name(app_id)
         } else {
             for (i, item) in self.items.iter().enumerate() {
                 if item.contains(client.handle()) {
-                    return i;
+                    return Some(i);
                 }
             }
-            unreachable!()
+            None
         }
     }
 
@@ -423,29 +430,32 @@ impl Dock {
 
     fn remove_client(&mut self, handle: XcbWindow) {
         let client = self.wm.win2client(&handle).unwrap();
-        let idx = self.find_client_item(&client);
-        if self.items[idx].remove_instance(handle) {
-            self.items.remove(idx);
-            self.geometry = self.layout.dock(self.items.len());
-            self.window.move_and_resize(self.geometry);
-            self.layout_items();
-            self.update();
-        } else {
-            self.update_item(idx);
+        if let Some(idx) = self.find_client_item(&client) {
+            if self.items[idx].remove_instance(handle) {
+                self.items.remove(idx);
+                self.geometry = self.layout.dock(self.items.len());
+                self.window.move_and_resize(self.geometry);
+                self.layout_items();
+                self.update();
+            } else {
+                self.update_item(idx);
+            }
         }
     }
 
     fn update_focus(&mut self, handle: XcbWindow) {
         let client = self.wm.win2client(&handle).unwrap();
-        let idx = self.find_client_item(&client);
-        self.items[idx].update_focus(handle);
+        if let Some(idx) = self.find_client_item(&client) {
+            self.items[idx].update_focus(handle);
+        }
     }
 
     fn update_urgency(&mut self, handle: XcbWindow) {
         let client = self.wm.win2client(&handle).unwrap();
-        let idx = self.find_client_item(&client);
-        if self.items[idx].update_urgency() {
-            self.update_item(idx);
+        if let Some(idx) = self.find_client_item(&client) {
+            if self.items[idx].update_urgency() {
+                self.update_item(idx);
+            }
         }
     }
 }
