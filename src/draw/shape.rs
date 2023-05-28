@@ -292,3 +292,9 @@ impl<'a> ShapeBuilder<'a> {
         }
     }
 }
+
+impl Drop for ShapeBuilder<'_> {
+    fn drop(&mut self) {
+        self.draw();
+    }
+}

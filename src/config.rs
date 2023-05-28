@@ -260,6 +260,7 @@ parsed_config! {
         Dock {
             enable: bool = "true",
             height: Size = "10%",
+            offset: Size = "0",
             pinned: Vec<String> = "[]",
             focused_client_on_top: bool = "false",
             focus_urgent: bool = "false",

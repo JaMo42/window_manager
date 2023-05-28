@@ -9,6 +9,7 @@ pub struct DockLayout {
     item: Rectangle,
     icon: Rectangle,
     show_window: Rectangle,
+    offset: i16,
 }
 
 impl DockLayout {
@@ -19,7 +20,11 @@ impl DockLayout {
             .dock
             .height
             .resolve(Some(dpmm), Some(screen_rect.height), None);
-        self.y = (screen_rect.height - self.height) as i16;
+        self.offset = config
+            .dock
+            .offset
+            .resolve(Some(dpmm), Some(screen_rect.height), None) as i16;
+        self.y = (screen_rect.height - self.height) as i16 - self.offset;
         self.screen_width = screen_rect.width;
         // TODO: maybe use percentage of height of something
         self.padding = 15;
@@ -61,5 +66,9 @@ impl DockLayout {
 
     pub fn show_window(&self) -> Rectangle {
         self.show_window
+    }
+
+    pub fn is_offset(&self) -> bool {
+        self.offset > 0
     }
 }

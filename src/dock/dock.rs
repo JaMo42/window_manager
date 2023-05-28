@@ -189,27 +189,35 @@ impl Dock {
     /// Redraw.
     pub fn update(&mut self) {
         let dc = self.wm.drawing_context.lock();
-        let corner = self.geometry.height as f64 * 0.2;
-        {
-            let corner = corner.ceil() as u16;
-            let clear = Rectangle::new(0, 0, corner, corner);
-            dc.rect(clear).color(Color::new(0.0, 0.0, 0.0, 0.0)).draw();
-            dc.rect(clear.with_x((self.geometry.width - corner) as i16))
-                .color(Color::new(0.0, 0.0, 0.0, 0.0))
-                .draw();
+        if self.layout.is_offset() {
+            let g = self.geometry.at(0, 0);
+            dc.fill_rect(g, Color::new(0.0, 0.0, 0.0, 0.0));
+            dc.rect(g)
+                .color(self.wm.config.colors.dock_background)
+                .corner_percent(0.2);
+        } else {
+            let corner = self.geometry.height as f64 * 0.2;
+            {
+                let corner = corner.ceil() as u16;
+                let clear = Rectangle::new(0, 0, corner, corner);
+                dc.rect(clear).color(Color::new(0.0, 0.0, 0.0, 0.0)).draw();
+                dc.rect(clear.with_x((self.geometry.width - corner) as i16))
+                    .color(Color::new(0.0, 0.0, 0.0, 0.0))
+                    .draw();
+            }
+            // We only want rounded corners on the top so we need to draw it ourselves.
+            let ctx = dc.cairo();
+            let w = self.geometry.width as f64;
+            let h = self.geometry.height as f64;
+            let r = corner;
+            ctx.move_to(0.0, h);
+            ctx.arc(r, r, r, 180.0f64.to_radians(), 270.0f64.to_radians());
+            ctx.arc(w - r, r, r, -90.0f64.to_radians(), 0.0f64.to_radians());
+            ctx.line_to(w, h);
+            ctx.close_path();
+            dc.set_color(self.wm.config.colors.dock_background);
+            ctx.fill().unwrap();
         }
-        // We only want rounded corners on the top so we need to draw it ourselves.
-        let ctx = dc.cairo();
-        let w = self.geometry.width as f64;
-        let h = self.geometry.height as f64;
-        let r = corner;
-        ctx.move_to(0.0, h);
-        ctx.arc(r, r, r, 180.0f64.to_radians(), 270.0f64.to_radians());
-        ctx.arc(w - r, r, r, -90.0f64.to_radians(), 0.0f64.to_radians());
-        ctx.line_to(w, h);
-        ctx.close_path();
-        dc.set_color(self.wm.config.colors.dock_background);
-        ctx.fill().unwrap();
 
         for i in self.items.iter() {
             i.update(&self.window, &dc, true);
