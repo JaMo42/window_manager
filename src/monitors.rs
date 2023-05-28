@@ -193,6 +193,9 @@ impl Monitors {
         let old = self.monitors.clone();
         self.query(display);
         self.set_window_areas(&config.layout.padding, &config.layout.secondary_padding);
+        let bar_height = self.bar_height;
+        self.bar_height = 0;
+        self.set_bar_height(bar_height);
         self.monitors != old
     }
 
@@ -214,7 +217,7 @@ impl Monitors {
         let p = &mut self.monitors[self.primary];
         p.window_area.y -= self.bar_height as i16;
         p.window_area.y += height as i16;
-        p.window_area.height -= self.bar_height;
+        p.window_area.height += self.bar_height;
         p.window_area.height -= height;
         self.bar_height = height;
     }

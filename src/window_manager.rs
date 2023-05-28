@@ -1,6 +1,6 @@
 use crate::{
     action::close_client,
-    appinfo::{self, set_startup_wm_classes},
+    appinfo::set_startup_wm_classes,
     bar,
     client::Client,
     config::{Action, Config},
