@@ -24,7 +24,7 @@ use xcb::{
         ButtonPressEvent, ClientMessageEvent, ConfigWindowMask, ConfigureNotifyEvent,
         ConfigureRequestEvent, DestroyNotifyEvent, EnterNotifyEvent, KeyPressEvent,
         LeaveNotifyEvent, MapRequestEvent, Mapping, MappingNotifyEvent, ModMask, MotionNotifyEvent,
-        PropertyNotifyEvent, ATOM_WM_HINTS, ATOM_WM_NAME,
+        PropertyNotifyEvent, ATOM_WM_HINTS, ATOM_WM_NAME, UnmapNotifyEvent,
     },
     Event, Xid,
 };
@@ -260,8 +260,8 @@ impl MainEventSink {
         self.wm.mapping_changed(event.request());
     }
 
-    fn destroy_notify(&mut self, event: &DestroyNotifyEvent) {
-        if let Some(client) = self.wm.win2client(&event.window()) {
+    fn destroy_window(&mut self, window: XcbWindow) {
+        if let Some(client) = self.wm.win2client(&window) {
             if client
                 .application_id()
                 .map(|id| id.starts_with("window_manager_"))
@@ -280,6 +280,10 @@ impl MainEventSink {
             // instead use our own signal handler which is always executed
             // last.
         }
+    }
+
+    fn destroy_notify(&mut self, event: &DestroyNotifyEvent) {
+        self.destroy_window(event.window());
     }
 
     fn property_notify(&mut self, event: &PropertyNotifyEvent) {
@@ -404,6 +408,24 @@ impl MainEventSink {
             );
         }
     }
+
+    fn unmap_notify(&mut self, event: &UnmapNotifyEvent) {
+        if let Some(client) = self.wm.win2client(&event.window()) {
+            if !client.is_minimized() && client.is_on_active_workspace() {
+                // The client got unmapped but we didn't cause it.  This may
+                // be a valid thing where we don't want to destroy the client
+                // but some program seem to do this instead of sending a
+                // DestroyNotify when closing their window (like solaar).
+                // I guess because they don't actually destroy their window but
+                // we need the window gone so we treat it the same a destruction.
+                self.destroy_window(event.window());
+
+                // This seems to work fine and fixes the problem of some windows
+                // leaving their frame behind when being closed but will need to
+                // keep an eye on it if it causes any problems.
+            }
+        }
+    }
 }
 
 impl EventSink for MainEventSink {
@@ -424,6 +446,7 @@ impl EventSink for MainEventSink {
                 MapRequest(e) => self.map_request(e),
                 MotionNotify(e) => self.motion(e),
                 PropertyNotify(e) => self.property_notify(e),
+                UnmapNotify(e) => self.unmap_notify(e),
                 _ => return false,
             },
             Event::Unknown(unknown_event) => match unknown_event.response_type() {
@@ -465,6 +488,7 @@ impl EventSink for MainEventSink {
             MapRequestEvent::NUMBER,
             MotionNotifyEvent::NUMBER,
             PropertyNotifyEvent::NUMBER,
+            UnmapNotifyEvent::NUMBER,
         ]
     }
 }
