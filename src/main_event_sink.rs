@@ -24,7 +24,7 @@ use xcb::{
         ButtonPressEvent, ClientMessageEvent, ConfigWindowMask, ConfigureNotifyEvent,
         ConfigureRequestEvent, DestroyNotifyEvent, EnterNotifyEvent, KeyPressEvent,
         LeaveNotifyEvent, MapRequestEvent, Mapping, MappingNotifyEvent, ModMask, MotionNotifyEvent,
-        PropertyNotifyEvent, ATOM_WM_HINTS, ATOM_WM_NAME, UnmapNotifyEvent,
+        PropertyNotifyEvent, UnmapNotifyEvent, ATOM_WM_HINTS, ATOM_WM_NAME,
     },
     Event, Xid,
 };

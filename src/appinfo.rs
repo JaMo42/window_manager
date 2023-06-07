@@ -38,10 +38,7 @@ pub fn set_startup_wm_classes() {
     }
 }
 
-pub fn get_application_id(
-    names: &[Option<&str>],
-    fallback: Option<&str>,
-) -> Option<String> {
+pub fn get_application_id(names: &[Option<&str>], fallback: Option<&str>) -> Option<String> {
     fn lookup(names: &[Option<&str>]) -> Option<(bool, String)> {
         // Try cached
         let lock = CACHE.lock();
