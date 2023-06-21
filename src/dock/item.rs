@@ -75,6 +75,7 @@ pub struct Item {
     geometry: Rectangle,
     icon_rect: Rectangle,
     wm: Arc<WindowManager>,
+    context_menu_open: bool,
     indicator_color: Color,
 }
 
@@ -150,6 +151,7 @@ impl Item {
             geometry,
             icon_rect,
             wm: wm.clone(),
+            context_menu_open: false,
             indicator_color,
         })
     }
@@ -239,6 +241,9 @@ impl Item {
     }
 
     pub fn show_tooltip(&self, dock_geometry: Rectangle) {
+        if self.context_menu_open {
+            return;
+        }
         let x_in_dock = self.geometry.x + self.geometry.width as i16 / 2;
         let y_in_dock = self.geometry.y;
         let x = dock_geometry.x + x_in_dock;
@@ -420,10 +425,11 @@ impl Item {
         }
     }
 
-    pub fn context_menu(&self, dock_geometry: Rectangle, self_ref: ItemRef) -> XcbWindow {
+    pub fn context_menu(&self, dock_geometry: Rectangle, mut self_ref: ItemRef) -> XcbWindow {
         let wm = self.wm.clone();
         let mut menu = ContextMenu::new(self.wm.clone(), self_ref);
         menu.after(Box::new(move |mut self_ref| {
+            self_ref.get().context_menu_open = false;
             if !wm.active_workspace().is_empty() {
                 let dock = self_ref.get_dock();
                 dock.keep_open(false);
@@ -436,6 +442,8 @@ impl Item {
             dock_geometry.x + self.geometry.x + self.geometry.width as i16 / 2,
             dock_geometry.y + self.geometry.y - 5,
         )));
+        self_ref.get().context_menu_open = true;
+        self.hide_tooltip();
         let handle = menu.window().handle();
         self.wm.add_event_sink(SinkStorage::Unique(Box::new(menu)));
         handle
