@@ -127,6 +127,7 @@ Key and type | Description | Default
 `item_size` <br> `size`, relative to dock height | size of dock items | `80%`
 `icon_size` <dr> `size`, relative to item size | size of icons on items | `85%`
 `context_show_workspaces` <br> `bool` | show the workspace of clients in context menus, unless all clients are on the current workspace | `true`
+`auto_indicator_colors` | for programs with icons, use the average color of the icon as the indicator color. | `true`
 
 ### [split_handles]
 

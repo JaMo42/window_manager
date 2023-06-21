@@ -5,11 +5,13 @@ use crate::{
     x::{Display, Visual, Window},
 };
 use cairo::{Context, Operator, XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
+use itertools::Itertools;
 use pango::{FontDescription, Layout};
 use std::{ptr::NonNull, sync::Arc};
 use xcb::{
     x::{
-        ChangeGc, CopyArea, CreateGc, Drawable, Gc, Gcontext, Pixmap, PolyFillRectangle, Visualtype,
+        ChangeGc, CopyArea, CreateGc, Drawable, Gc, Gcontext, GetImage, ImageFormat, Pixmap,
+        PolyFillRectangle, Visualtype,
     },
     Xid,
 };
@@ -165,6 +167,46 @@ impl DrawingContext {
     pub fn render(&self, to: &Window, rect: impl Into<Rectangle>) {
         let rect = rect.into();
         self.render_at(to, rect, (rect.x, rect.y));
+    }
+
+    pub fn get_average_svg_color(&self, svg: &Svg, rect: impl Into<Rectangle>) -> Color {
+        let rect = rect.into();
+        self.fill_rect(rect, Color::new(0.0, 0.0, 0.0, 0.0));
+        self.draw_svg(svg, rect);
+        let (x, y, width, height) = rect.into_parts();
+        // data is BGRA
+        let reply = self
+            .display
+            .request_with_reply(&GetImage {
+                format: ImageFormat::ZPixmap,
+                drawable: Drawable::Pixmap(self.pixmap),
+                x,
+                y,
+                width,
+                height,
+                plane_mask: 0xffffffff,
+            })
+            .unwrap();
+        let mut n = 0.0;
+        let (red, green, blue) = reply
+            .data()
+            .iter()
+            .cloned()
+            .tuples()
+            .filter(|&(_, _, _, a)| a != 0)
+            .fold((0.0, 0.0, 0.0), |(cma_r, cma_g, cma_b), (b, g, r, _)| {
+                n += 1.0;
+                (
+                    cma_r + (r as f64 - cma_r) / n,
+                    cma_g + (g as f64 - cma_g) / n,
+                    cma_b + (b as f64 - cma_b) / n,
+                )
+            });
+        Color::new_rgb(
+            red as f64 / 255.0,
+            green as f64 / 255.0,
+            blue as f64 / 255.0,
+        )
     }
 
     pub fn set_color(&self, color: Color) {

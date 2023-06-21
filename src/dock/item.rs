@@ -2,6 +2,7 @@ use super::dock::ItemRef;
 use crate::{
     action,
     client::Client,
+    color::Color,
     context_menu::Indicator,
     desktop_entry::DesktopEntry,
     draw::{self, ColorKind, DrawingContext, Svg},
@@ -17,7 +18,7 @@ use std::{rc::Rc, sync::Arc};
 
 type ContextMenu = crate::context_menu::ContextMenu<ItemRef>;
 
-fn get_icon(entry: Option<&DesktopEntry>, icon_theme: &str) -> Option<Svg> {
+fn get_icon(entry: Option<&DesktopEntry>, icon_theme: &str) -> Option<(Svg, bool)> {
     let maybe_name_or_path = entry.and_then(|e| e.icon.clone());
     if let Some(app_icon) = maybe_name_or_path.and_then(|name| {
         let icon_path = if name.starts_with('/') {
@@ -27,9 +28,11 @@ fn get_icon(entry: Option<&DesktopEntry>, icon_theme: &str) -> Option<Svg> {
         };
         Svg::try_load(&icon_path).ok()
     }) {
-        Some(app_icon)
+        Some((app_icon, true))
+    } else if let Some(Ok(icon)) = draw::load_icon("applications-system", icon_theme) {
+        Some((icon, false))
     } else {
-        draw::load_icon("applications-system", icon_theme)?.ok()
+        None
     }
 }
 
@@ -72,6 +75,7 @@ pub struct Item {
     geometry: Rectangle,
     icon_rect: Rectangle,
     wm: Arc<WindowManager>,
+    indicator_color: Color,
 }
 
 impl Item {
@@ -100,7 +104,7 @@ impl Item {
             .build(&wm.display);
         wm.set_window_kind(&window, WindowKind::DockItem);
         window.map(&wm.display);
-        let icon = if let Some(icon) = get_icon(de.as_ref(), &wm.config.icon_theme) {
+        let (icon, is_app_icon) = if let Some(icon) = get_icon(de.as_ref(), &wm.config.icon_theme) {
             icon
         } else {
             message_box(
@@ -123,6 +127,13 @@ impl Item {
         } else {
             Vec::new()
         };
+        let indicator_color = if is_app_icon && wm.config.dock.auto_indicator_colors {
+            wm.drawing_context
+                .lock()
+                .get_average_svg_color(&icon, (0, 0, 100, 100))
+        } else {
+            wm.config.colors.dock_indicator
+        };
         Some(Self {
             id,
             desktop_entry: de,
@@ -139,6 +150,7 @@ impl Item {
             geometry,
             icon_rect,
             wm: wm.clone(),
+            indicator_color,
         })
     }
 
@@ -212,7 +224,7 @@ impl Item {
             let x = self.geometry.x + (self.geometry.width - width) as i16 / 2;
             let y = self.geometry.y + (self.geometry.height - height) as i16;
             dc.rect((x, y, width, height))
-                .color(self.wm.config.colors.dock_indicator)
+                .color(self.indicator_color)
                 .corner_percent(0.49)
                 .draw();
         }

@@ -96,7 +96,7 @@ impl Display {
         R: RequestWithoutReply,
     {
         self.connection.send_request(request);
-        self.connection.flush().unwrap(); // TODO
+        self.connection.flush().unwrap();
     }
 
     pub fn try_void_request<'a, R>(&'a self, request: &'a R) -> ProtocolResult<()>

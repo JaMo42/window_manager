@@ -17,6 +17,7 @@ gio = "0.16.3"
 glib = "0.16.3"
 gtk = "0.16.1"
 include_dir = "0.7.3"
+itertools = "0.10.5"
 libc = "0.2.65"
 librsvg = { version="2.55.1", git="https://gitlab.gnome.org/GNOME/librsvg" }
 log = "0.4.16"

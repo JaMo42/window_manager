@@ -267,6 +267,7 @@ parsed_config! {
             item_size: Size = "80%",
             icon_size: Size = "85%",
             context_show_workspaces: bool = "true",
+            auto_indicator_colors: bool = "true",
         }
         SplitHandles {
             size: Size = "2mm",
