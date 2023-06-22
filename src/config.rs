@@ -227,6 +227,8 @@ parsed_config! {
             gaps: Size = "0",
             padding: WindowAreaPadding = "[0, 0, 0, 0]",
             secondary_padding: WindowAreaPadding = "[0, 0, 0, 0]",
+            smart_window_placement: bool = "true",
+            smart_window_placement_max: usize = "0",
         }
         Window {
             border: Size = "1mm",

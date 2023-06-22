@@ -41,6 +41,7 @@ mod process;
 mod rectangle;
 mod session_manager;
 mod snap;
+mod spawn_pos;
 mod split_handles;
 mod split_manager;
 mod timeout_thread;

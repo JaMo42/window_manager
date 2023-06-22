@@ -71,6 +71,8 @@ Key and type | Description | Default
 `gaps` <br> `size` | width of inner gaps for snapped windows. | `0`
 `pad` <br> `[uint; 4]` | padding from screen edges for snapped windows, values are [Top, Bottom, Left, Right]. This sets the padding for the main monitor. If the bar is enabled its height is added to the top padding. | `[0, 0, 0, 0]`
 `secondary_pad` <br> `[uint; 4]` | like `pad` but for all non-primary monitors. | `[0, 0, 0, 0]`
+`smart_window_splacement` <br> `bool` | Try to place new clients so they don't overlap any existing clients or at least have as little overlap as possible. | `true`
+`smart_window_placement_max` <br> `unint` | Do not attemp to do smart window placement if there are already this many clients on the main monitor. `0` means no limit. | `0`
 
 ### [window]
 

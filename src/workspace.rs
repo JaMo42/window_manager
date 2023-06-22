@@ -49,6 +49,10 @@ impl Workspace {
         self.clients.is_empty()
     }
 
+    pub fn clients(&self) -> &[Arc<Client>] {
+        &self.clients
+    }
+
     pub fn iter(&self) -> std::slice::Iter<Arc<Client>> {
         self.clients.iter()
     }
