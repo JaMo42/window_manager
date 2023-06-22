@@ -355,13 +355,12 @@ fn find_position(
         // find the first space that fits the rectangle, due to the sorting this
         // will also be the closest to the center of all spaces that can fit it.
         .position(|space| space.width() >= rect.width && space.height() >= rect.height)
-        .unwrap_or_else(|| {
+        .or_else(|| {
             // if no space can fit the rectangle we use the largest space to
             // minimize overlap of the new window with other windows.
             (0..open_spaces.len())
                 .max_by_key(|&i| open_spaces[i].area())
-                .unwrap()
-        });
+        })?;
     Some(open_spaces[idx].position())
 }
 
