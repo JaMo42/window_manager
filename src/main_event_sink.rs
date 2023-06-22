@@ -92,8 +92,6 @@ impl MainEventSink {
     fn map_new_client(&mut self, window: Window, window_type: WindowType) {
         let handle = window.handle();
         let client = Client::new(&self.wm, window, window_type);
-        //let mut g = client.frame_geometry();
-        //g.random_position_inside(monitors().primary().window_area());
         let g = spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config);
         client.move_and_resize(SetClientGeometry::Frame(g));
         client.save_geometry();
