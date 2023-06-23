@@ -136,10 +136,18 @@ struct RectangleBuilder<'a> {
     height: usize,
     down: bool,
     target_aspect_ratio: f32,
+    target_height: u16,
+    target_width: u16,
 }
 
 impl<'a> RectangleBuilder<'a> {
-    fn new(map: &'a RectangleMap, origin: (usize, usize), aspect_ratio: f32) -> Self {
+    fn new(
+        map: &'a RectangleMap,
+        origin: (usize, usize),
+        aspect_ratio: f32,
+        target_width: u16,
+        target_height: u16,
+    ) -> Self {
         let mut this = Self {
             map,
             x: origin.0,
@@ -148,6 +156,8 @@ impl<'a> RectangleBuilder<'a> {
             height: 1,
             down: true,
             target_aspect_ratio: aspect_ratio,
+            target_width,
+            target_height,
         };
         this.swap_direction();
         this
@@ -184,7 +194,12 @@ impl<'a> RectangleBuilder<'a> {
             }
             false
         } else {
-            true
+            let r = self.map.get_rect(self.x, self.y, self.width, self.height);
+            if r.width >= self.target_width || r.height >= self.target_height {
+                false
+            } else {
+                true
+            }
         }
     }
 
@@ -200,6 +215,8 @@ fn find_open_spaces(
     screen: Rectangle,
     windows: &[&Arc<Client>],
     aspect_ratio: f32,
+    target_width: u16,
+    target_height: u16,
 ) -> Option<Vec<Rectangle>> {
     let mut xs = BTreeSet::new();
     let mut ys = BTreeSet::new();
@@ -233,7 +250,8 @@ fn find_open_spaces(
     // based on the number of windows it shouldn't be a problem.
     for origin in map.iter_origins() {
         // try rectangle with new windows aspect ratio
-        let mut builder = RectangleBuilder::new(&map, origin, aspect_ratio);
+        let mut builder =
+            RectangleBuilder::new(&map, origin, aspect_ratio, target_width, target_height);
         while builder.try_grow() {
             builder.swap_direction();
         }
@@ -243,7 +261,7 @@ fn find_open_spaces(
         spaces.push(a);
 
         // try expanding in one direction until we can't and then the other
-        builder = RectangleBuilder::new(&map, origin, aspect_ratio);
+        builder = RectangleBuilder::new(&map, origin, aspect_ratio, target_width, target_height);
         while builder.try_grow() {}
         builder.swap_direction_unchecked();
         while builder.try_grow() {}
@@ -253,7 +271,7 @@ fn find_open_spaces(
         }
 
         // as the previous but with swapped directions
-        builder = RectangleBuilder::new(&map, origin, aspect_ratio);
+        builder = RectangleBuilder::new(&map, origin, aspect_ratio, target_width, target_height);
         builder.swap_direction_unchecked();
         while builder.try_grow() {}
         builder.swap_direction_unchecked();
@@ -285,6 +303,25 @@ fn move_towards(inner: Rectangle, outer: Rectangle, point: (i16, i16)) -> Rectan
     )
 }
 
+/// Opposite of `move_towards`
+fn move_away(inner: Rectangle, outer: Rectangle, point: (i16, i16)) -> Rectangle {
+    fn get(outer_pos: i16, outer_size: u16, inner_size: u16, point_pos: i16) -> i16 {
+        if inner_size > outer_size {
+            outer_pos + (outer_size as i16 - inner_size as i16) / 2
+        } else {
+            let lo = outer_pos;
+            let hi = outer_pos + (outer_size as i16 - inner_size as i16);
+            outer_pos + inner_size as i16 - (point_pos - inner_size as i16 / 2).clamp(lo, hi)
+        }
+    }
+    Rectangle::new(
+        get(outer.x, outer.width, inner.width, point.0),
+        get(outer.y, outer.height, inner.height, point.1),
+        inner.width,
+        inner.height,
+    )
+}
+
 /// Represents a space from `find_open_spaces` and the position the rectangle
 /// would have inside it.
 struct SpaceInfo {
@@ -297,6 +334,13 @@ impl SpaceInfo {
         rect = move_towards(rect, space, screen.center());
         rect.clamp_inside(&screen);
         Self { space, rect }
+    }
+
+    // Updates the space info so the rectangle is as far away from the center
+    // as possible,
+    pub fn move_away_from_center(&mut self, original_rect: Rectangle, screen: Rectangle) {
+        self.rect = move_away(original_rect, self.space, screen.center());
+        self.rect.clamp_inside(&screen);
     }
 
     // Returns the width of the space
@@ -342,24 +386,30 @@ fn find_position(
     windows: &[&Arc<Client>],
 ) -> Option<(i16, i16)> {
     let aspect_ratio = rect.width as f32 / rect.height as f32;
-    let mut open_spaces: Vec<_> = find_open_spaces(screen, windows, aspect_ratio)?
-        .into_iter()
-        .map(|space| SpaceInfo::new(space, rect, screen))
-        .collect();
+    let mut open_spaces: Vec<_> =
+        find_open_spaces(screen, windows, aspect_ratio, rect.width, rect.height)?
+            .into_iter()
+            .map(|space| SpaceInfo::new(space, rect, screen))
+            .collect();
     open_spaces.sort_by_key(|space| {
         // the sort function doesn't likes floats...
-        (center_distance(space.center(), screen) * 100.0) as usize
+        (center_distance(space.center(), screen) * 100.0) as isize
     });
     let idx = open_spaces
         .iter()
-        // find the first space that fits the rectangle, due to the sorting this
-        // will also be the closest to the center of all spaces that can fit it.
         .position(|space| space.width() >= rect.width && space.height() >= rect.height)
         .or_else(|| {
+            open_spaces
+                .iter_mut()
+                .for_each(|space| space.move_away_from_center(rect, screen));
             // if no space can fit the rectangle we use the largest space to
             // minimize overlap of the new window with other windows.
-            (0..open_spaces.len())
-                .max_by_key(|&i| open_spaces[i].area())
+            // This is only determined by the size of the free space which is
+            // kinda bad.  It's slightly better now because we stop growing
+            // spaces once they are wide enough to fit the new window so we
+            // won't get spaces with wildly different aspect ratios but it's
+            // not actually try to minimize overlap.
+            (0..open_spaces.len()).max_by_key(|&i| open_spaces[i].area())
         })?;
     Some(open_spaces[idx].position())
 }
@@ -379,7 +429,7 @@ pub fn spawn_geometry(
     let windows: Vec<_> = current_workspace
         .clients()
         .iter()
-        .filter(|client| window_area.overlaps(client.frame_geometry()))
+        .filter(|client| !client.is_minimized() && window_area.overlaps(client.frame_geometry()))
         .collect();
     let m = config.layout.smart_window_placement_max;
     if windows.len() == 0 || (m > 0 && windows.len() >= m) {
