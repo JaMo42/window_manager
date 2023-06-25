@@ -10,7 +10,7 @@ pub struct NormalHints {
 }
 
 impl NormalHints {
-    /// Get the normals hints for the given window.
+    /// Get the normal hints for the given window.
     pub fn get(window: &Window) -> Option<Self> {
         let hints = window.display().get_wm_normal_hints(window)?;
         let mut result = Self::default();

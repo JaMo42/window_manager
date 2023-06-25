@@ -232,9 +232,12 @@ impl MainEventSink {
                         }
                     }
                 }
+                let (center_x, center_y) = client.frame_geometry().center();
+                let left = event.root_x() < center_x;
+                let up = event.root_y() < center_y;
                 match self.pressed_button {
                     BUTTON_1 => mouse_move(&client, self.pressed_button),
-                    BUTTON_3 => mouse_resize(&client, lock_width, lock_height),
+                    BUTTON_3 => mouse_resize(&client, lock_width, lock_height, left, up),
                     _ => {}
                 }
             }

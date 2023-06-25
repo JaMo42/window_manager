@@ -9,7 +9,7 @@ struct BasicRect {
     is_window: bool,
 }
 
-/// This is the core structure that allows this algorithm to run efficent enough
+/// This is the core structure that allows this algorithm to run efficient enough
 /// because instead of having to check e.g. every pixel of the screen we add_divide
 /// it into larger "basic" rectangles such that each of those basic rectangles is
 /// either entirely a window or entirely empty.
@@ -284,7 +284,7 @@ fn find_open_spaces(
     Some(spaces)
 }
 
-/// Moves `inner` as clsoe to `point` as possible while staying inside `outer`.
+/// Moves `inner` as close to `point` as possible while staying inside `outer`.
 fn move_towards(inner: Rectangle, outer: Rectangle, point: (i16, i16)) -> Rectangle {
     fn get(outer_pos: i16, outer_size: u16, inner_size: u16, point_pos: i16) -> i16 {
         if inner_size > outer_size {

@@ -12,7 +12,7 @@ use xcb::{
     Xid, XidNew,
 };
 
-// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm46435610090352
+// https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html#idm45582155069600
 const _NET_WM_MOVERESIZE_SIZE_TOPLEFT: u32 = 0;
 const _NET_WM_MOVERESIZE_SIZE_TOP: u32 = 1;
 const _NET_WM_MOVERESIZE_SIZE_TOPRIGHT: u32 = 2;
@@ -22,6 +22,8 @@ const _NET_WM_MOVERESIZE_SIZE_BOTTOM: u32 = 5;
 const _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT: u32 = 6;
 const _NET_WM_MOVERESIZE_SIZE_LEFT: u32 = 7;
 const _NET_WM_MOVERESIZE_MOVE: u32 = 8;
+const _NET_WM_MOVERESIZE_SIZE_KEYBOARD: u32 = 9;
+const _NET_WM_MOVERESIZE_MOVE_KEYBOARD: u32 = 10;
 
 #[derive(Debug, Clone)]
 pub struct Root(pub Window);
@@ -385,29 +387,36 @@ fn net_wm_moveresize(client: &Client, event: &ClientMessageEvent) {
     if client.is_on_active_workspace() {
         focus_client_on_its_workspace(client);
     }
-    // Note: resizing from the left, top, or any corner that's not the bottom-right
-    //       corner is kinda weird since the mouse_resize expects to resize in the
-    //       bottom and/or right direction, we could just ignore them but it's
-    //       probably nicer to have them anyways.
     if direction == _NET_WM_MOVERESIZE_MOVE && client.may_move() {
         mouse_move(client, BUTTON_1);
-    } else if (direction == _NET_WM_MOVERESIZE_SIZE_LEFT
-        || direction == _NET_WM_MOVERESIZE_SIZE_RIGHT)
+    } else if !(direction == _NET_WM_MOVERESIZE_MOVE_KEYBOARD
+        || direction == _NET_WM_MOVERESIZE_SIZE_KEYBOARD)
         && client.may_resize()
     {
-        mouse_resize(client, false, true);
-    } else if (direction == _NET_WM_MOVERESIZE_SIZE_TOP
-        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOM)
-        && client.may_resize()
-    {
-        mouse_resize(client, true, false);
-    } else if (direction == _NET_WM_MOVERESIZE_SIZE_TOPLEFT
-        || direction == _NET_WM_MOVERESIZE_SIZE_TOPRIGHT
-        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMRIGHT
-        || direction == _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT)
-        && client.may_resize()
-    {
-        mouse_resize(client, false, false);
+        // assignment because rustfmt::skip doesn't work on expressions
+        #[allow(clippy::let_unit_value)]
+        #[rustfmt::skip]
+        let _ = {
+        let lock_width = [
+            _NET_WM_MOVERESIZE_SIZE_TOP,
+            _NET_WM_MOVERESIZE_SIZE_BOTTOM,
+        ].contains(&direction);
+        let lock_height = [
+            _NET_WM_MOVERESIZE_SIZE_LEFT,
+            _NET_WM_MOVERESIZE_SIZE_RIGHT,
+        ].contains(&direction);
+        let left = [
+            _NET_WM_MOVERESIZE_SIZE_LEFT,
+            _NET_WM_MOVERESIZE_SIZE_TOPLEFT,
+            _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT,
+        ].contains(&direction);
+        let up = [
+            _NET_WM_MOVERESIZE_SIZE_TOP,
+            _NET_WM_MOVERESIZE_SIZE_TOPLEFT,
+            _NET_WM_MOVERESIZE_SIZE_TOPRIGHT,
+        ].contains(&direction);
+        mouse_resize(client, lock_width, lock_height, left, up);
+        };
     }
     // _NET_WM_MOVERESIZE_SIZE_KEYBOARD and _NET_WM_MOVERESIZE_MOVE_KEYBOARD are
     // not implemented.

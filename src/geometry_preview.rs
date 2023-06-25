@@ -31,6 +31,8 @@ pub struct GeometryPreview {
     client_layout: ClientLayout,
     frame_kind: FrameKind,
     splits: Vec<Splits>,
+    sizing_left: bool,
+    sizing_up: bool,
 }
 
 impl GeometryPreview {
@@ -88,7 +90,16 @@ impl GeometryPreview {
             client_layout,
             frame_kind,
             splits,
+            sizing_left: false,
+            sizing_up: false,
         }
+    }
+
+    pub fn with_sizing_direction(mut self, left: bool, up: bool) -> Self {
+        log::debug!("sizing: left={left} up={up}");
+        self.sizing_left = left;
+        self.sizing_up = up;
+        self
     }
 
     pub fn show(&self) {
@@ -147,7 +158,32 @@ impl GeometryPreview {
         self.is_snapped = true;
     }
 
-    pub fn resize_by(&mut self, w: i16, h: i16) {
+    /// Sets the `final_geometry`, this is where the up/left sizing directions
+    /// are applied.
+    fn set_final_geometry(&mut self, g: Rectangle) {
+        let dw = (g.width as i32 - self.final_geometry.width as i32) as i16;
+        let dh = (g.height as i32 - self.final_geometry.height as i32) as i16;
+        self.final_geometry = g;
+        if dh == 0 && dw == 0 {
+            return;
+        }
+        if self.sizing_left {
+            self.final_geometry.x -= dw;
+            self.geometry.x -= dw;
+        }
+        if self.sizing_up {
+            self.final_geometry.y -= dh;
+            self.geometry.y -= dh;
+        }
+    }
+
+    pub fn resize_by(&mut self, mut w: i16, mut h: i16) {
+        if self.sizing_left {
+            w = -w;
+        }
+        if self.sizing_up {
+            h = -h;
+        }
         if w < 0 {
             let ww = -w as u16;
             if self.geometry.width > ww && self.geometry.width - ww >= Self::MIN_WIDTH {
@@ -164,7 +200,7 @@ impl GeometryPreview {
         } else {
             self.geometry.height += h as u16;
         }
-        self.final_geometry = self.geometry;
+        self.set_final_geometry(self.geometry);
     }
 
     pub fn snap(&mut self, x: i16, y: i16) {
@@ -216,8 +252,9 @@ impl GeometryPreview {
             g = self.geometry;
         }
         // Apply size constraints
-        self.final_geometry =
-            self.get_frame_rect(hints.constrain(&self.get_client_rect(g), keep_height));
+        self.set_final_geometry(
+            self.get_frame_rect(hints.constrain(&self.get_client_rect(g), keep_height)),
+        );
     }
 
     pub fn update(&self) {

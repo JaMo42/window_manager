@@ -278,7 +278,7 @@ pub fn mouse_move(client: &Client, pressed_key: u8) {
         .run(cursor);
 }
 
-pub fn mouse_resize(client: &Client, lock_width: bool, lock_height: bool) {
+pub fn mouse_resize(client: &Client, lock_width: bool, lock_height: bool, left: bool, up: bool) {
     let wm = client.get_window_manager();
     let mut dx = 0;
     let mut dy = 0;
@@ -290,12 +290,15 @@ pub fn mouse_resize(client: &Client, lock_width: bool, lock_height: bool) {
     } else {
         client.frame_geometry()
     };
-    let preview = Rc::new(RefCell::new(GeometryPreview::new(
-        wm.clone(),
-        initial_geometry,
-        client.workspace(),
-        client.frame_kind(),
-    )));
+    let preview = Rc::new(RefCell::new(
+        GeometryPreview::new(
+            wm.clone(),
+            initial_geometry,
+            client.workspace(),
+            client.frame_kind(),
+        )
+        .with_sizing_direction(left, up),
+    ));
     let cursor = if lock_height {
         wm.cursors.resizing_horizontal
     } else if lock_width {
