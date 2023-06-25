@@ -68,10 +68,8 @@ pub fn get_application_id(names: &[Option<&str>], fallback: Option<&str>) -> Opt
         if add_to_cache {
             let mut lock = CACHE.lock();
             let cache = lock.get_or_insert_with(BTreeMap::new);
-            for i in names {
-                if let Some(name) = i {
-                    cache.insert(name.to_string(), id.clone());
-                }
+            for name in names.iter().flatten() {
+                cache.insert(name.to_string(), id.clone());
             }
         }
         return Some(id);

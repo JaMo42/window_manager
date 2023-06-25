@@ -203,9 +203,9 @@ impl DrawingContext {
                 )
             });
         Color::new_rgb(
-            red as f64 / 255.0,
-            green as f64 / 255.0,
-            blue as f64 / 255.0,
+            red / 255.0,
+            green / 255.0,
+            blue / 255.0,
         )
     }
 

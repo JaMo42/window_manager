@@ -87,7 +87,7 @@ impl RectangleMap {
 
     /// Returns an iterator over all positions of basic rectangles that are not
     /// within a window.
-    fn iter_origins<'a>(&'a self) -> OriginIterator<'a> {
+    fn iter_origins(&self) -> OriginIterator<'_> {
         OriginIterator::new(self)
     }
 }
@@ -195,11 +195,7 @@ impl<'a> RectangleBuilder<'a> {
             false
         } else {
             let r = self.map.get_rect(self.x, self.y, self.width, self.height);
-            if r.width >= self.target_width || r.height >= self.target_height {
-                false
-            } else {
-                true
-            }
+            !(r.width >= self.target_width || r.height >= self.target_height)
         }
     }
 
@@ -432,7 +428,7 @@ pub fn spawn_geometry(
         .filter(|client| !client.is_minimized() && window_area.overlaps(client.frame_geometry()))
         .collect();
     let m = config.layout.smart_window_placement_max;
-    if windows.len() == 0 || (m > 0 && windows.len() >= m) {
+    if windows.is_empty() || (m > 0 && windows.len() >= m) {
         frame.random_position_inside(&window_area);
     } else {
         frame.clamp_inside(&window_area);

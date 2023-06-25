@@ -172,7 +172,7 @@ impl DesktopEntry {
     }
 
     pub fn new_from_path(pathname: &str) -> Option<DesktopEntry> {
-        match Self::read_file(&pathname) {
+        match Self::read_file(pathname) {
             Ok(desktop_entry) => Some(desktop_entry),
             Err(e) => {
                 log::error!("Could not read {}: {}", pathname, e);
