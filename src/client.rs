@@ -45,7 +45,7 @@ pub enum SetClientGeometry {
     Client(Rectangle),
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum FrameKind {
     /// Frame with title bar and buttons
     Decorated,

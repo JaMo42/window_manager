@@ -19,7 +19,7 @@ macro_rules! cursors {
         $($name:ident => $shape:ident,)*
         }
         named {
-        $($i_name:ident => $c_name:expr, $my_id:ident, $fallback:ident,)*
+        $($i_name:ident => $c_name:expr, $my_id:ident, $fallback:ident;)*
         }
     } => {
         pub struct Cursors {
@@ -81,7 +81,7 @@ cursors! {
         resizing_vertical => XC_sb_v_double_arrow,
     }
     named {
-        nesw_resize => "nesw-resize", NESW_RESIZE, XC_sizing,
-        nwse_resize => "nwse-resize", NWSE_RESIZE, XC_sizing,
+        nesw_resize => "nesw-resize", NESW_RESIZE, XC_sizing;
+        nwse_resize => "nwse-resize", NWSE_RESIZE, XC_sizing;
     }
 }

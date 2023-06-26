@@ -605,3 +605,9 @@ impl WindowManager {
         Ok(())
     }
 }
+
+impl std::fmt::Debug for WindowManager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "WindowManager")
+    }
+}

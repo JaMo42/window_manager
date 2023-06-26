@@ -18,6 +18,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+#[derive(Debug)]
 pub struct GeometryPreview {
     wm: Arc<WindowManager>,
     window: Window,
