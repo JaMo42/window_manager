@@ -415,7 +415,7 @@ fn net_wm_moveresize(client: &Client, event: &ClientMessageEvent) {
             _NET_WM_MOVERESIZE_SIZE_TOPLEFT,
             _NET_WM_MOVERESIZE_SIZE_TOPRIGHT,
         ].contains(&direction);
-        mouse_resize(client, MouseResizeOptions::new(lock_width, lock_height, left, up));
+        mouse_resize(client, MouseResizeOptions::new(lock_width, lock_height, up, left));
         };
     }
     // _NET_WM_MOVERESIZE_SIZE_KEYBOARD and _NET_WM_MOVERESIZE_MOVE_KEYBOARD are
