@@ -131,6 +131,9 @@ impl Workspace {
             self.clients.insert(0, c);
         }
         self.focus_client(&self.clients[0]);
+        if let Some(prev) = self.clients.get(1) {
+            self.clients[0].ensure_stacked_above(prev);
+        }
     }
 
     /// Focus the client with the given window.

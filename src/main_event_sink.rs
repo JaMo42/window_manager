@@ -205,9 +205,6 @@ impl MainEventSink {
             client.focus();
             self.pressed_button = event.detail();
             let mut workspace = self.wm.workspace(client.workspace());
-            if let Some(prev) = workspace.focused() {
-                client.ensure_stacked_above(prev);
-            }
             workspace.focus(child);
         }
     }
