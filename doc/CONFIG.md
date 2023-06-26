@@ -89,6 +89,7 @@ Key and type | Description | Default
 `icon_size` <br> `size`, relative to title bar height | size of window icons. If `0` window icons are disabled. | `80%`
 `button_icon_size` <br> `size`, relative to title bar height | size of button icons | `75%`
 `circle_buttons` <br> `bool` | enable [circular window buttons](#circular-buttons) | `false`
+`extend_frame` <br>  `sizeo` | how far to extend the clickable window frame for resizing. `0` means disable frame extension. | `1mm`
 
 ### [theme]
 
