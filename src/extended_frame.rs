@@ -132,3 +132,9 @@ impl Xid for ExtendedFrame {
         self.window.handle().resource_id()
     }
 }
+
+impl PartialEq for ExtendedFrame {
+    fn eq(&self, other: &Self) -> bool {
+        self.window == other.window
+    }
+}

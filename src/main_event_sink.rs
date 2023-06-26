@@ -495,6 +495,9 @@ impl EventSink for MainEventSink {
             self.wm.active_workspace().remove(&client);
             client.destroy();
             self.wm.update_client_list();
+            if self.extended_frame_hovered.as_ref() == Some(client.extended_frame()) {
+                self.extended_frame_hovered = None;
+            }
             log::trace!("Removed client: {client}");
         }
     }

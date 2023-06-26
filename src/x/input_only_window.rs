@@ -9,7 +9,7 @@ use xcb::{
 };
 
 /// A more lightweight window specialization for `InputOnly` windows.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct InputOnlyWindow(XcbWindow);
 
 impl InputOnlyWindow {
