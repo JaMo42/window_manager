@@ -242,6 +242,7 @@ parsed_config! {
             icon_size: Size = "80%",
             button_icon_size: Size = "75%",
             circle_buttons: bool = "false",
+            extend_frame: Size = "1mm",
         }
         Theme {
             colors: String = "'default'",

@@ -307,7 +307,6 @@ impl Value for Color {
             scanner.next();
             let hex_chars = scanner.some(|c| c.is_ascii_hexdigit());
             if hex_chars.len() != 6 && hex_chars.len() != 8 {
-                log::debug!("\n{}", scanner.as_str());
                 return Err(value_error(
                     "invalid hex color",
                     "expected `#RRGGBB` or `#RRGGBBAA`",

@@ -10,6 +10,10 @@ stacking window manager for X
 
 Written in rust, `cargo` required.
 
+### Libraries
+
+- `Xcursor`
+
 ### Optional
 
 - `amixer` required for volume control actions and status bar widget

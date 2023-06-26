@@ -113,6 +113,7 @@ pub struct ClientLayout {
     /// Gap around snapped clients.
     gap: i16,
     title_font: FontDescription,
+    frame_extents: i16,
 }
 
 impl Layout for ClientLayout {
@@ -149,6 +150,10 @@ impl Layout for ClientLayout {
                 .resolve(Some(monitor.dpmm()), None, Some(title_font_height)) as i16;
         let border2 = border as u16 * 2;
         let button = ButtonLayout::new(config, monitor.dpmm(), title_bar_height, title_font_height);
+        let extended_frame = config
+            .window
+            .extend_frame
+            .resolve(Some(monitor.dpmm()), None, None) as i16;
         Self {
             decorated_frame_offset: Rectangle::new(
                 border,
@@ -168,6 +173,7 @@ impl Layout for ClientLayout {
                 .resolve(Some(monitor.dpmm()), None, Some(title_font_height))
                 as i16,
             title_font,
+            frame_extents: extended_frame,
         }
     }
 }
@@ -256,6 +262,10 @@ impl ClientLayout {
             self.title_width_offset + INNER_WIDTH,
             self.decorated_frame_offset.height + INNER_HEIGHT,
         )
+    }
+
+    pub fn frame_extents(&self) -> i16 {
+        self.frame_extents
     }
 }
 

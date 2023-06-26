@@ -54,6 +54,7 @@ pub enum WindowKind {
     Dock,
     DockItem,
     DockShow,
+    ExtendedFrame,
     Frame,
     FrameButton,
     MetaOrUnmanaged,

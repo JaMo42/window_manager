@@ -2,12 +2,19 @@ use super::{property::Atoms, GetProperty, Visual, XcbWindow};
 use crate::error::{fatal_error, OrFatal};
 use libc::c_void;
 use parking_lot::Mutex;
-use std::{ffi::CStr, mem::zeroed, sync::Arc};
-use x11::xlib::{
-    KeyCode, MappingKeyboard, MappingModifier, MappingPointer, XCreateFontCursor,
-    XDefaultRootWindow, XDefaultScreen, XDisplayHeight, XDisplayString, XDisplayWidth, XFree,
-    XFreeCursor, XGetModifierMapping, XGetWMNormalHints, XKeycodeToKeysym, XKeysymToKeycode,
-    XMatchVisualInfo, XModifierKeymap, XRefreshKeyboardMapping, XSizeHints, XVisualInfo,
+use std::{
+    ffi::{CStr, CString},
+    mem::zeroed,
+    sync::Arc,
+};
+use x11::{
+    xcursor::XcursorLibraryLoadCursor,
+    xlib::{
+        KeyCode, MappingKeyboard, MappingModifier, MappingPointer, XCreateFontCursor,
+        XDefaultRootWindow, XDefaultScreen, XDisplayHeight, XDisplayString, XDisplayWidth, XFree,
+        XFreeCursor, XGetModifierMapping, XGetWMNormalHints, XKeycodeToKeysym, XKeysymToKeycode,
+        XMatchVisualInfo, XModifierKeymap, XRefreshKeyboardMapping, XSizeHints, XVisualInfo,
+    },
 };
 use xcb::{
     ffi::xcb_generic_event_t,
@@ -330,6 +337,16 @@ impl Display {
         unsafe {
             let xlib_cursor = XCreateFontCursor(self.connection.get_raw_dpy(), shape);
             Cursor::new(xlib_cursor as u32)
+        }
+    }
+
+    pub fn load_cursor(&self, name: &str) -> Option<Cursor> {
+        let cname = CString::new(name).unwrap();
+        let xlib_cursor = unsafe { XcursorLibraryLoadCursor(self.xlib_display(), cname.as_ptr()) };
+        if xlib_cursor == 0 {
+            None
+        } else {
+            Some(unsafe { Cursor::new(xlib_cursor as u32) })
         }
     }
 

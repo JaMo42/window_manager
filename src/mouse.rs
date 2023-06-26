@@ -1,6 +1,7 @@
 use crate::{
     action,
     client::Client,
+    cursor,
     geometry_preview::GeometryPreview,
     monitors::monitors,
     normal_hints::NormalHints,
@@ -207,7 +208,7 @@ impl<'a> TrackedMotion<'a> {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct MouseResizeOptions {
     pub lock_width: bool,
     pub lock_height: bool,
@@ -240,6 +241,36 @@ impl MouseResizeOptions {
             up: y < corner,
             left: x < corner,
         }
+    }
+
+    pub fn cursor_id(&self) -> u32 {
+        #[rustfmt::skip]
+        const TABLE: [(MouseResizeOptions, u32); 16] = [
+            (MouseResizeOptions::new(true, false, false, false), cursor::XC_sb_v_double_arrow),
+            (MouseResizeOptions::new(true, false, true, false), cursor::XC_sb_v_double_arrow),
+            (MouseResizeOptions::new(false, true, false, false), cursor::XC_sb_h_double_arrow),
+            (MouseResizeOptions::new(false, true, false, true), cursor::XC_sb_h_double_arrow),
+            (MouseResizeOptions::new(false, false, false, false), cursor::NWSE_RESIZE),
+            (MouseResizeOptions::new(false, false, false, true), cursor::NESW_RESIZE),
+            (MouseResizeOptions::new(false, false, true, false), cursor::NESW_RESIZE),
+            (MouseResizeOptions::new(false, false, true, true), cursor::NWSE_RESIZE),
+            // These don't make sense and can never be returned from `from_position`
+            // but we add them for safety
+            (MouseResizeOptions::new(true, false, false, true), cursor::XC_sizing),
+            (MouseResizeOptions::new(true, false, true, true), cursor::XC_sizing),
+            (MouseResizeOptions::new(false, true, true, true), cursor::XC_sizing),
+            (MouseResizeOptions::new(false, true, true, false), cursor::XC_sizing),
+            (MouseResizeOptions::new(true, true, false, false), cursor::XC_sizing),
+            (MouseResizeOptions::new(true, true, false, true), cursor::XC_sizing),
+            (MouseResizeOptions::new(true, true, true, false), cursor::XC_sizing),
+            (MouseResizeOptions::new(true, true, true, true), cursor::XC_sizing),
+        ];
+        for (opts, cursor_id) in TABLE {
+            if opts == *self {
+                return cursor_id;
+            }
+        }
+        unreachable!()
     }
 }
 
@@ -335,13 +366,7 @@ pub fn mouse_resize(client: &Client, opts: MouseResizeOptions) {
         )
         .with_sizing_direction(opts.left, opts.up),
     ));
-    let cursor = if opts.lock_height {
-        wm.cursors.resizing_horizontal
-    } else if opts.lock_width {
-        wm.cursors.resizing_vertical
-    } else {
-        wm.cursors.resizing
-    };
+    let cursor = wm.cursors.by_id(opts.cursor_id());
     let display = wm.display.clone();
     TrackedMotion::new(display)
         .rate(MOUSE_MOVE_RESIZE_RATE)

@@ -25,6 +25,7 @@ mod error;
 mod event;
 mod event_router;
 mod ewmh;
+mod extended_frame;
 mod geometry_preview;
 mod layout;
 mod main_event_sink;

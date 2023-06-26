@@ -7,6 +7,7 @@ use crate::{
     error::OrFatal,
     event::{EventSink, Signal},
     ewmh::{self, WindowType},
+    extended_frame::ExtendedFrame,
     monitors::{monitors, monitors_mut},
     mouse::{mouse_move, mouse_resize, MouseResizeOptions, BUTTON_1, BUTTON_3},
     process::run_or_message_box,
@@ -37,6 +38,9 @@ pub struct MainEventSink {
     signal_sender: Sender<Signal>,
     screen_size: (u16, u16),
     wm: Arc<WindowManager>,
+    // we keep track of this so we don't need to check for window kind on every
+    // motion event
+    extended_frame_hovered: Option<ExtendedFrame>,
 }
 
 impl MainEventSink {
@@ -48,6 +52,7 @@ impl MainEventSink {
             signal_sender: wm.signal_sender.clone(),
             screen_size: wm.display.get_total_size(),
             wm,
+            extended_frame_hovered: None,
         }
     }
 
@@ -178,7 +183,7 @@ impl MainEventSink {
                     );
                 }
             }
-            WindowKind::MetaOrUnmanaged => {}
+            WindowKind::MetaOrUnmanaged | WindowKind::ExtendedFrame => {}
             _ => {
                 log::warn!(
                     "Ignoring click on window with button press mask: {}",
@@ -221,7 +226,10 @@ impl MainEventSink {
                         event.root_y(),
                         3 * client.frame_offset().x as u16,
                     );
-                    if event.root_y() < frame.y + client.frame_offset().y {
+                    if event.root_y() < frame.y + client.frame_offset().y
+                        && matches!(self.wm.get_window_kind(&event.child()), WindowKind::Frame)
+                    {
+                        // on title bar
                         self.pressed_button = BUTTON_1;
                     } else {
                         self.pressed_button = BUTTON_3;
@@ -236,6 +244,13 @@ impl MainEventSink {
                 }
             }
             self.pressed_button = 0;
+        } else if let Some(exframe) = &self.extended_frame_hovered {
+            exframe.update_cursor(
+                &self.display,
+                &self.wm.cursors,
+                event.root_x(),
+                event.root_y(),
+            );
         } else {
             // Ignore all immediately following motion events.
             use xcb::x::Event::*;
@@ -377,10 +392,22 @@ impl MainEventSink {
     }
 
     fn crossing(&mut self, window: XcbWindow, is_enter: bool) {
-        if matches!(self.wm.get_window_kind(&window), WindowKind::FrameButton) {
-            if let Some(client) = self.wm.win2client(&window) {
-                client.cross_button(window, is_enter);
+        // TODO
+        match self.wm.get_window_kind(&window) {
+            WindowKind::FrameButton => {
+                if let Some(client) = self.wm.win2client(&window) {
+                    client.cross_button(window, is_enter);
+                }
             }
+            WindowKind::ExtendedFrame => {
+                self.extended_frame_hovered = None;
+                if is_enter {
+                    if let Some(client) = self.wm.win2client(&window) {
+                        self.extended_frame_hovered = Some(client.extended_frame().clone())
+                    }
+                }
+            }
+            _ => {}
         }
     }
 

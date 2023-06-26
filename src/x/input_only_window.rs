@@ -2,13 +2,14 @@ use super::{Display, WindowAttributes, XcbWindow};
 use crate::{error::OrFatal, rectangle::Rectangle};
 use xcb::{
     x::{
-        ConfigWindow, ConfigureWindow, CreateWindow, DestroyWindow, EventMask, MapWindow,
-        WindowClass, COPY_FROM_PARENT,
+        ChangeWindowAttributes, ConfigWindow, ConfigureWindow, CreateWindow, Cursor, Cw,
+        DestroyWindow, EventMask, MapWindow, UnmapWindow, WindowClass, COPY_FROM_PARENT,
     },
     Xid,
 };
 
 /// A more lightweight window specialization for `InputOnly` windows.
+#[derive(Copy, Clone)]
 pub struct InputOnlyWindow(XcbWindow);
 
 impl InputOnlyWindow {
@@ -32,9 +33,12 @@ impl InputOnlyWindow {
         display.void_request(&DestroyWindow { window: self.0 });
     }
 
-    #[allow(dead_code)]
     pub fn map(&self, display: &Display) {
         display.void_request(&MapWindow { window: self.0 })
+    }
+
+    pub fn unmap(&self, display: &Display) {
+        display.void_request(&UnmapWindow { window: self.0 })
     }
 
     pub fn move_and_resize(&self, display: &Display, geometry: impl Into<(i16, i16, u16, u16)>) {
@@ -47,6 +51,13 @@ impl InputOnlyWindow {
                 ConfigWindow::Width(width as u32),
                 ConfigWindow::Height(height as u32),
             ],
+        });
+    }
+
+    pub fn set_cursor(&self, display: &Display, cursor: Cursor) {
+        display.void_request(&ChangeWindowAttributes {
+            window: self.0,
+            value_list: &[Cw::Cursor(cursor)],
         });
     }
 }

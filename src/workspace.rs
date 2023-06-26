@@ -68,8 +68,7 @@ impl Workspace {
     }
 
     fn find_client_by_id(&self, id: XcbWindow) -> Option<usize> {
-        self.iter()
-            .position(|c| c.window().handle() == id || c.frame().handle() == id)
+        self.iter().position(|c| c.has_handle(id))
     }
 
     fn focus_client(&self, client: &Client) {
@@ -135,7 +134,6 @@ impl Workspace {
     }
 
     /// Focus the client with the given window.
-    /// The client cannot be borrowed.
     pub fn focus(&mut self, window: XcbWindow) {
         if cfg!(debug_assertions) && (window.is_none() || self.root.0 == window) {
             log::warn!(

@@ -8,6 +8,7 @@ use crate::{
     error::OrFatal,
     event::Signal,
     ewmh::{set_allowed_actions, set_frame_extents, WindowState, WindowType},
+    extended_frame::ExtendedFrame,
     layout::{ClientLayout, LayoutClass},
     monitors::{monitors, Monitor},
     motif_hints::MotifHints,
@@ -107,6 +108,7 @@ pub struct Client {
     last_click_time: Cell<Timestamp>,
     workspace: Cell<usize>,
     monitor: Cell<isize>,
+    extended_frame: ExtendedFrame,
 }
 
 impl Client {
@@ -134,11 +136,8 @@ impl Client {
         } else {
             FrameKind::Decorated
         };
-        let frame = create_frame(
-            window.display(),
-            layout.get_frame(frame_kind, &geometry),
-            wm.cursors.normal,
-        );
+        let frame_size = layout.get_frame(frame_kind, &geometry);
+        let frame = create_frame(window.display(), frame_size, wm.cursors.normal);
         let (x, y) = layout.reparent_position(frame_kind);
         window.reparent(&frame, x, y);
         frame.map_subwindows();
@@ -166,6 +165,8 @@ impl Client {
         set_allowed_actions(&window, !window_type.is_dialog());
         set_frame_extents(&window, layout.frame_offset(frame_kind));
 
+        let extended_frame = ExtendedFrame::new(&display, frame_size, layout.frame_extents());
+
         drop(layout_class_b);
         let window_handle = window.handle();
         let frame_handle = frame.handle();
@@ -191,11 +192,14 @@ impl Client {
             last_click_time: Cell::new(0),
             workspace: Cell::new(wm.active_workspace_index()),
             monitor: Cell::new(monitors().primary().index() as isize),
+            extended_frame: extended_frame.clone(),
         });
         wm.associate_client(&window_handle, &this);
         wm.associate_client(&frame_handle, &this);
         wm.set_window_kind(&window_handle, WindowKind::Client);
         wm.set_window_kind(&frame_handle, WindowKind::Frame);
+        extended_frame.associate(&wm, &this);
+        extended_frame.restack(&this);
         if frame_kind.should_draw_decorations() {
             let layout_class = this.layout_class.borrow();
             let layout = layout_class.get(monitors().get(0));
@@ -256,8 +260,20 @@ impl Client {
         &self.frame
     }
 
+    pub fn extended_frame(&self) -> &ExtendedFrame {
+        &self.extended_frame
+    }
+
     pub fn handle(&self) -> XcbWindow {
         self.window.handle()
+    }
+
+    /// Checks if the given handle is the handle of the clients window, frame
+    /// window, or extended frame window.
+    pub fn has_handle(&self, handle: XcbWindow) -> bool {
+        self.window.handle() == handle
+            || self.frame.handle() == handle
+            || self.extended_frame.handle_eq(handle)
     }
 
     pub fn display(&self) -> &Arc<Display> {
@@ -312,14 +328,17 @@ impl Client {
 
     pub fn map(&self) {
         self.frame.map();
+        self.extended_frame.map(self);
     }
 
     pub fn unmap(&self) {
         self.frame.unmap();
+        self.extended_frame.unmap(&self.display());
     }
 
     pub fn raise(&self) {
         self.frame.raise();
+        self.extended_frame.restack(self);
     }
 
     pub fn is_on_active_workspace(&self) -> bool {
@@ -504,6 +523,8 @@ impl Client {
         self.geometry
             .set(layout.get_client(self.frame_kind, &frame_rect));
         self.frame.move_and_resize((x, y, width, height));
+        self.extended_frame
+            .resize(&self.display(), (x, y, width, height));
         let mon_idx = monitors().at(frame_rect.center()).index() as isize;
         if mon_idx != self.monitor.get() {
             drop(layout);
@@ -903,12 +924,14 @@ impl Client {
         let wm = self.get_window_manager();
         wm.remove_all_contexts(&self.window);
         wm.remove_all_contexts(&self.frame);
+        wm.remove_all_contexts(&self.extended_frame);
         self.for_each_button(|button| {
             wm.remove_all_contexts(button.window());
             button.window().destroy();
             false
         });
         self.frame.destroy();
+        self.extended_frame.destroy(&self.display());
     }
 }
 

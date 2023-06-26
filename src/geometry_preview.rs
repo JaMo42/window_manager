@@ -96,7 +96,6 @@ impl GeometryPreview {
     }
 
     pub fn with_sizing_direction(mut self, left: bool, up: bool) -> Self {
-        log::debug!("sizing: left={left} up={up}");
         self.sizing_left = left;
         self.sizing_up = up;
         self
