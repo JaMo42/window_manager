@@ -97,7 +97,12 @@ impl MainEventSink {
     fn map_new_client(&mut self, window: Window, window_type: WindowType) {
         let handle = window.handle();
         let client = Client::new(&self.wm, window, window_type);
-        let g = spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config);
+        let g = if let WindowType::Dialog = window_type {
+            let monitor = *client.get_monitor().window_area();
+            *client.frame_geometry().center_inside(&monitor)
+        } else {
+            spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config)
+        };
         client.move_and_resize(SetClientGeometry::Frame(g));
         client.save_geometry();
         if client.workspace() == self.wm.active_workspace_index() {
