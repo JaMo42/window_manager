@@ -8,7 +8,7 @@ use crate::{
     event::{EventSink, Signal},
     ewmh::{self, WindowType},
     monitors::{monitors, monitors_mut},
-    mouse::{mouse_move, mouse_resize, BUTTON_1, BUTTON_3},
+    mouse::{mouse_move, mouse_resize, MouseResizeOptions, BUTTON_1, BUTTON_3},
     process::run_or_message_box,
     rectangle::Rectangle,
     session_manager::SESSION_MANAGER_EVENT,
@@ -211,33 +211,27 @@ impl MainEventSink {
     fn motion(&mut self, event: &MotionNotifyEvent) {
         if self.pressed_button != 0 {
             if let Some(client) = self.wm.win2client(&event.child()) {
-                let mut lock_width = false;
-                let mut lock_height = false;
+                let options;
                 let state = ModMask::from_bits_truncate(event.state().bits());
                 if !state.contains(self.config.modifier()) {
-                    // Modifier not pressed so it was a frame click, check if
-                    // we should lock one axis.
-                    let border_px = client.frame_offset().x;
-                    let frame_geometry = client.frame_geometry();
-                    lock_height = event.root_x() > frame_geometry.right_edge() - 3 * border_px;
-                    lock_width = event.root_y() > frame_geometry.bottom_edge() - 3 * border_px;
-                    if !lock_width && !lock_height {
+                    let frame = client.frame_geometry();
+                    options = MouseResizeOptions::from_position(
+                        frame,
+                        event.root_x(),
+                        event.root_y(),
+                        3 * client.frame_offset().x as u16,
+                    );
+                    if event.root_y() < frame.y + client.frame_offset().y {
                         self.pressed_button = BUTTON_1;
                     } else {
                         self.pressed_button = BUTTON_3;
-                        if lock_width && lock_height {
-                            // Bottom-right corner, don't lock either axis.
-                            lock_width = false;
-                            lock_height = false;
-                        }
                     }
+                } else {
+                    options = MouseResizeOptions::default();
                 }
-                let (center_x, center_y) = client.frame_geometry().center();
-                let left = event.root_x() < center_x;
-                let up = event.root_y() < center_y;
                 match self.pressed_button {
                     BUTTON_1 => mouse_move(&client, self.pressed_button),
-                    BUTTON_3 => mouse_resize(&client, lock_width, lock_height, left, up),
+                    BUTTON_3 => mouse_resize(&client, options),
                     _ => {}
                 }
             }

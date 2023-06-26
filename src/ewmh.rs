@@ -1,7 +1,7 @@
 use crate::{
     action,
     client::{Client, SetClientGeometry},
-    mouse::{mouse_move, mouse_resize, BUTTON_1},
+    mouse::{mouse_move, mouse_resize, MouseResizeOptions, BUTTON_1},
     rectangle::Rectangle,
     snap::SnapState,
     window_manager::{WindowManager, NAME},
@@ -415,7 +415,7 @@ fn net_wm_moveresize(client: &Client, event: &ClientMessageEvent) {
             _NET_WM_MOVERESIZE_SIZE_TOPLEFT,
             _NET_WM_MOVERESIZE_SIZE_TOPRIGHT,
         ].contains(&direction);
-        mouse_resize(client, lock_width, lock_height, left, up);
+        mouse_resize(client, MouseResizeOptions::new(lock_width, lock_height, left, up));
         };
     }
     // _NET_WM_MOVERESIZE_SIZE_KEYBOARD and _NET_WM_MOVERESIZE_MOVE_KEYBOARD are

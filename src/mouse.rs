@@ -4,7 +4,7 @@ use crate::{
     geometry_preview::GeometryPreview,
     monitors::monitors,
     normal_hints::NormalHints,
-    rectangle::PointOffset,
+    rectangle::{PointOffset, Rectangle},
     x::{Display, ScopedKeyboardGrab, ScopedPointerGrab},
 };
 use std::{cell::RefCell, rc::Rc, sync::Arc};
@@ -207,6 +207,42 @@ impl<'a> TrackedMotion<'a> {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct MouseResizeOptions {
+    pub lock_width: bool,
+    pub lock_height: bool,
+    pub up: bool,
+    pub left: bool,
+}
+
+impl MouseResizeOptions {
+    pub const fn new(lock_width: bool, lock_height: bool, up: bool, left: bool) -> Self {
+        Self {
+            lock_width,
+            lock_height,
+            up,
+            left,
+        }
+    }
+
+    pub fn from_position(frame: Rectangle, mut x: i16, mut y: i16, corner_size: u16) -> Self {
+        x -= frame.x;
+        y -= frame.y;
+        let corner = corner_size as i16;
+        let corner_x = (frame.width - corner_size) as i16;
+        let corner_y = (frame.height - corner_size) as i16;
+        let lock_width = y < corner || y >= corner_y;
+        let lock_height = x < corner || x >= corner_x;
+        let not_both = !(lock_width && lock_height);
+        Self {
+            lock_width: lock_width && not_both,
+            lock_height: lock_height && not_both,
+            up: y < corner,
+            left: x < corner,
+        }
+    }
+}
+
 pub fn mouse_move(client: &Client, pressed_key: u8) {
     let wm = client.get_window_manager();
     let display = wm.display.clone();
@@ -278,12 +314,12 @@ pub fn mouse_move(client: &Client, pressed_key: u8) {
         .run(cursor);
 }
 
-pub fn mouse_resize(client: &Client, lock_width: bool, lock_height: bool, left: bool, up: bool) {
+pub fn mouse_resize(client: &Client, opts: MouseResizeOptions) {
     let wm = client.get_window_manager();
     let mut dx = 0;
     let mut dy = 0;
-    let width_mul = !lock_width as i16;
-    let height_mul = !lock_height as i16;
+    let width_mul = !opts.lock_width as i16;
+    let height_mul = !opts.lock_height as i16;
     let normal_hints = NormalHints::get(client.window());
     let initial_geometry = if client.is_snapped() {
         client.saved_geometry()
@@ -297,11 +333,11 @@ pub fn mouse_resize(client: &Client, lock_width: bool, lock_height: bool, left: 
             client.workspace(),
             client.frame_kind(),
         )
-        .with_sizing_direction(left, up),
+        .with_sizing_direction(opts.left, opts.up),
     ));
-    let cursor = if lock_height {
+    let cursor = if opts.lock_height {
         wm.cursors.resizing_horizontal
-    } else if lock_width {
+    } else if opts.lock_width {
         wm.cursors.resizing_vertical
     } else {
         wm.cursors.resizing
@@ -321,7 +357,7 @@ pub fn mouse_resize(client: &Client, lock_width: bool, lock_height: bool, left: 
             preview.resize_by(mx, my);
             if let Some(h) = normal_hints.as_ref() {
                 // If resizing freely prefer the direction the mouse has moved more in
-                let keep_height = lock_width || (!lock_height && dx > dy);
+                let keep_height = opts.lock_width || (!opts.lock_height && dx > dy);
                 preview.apply_normal_hints(h, keep_height);
             }
             preview.update();

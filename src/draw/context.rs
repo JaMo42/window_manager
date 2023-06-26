@@ -202,11 +202,7 @@ impl DrawingContext {
                     cma_b + (b as f64 - cma_b) / n,
                 )
             });
-        Color::new_rgb(
-            red / 255.0,
-            green / 255.0,
-            blue / 255.0,
-        )
+        Color::new_rgb(red / 255.0, green / 255.0, blue / 255.0)
     }
 
     pub fn set_color(&self, color: Color) {
