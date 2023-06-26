@@ -29,8 +29,8 @@ use std::{
 };
 use xcb::{
     x::{
-        Atom, ClientMessageData, ClientMessageEvent, ConfigureNotifyEvent, Cursor, EventMask,
-        Timestamp, CURRENT_TIME,
+        Atom, ClientMessageData, ClientMessageEvent, ConfigWindow, ConfigureNotifyEvent,
+        ConfigureWindow, Cursor, EventMask, StackMode, Timestamp, CURRENT_TIME,
     },
     Xid,
 };
@@ -339,6 +339,30 @@ impl Client {
     pub fn raise(&self) {
         self.frame.raise();
         self.extended_frame.restack(self);
+    }
+
+    /// Ensures the extended frame of `self` is correctly stacked above `other`.
+    /// I don't know why we can't just raise out extended frame but need to lower
+    /// the other window instead but this is the only way I got it to work.
+    pub fn ensure_stacked_above(&self, other: &Client) {
+        let my_extended_frame = match self.extended_frame.handle() {
+            Some(handle) => handle,
+            // if we don't have an extended handle no further action is required
+            None => return,
+        };
+        let stack_below = |handle| {
+            self.display().void_request(&ConfigureWindow {
+                window: handle,
+                value_list: &[
+                    ConfigWindow::Sibling(my_extended_frame),
+                    ConfigWindow::StackMode(StackMode::Below),
+                ],
+            });
+        };
+        if let Some(extended_frame) = other.extended_frame.handle() {
+            stack_below(extended_frame);
+        }
+        stack_below(other.frame.handle());
     }
 
     pub fn is_on_active_workspace(&self) -> bool {

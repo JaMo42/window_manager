@@ -58,6 +58,14 @@ impl ExtendedFrame {
         self.window.destroy(display);
     }
 
+    pub fn handle(&self) -> Option<XcbWindow> {
+        if self.extents == 0 {
+            None
+        } else {
+            Some(self.window.handle())
+        }
+    }
+
     pub fn handle_eq(&self, handle: XcbWindow) -> bool {
         self.extents != 0 && handle == self.window.handle()
     }
