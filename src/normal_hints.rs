@@ -29,7 +29,7 @@ impl NormalHints {
         if hints.flags & PResizeInc == PResizeInc {
             result.resize_inc = Some((
                 hints.width_inc.min(u16::MAX as i32) as i16,
-                hints.height_inc.min(u16::MAX as i32) as i16
+                hints.height_inc.min(u16::MAX as i32) as i16,
             ));
         }
         if hints.flags & PAspect == PAspect {

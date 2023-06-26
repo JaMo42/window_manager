@@ -78,7 +78,12 @@ fn create_frame(display: &Arc<Display>, geometry: Rectangle, cursor: Cursor) -> 
                 .border_pixel(0xFF000000)
                 .override_redirect()
                 .cursor(cursor)
-                .event_mask(EventMask::SUBSTRUCTURE_REDIRECT);
+                .event_mask(
+                    EventMask::SUBSTRUCTURE_REDIRECT
+                        | EventMask::ENTER_WINDOW
+                        | EventMask::LEAVE_WINDOW
+                        | EventMask::BUTTON_MOTION,
+                );
         })
         .build()
 }
@@ -92,6 +97,8 @@ pub struct Client {
     /// The frame geometry before snapping. Value is unspecified if the client
     /// is not snapped.
     prev_geometry: Cell<Rectangle>,
+    frame_geometry: Cell<Rectangle>,
+    frame_offset: Cell<Rectangle>,
     title: RefCell<Option<String>>,
     application_id: Option<String>,
     icon: Option<Rc<Svg>>,
@@ -163,7 +170,8 @@ impl Client {
             .map(Rc::new);
 
         set_allowed_actions(&window, !window_type.is_dialog());
-        set_frame_extents(&window, layout.frame_offset(frame_kind));
+        let frame_offset = *layout.frame_offset(frame_kind);
+        set_frame_extents(&window, &frame_offset);
 
         let extended_frame = ExtendedFrame::new(&display, frame_size, layout.frame_extents());
 
@@ -176,6 +184,8 @@ impl Client {
             frame,
             geometry: Cell::new(geometry),
             prev_geometry: Cell::new(geometry),
+            frame_geometry: Cell::new(frame_size),
+            frame_offset: Cell::new(frame_offset),
             title: RefCell::new(title),
             application_id,
             icon,
@@ -297,6 +307,7 @@ impl Client {
         if before != idx {
             let mut layout_class = self.layout_class.borrow_mut();
             if let Some(layout) = layout_class.get_if_different(monitors().get(idx)) {
+                self.frame_offset.set(*layout.frame_offset(self.frame_kind));
                 self.layout_children(frame_geometry, layout);
                 drop(layout_class);
                 self.configure();
@@ -467,16 +478,12 @@ impl Client {
 
     /// Returns the geometry of the frame window (outer window)
     pub fn frame_geometry(&self) -> Rectangle {
-        let layout_class = self.layout_class.borrow();
-        let layout = layout_class.get(monitors().get(self.monitor.get()));
-        layout.get_frame(self.frame_kind, &self.geometry.get())
+        self.frame_geometry.get()
     }
 
     /// Get the frame offset.
     pub fn frame_offset(&self) -> Rectangle {
-        let layout_class = self.layout_class.borrow();
-        let layout = layout_class.get(monitors().get(self.monitor.get()));
-        *layout.frame_offset(self.frame_kind)
+        self.frame_offset.get()
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -546,6 +553,7 @@ impl Client {
         let frame_rect = Rectangle::new(x, y, width, height);
         self.geometry
             .set(layout.get_client(self.frame_kind, &frame_rect));
+        self.frame_geometry.set(frame_rect);
         self.frame.move_and_resize((x, y, width, height));
         self.extended_frame
             .resize(&self.display(), (x, y, width, height));

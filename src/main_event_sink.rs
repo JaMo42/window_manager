@@ -7,7 +7,7 @@ use crate::{
     error::OrFatal,
     event::{EventSink, Signal},
     ewmh::{self, WindowType},
-    extended_frame::ExtendedFrame,
+    extended_frame::HoveredFrame,
     monitors::{monitors, monitors_mut},
     mouse::{mouse_move, mouse_resize, MouseResizeOptions, BUTTON_1, BUTTON_3},
     process::run_or_message_box,
@@ -40,7 +40,7 @@ pub struct MainEventSink {
     wm: Arc<WindowManager>,
     // we keep track of this so we don't need to check for window kind on every
     // motion event
-    extended_frame_hovered: Option<ExtendedFrame>,
+    frame_hovered: HoveredFrame,
 }
 
 impl MainEventSink {
@@ -52,7 +52,7 @@ impl MainEventSink {
             signal_sender: wm.signal_sender.clone(),
             screen_size: wm.display.get_total_size(),
             wm,
-            extended_frame_hovered: None,
+            frame_hovered: HoveredFrame::new(),
         }
     }
 
@@ -183,7 +183,7 @@ impl MainEventSink {
                     );
                 }
             }
-            WindowKind::MetaOrUnmanaged | WindowKind::ExtendedFrame => {}
+            WindowKind::MetaOrUnmanaged => {}
             _ => {
                 log::warn!(
                     "Ignoring click on window with button press mask: {}",
@@ -244,13 +244,13 @@ impl MainEventSink {
                 }
             }
             self.pressed_button = 0;
-        } else if let Some(exframe) = &self.extended_frame_hovered {
-            exframe.update_cursor(
+        } else if self.frame_hovered.is_some() {
+            self.frame_hovered.update_cursor(
                 &self.display,
                 &self.wm.cursors,
                 event.root_x(),
                 event.root_y(),
-            );
+            )
         } else {
             // Ignore all immediately following motion events.
             use xcb::x::Event::*;
@@ -392,7 +392,6 @@ impl MainEventSink {
     }
 
     fn crossing(&mut self, window: XcbWindow, is_enter: bool) {
-        // TODO
         match self.wm.get_window_kind(&window) {
             WindowKind::FrameButton => {
                 if let Some(client) = self.wm.win2client(&window) {
@@ -400,10 +399,23 @@ impl MainEventSink {
                 }
             }
             WindowKind::ExtendedFrame => {
-                self.extended_frame_hovered = None;
+                if self.frame_hovered.is_extended() {
+                    self.frame_hovered.clear();
+                }
                 if is_enter {
                     if let Some(client) = self.wm.win2client(&window) {
-                        self.extended_frame_hovered = Some(client.extended_frame().clone())
+                        self.frame_hovered
+                            .set_extended(client.extended_frame().clone(), &client);
+                    }
+                }
+            }
+            WindowKind::Frame => {
+                if self.frame_hovered.is_frame() {
+                    self.frame_hovered.clear();
+                }
+                if is_enter {
+                    if let Some(client) = self.wm.win2client(&window) {
+                        self.frame_hovered.set_frame(client);
                     }
                 }
             }
@@ -492,8 +504,8 @@ impl EventSink for MainEventSink {
             self.wm.active_workspace().remove(&client);
             client.destroy();
             self.wm.update_client_list();
-            if self.extended_frame_hovered.as_ref() == Some(client.extended_frame()) {
-                self.extended_frame_hovered = None;
+            if self.frame_hovered.is_client(&client) {
+                self.frame_hovered.clear();
             }
             log::trace!("Removed client: {client}");
         }

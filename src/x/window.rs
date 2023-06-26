@@ -1,6 +1,8 @@
 use super::{Display, WindowAttributes, WindowBuilder, XcbWindow};
 use std::sync::Arc;
 use xcb::x::ClearArea;
+use xcb::x::Cursor;
+use xcb::x::Cw;
 use xcb::x::SendEvent;
 use xcb::x::SendEventDest;
 use xcb::x::UnmapWindow;
@@ -149,6 +151,13 @@ impl Window {
             ConfigWindow::Sibling(sibling),
             ConfigWindow::StackMode(StackMode::Above),
         ]);
+    }
+
+    pub fn set_cursor(&self, cursor: Cursor) {
+        self.display.void_request(&ChangeWindowAttributes {
+            window: self.handle,
+            value_list: &[Cw::Cursor(cursor)],
+        })
     }
 
     pub fn send_event<E: BaseEvent>(&self, mask: EventMask, event: &'_ E) {
