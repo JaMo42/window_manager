@@ -15,13 +15,22 @@ impl NormalHints {
         let hints = window.display().get_wm_normal_hints(window)?;
         let mut result = Self::default();
         if hints.flags & PMinSize == PMinSize {
-            result.min_size = Some((hints.min_width as u16, hints.min_height as u16));
+            result.min_size = Some((
+                hints.min_width.min(u16::MAX as i32) as u16,
+                hints.min_height.min(u16::MAX as i32) as u16,
+            ));
         }
         if hints.flags & PMaxSize == PMaxSize {
-            result.max_size = Some((hints.max_width as u16, hints.max_height as u16));
+            result.max_size = Some((
+                hints.max_width.min(u16::MAX as i32) as u16,
+                hints.max_height.min(u16::MAX as i32) as u16,
+            ));
         }
         if hints.flags & PResizeInc == PResizeInc {
-            result.resize_inc = Some((hints.width_inc as i16, hints.height_inc as i16));
+            result.resize_inc = Some((
+                hints.width_inc.min(u16::MAX as i32) as i16,
+                hints.height_inc.min(u16::MAX as i32) as i16
+            ));
         }
         if hints.flags & PAspect == PAspect {
             result.aspect_ratio = Some((
