@@ -419,6 +419,9 @@ impl MainEventSink {
                     }
                 }
             }
+            WindowKind::Client => {
+                self.frame_hovered.clear();
+            }
             _ => {}
         }
     }

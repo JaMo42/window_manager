@@ -126,7 +126,9 @@ impl Client {
         let display = window.display();
 
         window.change_attributes(|attributes| {
-            attributes.event_mask(EventMask::STRUCTURE_NOTIFY | EventMask::PROPERTY_CHANGE);
+            attributes.event_mask(
+                EventMask::STRUCTURE_NOTIFY | EventMask::PROPERTY_CHANGE | EventMask::ENTER_WINDOW,
+            );
             // TODO: do_not_propagate?
         });
 

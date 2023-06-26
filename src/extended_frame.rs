@@ -192,7 +192,16 @@ impl HoveredFrame {
         self.last_cursor = id;
     }
 
+    fn leave(&self) {
+        if let HoveredFrameInner::Frame(client) = &self.inner {
+            client
+                .frame()
+                .set_cursor(client.get_window_manager().cursors.normal);
+        }
+    }
+
     pub fn clear(&mut self) {
+        self.leave();
         self.inner = HoveredFrameInner::None;
     }
 
@@ -201,12 +210,14 @@ impl HoveredFrame {
     }
 
     pub fn set_extended(&mut self, exframe: ExtendedFrame, client: &Client) {
+        self.leave();
         self.set_border(client);
         self.inner = HoveredFrameInner::Extended(exframe);
         self.last_cursor = u32::MAX;
     }
 
     pub fn set_frame(&mut self, client: Arc<Client>) {
+        self.leave();
         self.set_border(&client);
         self.inner = HoveredFrameInner::Frame(client);
         self.last_cursor = u32::MAX;
