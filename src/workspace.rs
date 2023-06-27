@@ -7,10 +7,11 @@ use crate::{
     window_manager::WindowManager,
     x::{Display, Window, XcbWindow},
 };
+use itertools::Itertools;
 use std::sync::{mpsc::Sender, Arc};
 use x11::keysym::{XK_Alt_L, XK_Tab};
 use xcb::{
-    x::{EventMask, KeyButMask, KeyPressEvent},
+    x::{ConfigWindow, ConfigureWindow, EventMask, KeyButMask, KeyPressEvent, StackMode},
     Event, Xid,
 };
 
@@ -115,6 +116,43 @@ impl Workspace {
         panic!("Tried to remove client no on workspace");
     }
 
+    /// Restacks all clients in this workspace.
+    /// For some reason this is neccessary to keep proper stacking order while
+    /// also keeping the correct window order for extended frames because we
+    /// we can't just raise the extended frame of the most recently focused
+    /// window.
+    fn restack(&self) {
+        if self.clients.len() < 2 {
+            return;
+        }
+        let stack = |upper, lower| {
+            self.display
+                .try_void_request(&ConfigureWindow {
+                    window: lower,
+                    value_list: &mut [
+                        ConfigWindow::Sibling(upper),
+                        ConfigWindow::StackMode(StackMode::Below),
+                    ],
+                })
+                .unwrap();
+        };
+        self.clients[0].frame().raise();
+        if let Some(exframe) = self.clients[0].extended_frame().handle() {
+            stack(self.clients[0].frame().handle(), exframe);
+        }
+        for (upper, lower) in self.clients.iter().tuple_windows() {
+            let upper = upper
+                .extended_frame()
+                .handle()
+                .unwrap_or_else(|| upper.frame().handle());
+            let lower_frame = lower.frame().handle();
+            stack(upper, lower_frame);
+            if let Some(exframe) = lower.extended_frame().handle() {
+                stack(lower_frame, exframe);
+            }
+        }
+    }
+
     /// Focus the client at the given index.
     /// Emits a `FocusClient` signal.
     pub fn focus_at(&mut self, idx: usize) {
@@ -131,9 +169,7 @@ impl Workspace {
             self.clients.insert(0, c);
         }
         self.focus_client(&self.clients[0]);
-        if let Some(prev) = self.clients.get(1) {
-            self.clients[0].ensure_stacked_above(prev);
-        }
+        self.restack();
     }
 
     /// Focus the client with the given window.
