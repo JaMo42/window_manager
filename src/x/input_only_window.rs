@@ -139,6 +139,9 @@ impl InputOnlyWindowBuilder {
         let wid = display.connection.generate_id();
         let mut attrs = WindowAttributes::new();
         attrs.event_mask(self.event_mask);
+        if self.parent.is_none() {
+            attrs.override_redirect();
+        }
         let value_list = attrs.value_list();
         let (x, y, width, height) = self.geometry.into_parts();
         let parent = if self.parent.is_none() {

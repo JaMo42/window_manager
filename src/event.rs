@@ -21,6 +21,9 @@ pub enum Signal {
     SnapStateChanged(XcbWindow, SnapState, SnapState),
     /// `(from, to)`
     WorkspaceChanged(usize, usize),
+    /// Contains `true` if the active workspace is empty
+    // TODO: should only be for the main monitor as it's used for showing or
+    //       hiding the dock
     ActiveWorkspaceEmpty(bool),
     /// Monitors changed
     Resize,

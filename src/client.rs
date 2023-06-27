@@ -418,8 +418,10 @@ impl Client {
         }
         let before = self.snap_state.replace(new_state);
         if self.is_snapped() {
+            self.extended_frame.unmap(self.display());
             self.set_state(WindowState::Snapped);
         } else {
+            self.extended_frame.map(self);
             self.set_state(WindowState::Normal);
         }
         self.get_window_manager()
