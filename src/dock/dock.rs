@@ -507,7 +507,6 @@ impl EventSink for Dock {
     }
 
     fn signal(&mut self, signal: &Signal) {
-        log::debug!("dock: signal: {signal:?}");
         match signal {
             Signal::ActiveWorkspaceEmpty(is_empty) => {
                 if *is_empty {

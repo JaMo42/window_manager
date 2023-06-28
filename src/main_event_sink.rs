@@ -458,6 +458,7 @@ impl MainEventSink {
             if event.window() == client.window().handle()
                 && !client.is_minimized()
                 && client.is_on_active_workspace()
+                && !client.block_unmap_deletion()
             {
                 // The client got unmapped but we didn't cause it.  This may
                 // be a valid thing where we don't want to destroy the client

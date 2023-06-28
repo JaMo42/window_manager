@@ -116,6 +116,12 @@ pub struct Client {
     workspace: Cell<usize>,
     monitor: Cell<isize>,
     extended_frame: ExtendedFrame,
+    // we consider unexpected unmapping of windows as that client being closed,
+    // however whenever we reparent a client to fullscreen it we also get those
+    // events.  This is flag is used to block handling of them.
+    // XXX: For some reason we get two of those events when leaving fullscreen
+    // mode so we store it as an integer that is decremented.
+    block_unmap_deletion: Cell<u8>,
 }
 
 impl Client {
@@ -205,6 +211,7 @@ impl Client {
             workspace: Cell::new(wm.active_workspace_index()),
             monitor: Cell::new(monitors().primary().index() as isize),
             extended_frame: extended_frame.clone(),
+            block_unmap_deletion: Cell::new(0),
         });
         wm.associate_client(&window_handle, &this);
         wm.associate_client(&frame_handle, &this);
@@ -899,6 +906,7 @@ impl Client {
                     .send(Signal::ClientGeometry(self.handle(), monitor_rect))
                     .or_fatal(self.display())
             }
+            self.block_unmap_deletion.set(1);
         } else {
             let layout_class = self.layout_class.borrow();
             let (reparent_x, reparent_y) = layout_class
@@ -913,6 +921,7 @@ impl Client {
                 self.move_and_resize(SetClientGeometry::Frame(self.prev_geometry.get()));
             }
             self.focus();
+            self.block_unmap_deletion.set(2);
         }
         self.set_state(if state {
             WindowState::Fullscreen
@@ -921,6 +930,13 @@ impl Client {
         } else {
             WindowState::Normal
         });
+    }
+
+    /// Returns `true` if the client has indicated that it expects an unmap
+    /// event for the client handle.  The flag is cleared afterwards.
+    pub fn block_unmap_deletion(&self) -> bool {
+        let value = self.block_unmap_deletion.get();
+        self.block_unmap_deletion.replace(value.saturating_sub(1)) != 0
     }
 
     /// Positions and resizes all child windows according to the given layout,
