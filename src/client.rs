@@ -553,6 +553,10 @@ impl Client {
             self.configure();
             self.draw_border();
         }
+        self.get_window_manager()
+            .signal_sender
+            .send(Signal::ClientGeometry(self.handle(), frame_rect))
+            .or_fatal(self.display());
     }
 
     /// Tell the client its geometry.
@@ -589,6 +593,7 @@ impl Client {
     /// Focus the client.
     /// Note: This only updates this client but has no effect on the the actual
     /// focus order, use `Workspace::focus` for that.
+    /// Emits a `ClientMinimized` if the client is in fullscreen mode.
     pub fn focus(&self) {
         self.is_focused.set(true);
         self.display().set_input_focus(self.handle());
@@ -601,15 +606,27 @@ impl Client {
         }
         if state.is_fullscreen() {
             self.window.raise();
+            self.get_window_manager()
+                .signal_sender
+                .send(Signal::ClientMinimized(self.handle(), false))
+                .or_fatal(self.display())
         } else {
             self.set_border(self.get_window_manager().config.colors.focused_border());
             self.frame.raise();
         }
     }
 
+    /// Unfocus the client.
+    /// Emits a `ClientMinimized` if the client is in fullscreen mode.
     pub fn unfocus(&self) {
         self.is_focused.set(false);
-        self.set_border(self.get_window_manager().config.colors.normal_border())
+        self.set_border(self.get_window_manager().config.colors.normal_border());
+        if self.is_fullscreen() {
+            self.get_window_manager()
+                .signal_sender
+                .send(Signal::ClientMinimized(self.handle(), true))
+                .or_fatal(self.display())
+        }
     }
 
     /// Is this the globally focused client?
@@ -858,7 +875,12 @@ impl Client {
             .as_splits()
     }
 
+    pub fn is_fullscreen(&self) -> bool {
+        self.real_state().is_fullscreen()
+    }
+
     /// Sets the fullscreen state.
+    /// Emits a `ClientGeometry` signal.
     pub fn set_fullscreen(&self, state: bool) {
         if state == self.window_state.get().is_fullscreen() {
             return;
@@ -871,6 +893,12 @@ impl Client {
             self.window.resize(monitor_rect.width, monitor_rect.height);
             self.window.raise();
             self.display().set_input_focus(self.window.handle());
+            if self.is_focused() {
+                self.get_window_manager()
+                    .signal_sender
+                    .send(Signal::ClientGeometry(self.handle(), monitor_rect))
+                    .or_fatal(self.display())
+            }
         } else {
             let layout_class = self.layout_class.borrow();
             let (reparent_x, reparent_y) = layout_class

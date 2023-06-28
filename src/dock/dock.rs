@@ -5,6 +5,7 @@ use crate::{
     color::Color,
     event::{EventSink, Signal},
     ewmh::{set_window_type, WindowType},
+    monitors::monitors,
     mouse::{BUTTON_1, BUTTON_2, BUTTON_3},
     rectangle::Rectangle,
     timeout_thread::RepeatableTimeoutThread,
@@ -317,6 +318,28 @@ impl Dock {
         let item_window = self.items[idx].window().handle();
         ItemRef { dock, item_window }
     }
+
+    /// Checks if the dock is occluded by any client and sets the `keep_open`
+    /// flag accordingly.
+    pub fn check_occluded(&mut self, ignore: Option<XcbWindow>) {
+        let mut is_occluded = false;
+        let main_mon = monitors().primary().index() as isize;
+        for client in self.wm.active_workspace().iter() {
+            if Some(client.handle()) == ignore || client.is_minimized() {
+                continue;
+            }
+            is_occluded = is_occluded
+                || if client.is_fullscreen() {
+                    client.monitor() == main_mon && client.is_focused()
+                } else {
+                    client.frame_geometry().overlaps(self.geometry)
+                };
+            if is_occluded {
+                break;
+            }
+        }
+        self.keep_open(!is_occluded);
+    }
 }
 
 // Event and signal handlers
@@ -484,13 +507,25 @@ impl EventSink for Dock {
     }
 
     fn signal(&mut self, signal: &Signal) {
+        log::debug!("dock: signal: {signal:?}");
         match signal {
-            Signal::ActiveWorkspaceEmpty(is_empty) => self.keep_open(*is_empty),
+            Signal::ActiveWorkspaceEmpty(is_empty) => {
+                if *is_empty {
+                    self.keep_open(true)
+                }
+            }
+            Signal::ClientGeometry(..) | Signal::ClientMinimized(..) => self.check_occluded(None),
             Signal::NewClient(handle) => self.new_client(*handle),
-            Signal::ClientRemoved(handle) => self.remove_client(*handle),
+            Signal::ClientRemoved(handle) => {
+                self.remove_client(*handle);
+                self.check_occluded(Some(*handle));
+            }
             Signal::FocusClient(handle) => self.update_focus(*handle),
             Signal::UrgencyChanged(handle) => self.update_urgency(*handle),
-            Signal::Resize => self.resize(),
+            Signal::Resize => {
+                self.resize();
+                self.check_occluded(None);
+            }
             Signal::Quit => self.destroy(),
             _ => {}
         }

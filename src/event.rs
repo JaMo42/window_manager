@@ -1,4 +1,5 @@
 use crate::mouse::{BUTTON_2, BUTTON_3};
+use crate::rectangle::Rectangle;
 use crate::x::XcbWindow;
 use crate::{mouse::BUTTON_1, snap::SnapState};
 use libc::c_void;
@@ -19,6 +20,7 @@ pub enum Signal {
     ClientMonitorChanged(XcbWindow, isize, isize),
     /// `(client, from, to)`
     SnapStateChanged(XcbWindow, SnapState, SnapState),
+    ClientGeometry(XcbWindow, Rectangle),
     /// `(client, is_minimized)`
     ClientMinimized(XcbWindow, bool),
     /// `(from, to)`
