@@ -109,6 +109,11 @@ impl event::EventSink for EventSink {
                 bar.destroy();
                 return;
             }
+            Signal::ClientMinimized(handle, is_minimized) => {
+                if *is_minimized && bar.wm.win2client(handle).unwrap().is_fullscreen() {
+                    bar.window.raise();
+                }
+            }
             _ => {
                 for widget in &bar.left_widgets {
                     widget.borrow_mut().signal(signal);

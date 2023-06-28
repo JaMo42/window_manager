@@ -21,7 +21,7 @@ use xcb::{
 
 pub struct Bar {
     pub(super) wm: Arc<WindowManager>,
-    window: Window,
+    pub(super) window: Window,
     geometry: Rectangle,
     config: Arc<Config>,
     pub(super) last_scroll_time: Timestamp,
