@@ -140,7 +140,12 @@ impl Workspace {
         if let Some(exframe) = self.clients[0].extended_frame().handle() {
             stack(self.clients[0].frame().handle(), exframe);
         }
-        for (upper, lower) in self.clients.iter().tuple_windows() {
+        for (upper, lower) in self
+            .clients
+            .iter()
+            .filter(|c| !c.is_minimized())
+            .tuple_windows()
+        {
             let upper = upper
                 .extended_frame()
                 .handle()
@@ -243,6 +248,8 @@ impl Workspace {
                             c.set_border(self.config.colors.normal_border());
                             if c.real_state().is_minimized() {
                                 c.unmap();
+                            } else {
+                                self.restack();
                             }
                         }
                         if event.state().contains(shift) {
