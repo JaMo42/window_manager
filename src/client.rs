@@ -628,6 +628,10 @@ impl Client {
             WindowState::Normal
         });
         self.draw_border();
+        self.get_window_manager()
+            .signal_sender
+            .send(Signal::ClientMinimized(self.handle(), false))
+            .or_fatal(self.display());
     }
 
     pub fn is_urgent(&self) -> bool {

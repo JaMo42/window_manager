@@ -514,7 +514,7 @@ impl WindowManager {
             match self.display.next_event() {
                 Ok(event) => self.dispatch_event(event),
                 Err(error) => {
-                    log::error!("X error: {error}");
+                    log::error!("X error: {error:#?}");
                 }
             }
             while let Ok(sig) = self.signal_receiver.try_recv() {

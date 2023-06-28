@@ -136,6 +136,11 @@ pub fn minimize(client: &Client) {
     }
     client.unmap();
     client.set_state(WindowState::Minimized);
+    client
+        .get_window_manager()
+        .signal_sender
+        .send(Signal::ClientMinimized(client.handle(), true))
+        .or_fatal(client.display());
     let wm = client.get_window_manager();
     let mut active_workspace = wm.active_workspace();
     if active_workspace.index() == client.workspace() {

@@ -19,11 +19,11 @@ pub enum Signal {
     ClientMonitorChanged(XcbWindow, isize, isize),
     /// `(client, from, to)`
     SnapStateChanged(XcbWindow, SnapState, SnapState),
+    /// `(client, is_minimized)`
+    ClientMinimized(XcbWindow, bool),
     /// `(from, to)`
     WorkspaceChanged(usize, usize),
     /// Contains `true` if the active workspace is empty
-    // TODO: should only be for the main monitor as it's used for showing or
-    //       hiding the dock
     ActiveWorkspaceEmpty(bool),
     /// Monitors changed
     Resize,
@@ -33,9 +33,6 @@ pub enum Signal {
     /// The window manager is quitting.
     Quit,
 }
-
-// TODO: filters for event sinks so we don't need to dispatch every event to
-//       every sink.
 
 /// Wraps different ways of storing an event sink.
 pub enum SinkStorage {

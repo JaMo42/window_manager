@@ -250,6 +250,19 @@ impl EventSink for SplitManager {
                     self.active(monitor).visible(true);
                 }
             }
+            Signal::ClientMinimized(handle, is_minimized) => {
+                let client = wm.win2client(handle).unwrap();
+                if client.is_snapped() && client.workspace() == self.current_workspace {
+                    let monitor = client.monitor();
+                    self.change_count(
+                        self.current_workspace,
+                        monitor,
+                        client.snap_state(),
+                        if *is_minimized { u16::sub } else { u16::add },
+                    );
+                    self.active(monitor).visible(true);
+                }
+            }
             Signal::ClientRemoved(handle) => {
                 let client = wm.win2client(handle).unwrap();
                 let workspace = client.workspace();
