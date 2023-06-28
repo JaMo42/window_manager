@@ -181,7 +181,7 @@ impl Client {
         let frame_offset = *layout.frame_offset(frame_kind);
         set_frame_extents(&window, &frame_offset);
 
-        let extended_frame = ExtendedFrame::new(&display, frame_size, layout.frame_extents());
+        let extended_frame = ExtendedFrame::new(display, frame_size, layout.frame_extents());
 
         drop(layout_class_b);
         let window_handle = window.handle();
@@ -217,7 +217,7 @@ impl Client {
         wm.associate_client(&frame_handle, &this);
         wm.set_window_kind(&window_handle, WindowKind::Client);
         wm.set_window_kind(&frame_handle, WindowKind::Frame);
-        extended_frame.associate(&wm, &this);
+        extended_frame.associate(wm, &this);
         extended_frame.restack(&this);
         if frame_kind.should_draw_decorations() {
             let layout_class = this.layout_class.borrow();
@@ -353,7 +353,7 @@ impl Client {
 
     pub fn unmap(&self) {
         self.frame.unmap();
-        self.extended_frame.unmap(&self.display());
+        self.extended_frame.unmap(self.display());
     }
 
     pub fn raise(&self) {
@@ -543,7 +543,7 @@ impl Client {
         self.frame_geometry.set(frame_rect);
         self.frame.move_and_resize((x, y, width, height));
         self.extended_frame
-            .resize(&self.display(), (x, y, width, height));
+            .resize(self.display(), (x, y, width, height));
         let mon_idx = monitors().at(frame_rect.center()).index() as isize;
         if mon_idx != self.monitor.get() {
             drop(layout);
@@ -991,7 +991,7 @@ impl Client {
             false
         });
         self.frame.destroy();
-        self.extended_frame.destroy(&self.display());
+        self.extended_frame.destroy(self.display());
     }
 }
 

@@ -87,7 +87,7 @@ impl ExtendedFrame {
         if self.extents == 0 {
             return;
         }
-        self.window.map(&client.display());
+        self.window.map(client.display());
         self.restack(client);
     }
 
