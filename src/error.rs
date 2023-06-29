@@ -97,6 +97,37 @@ where
     }
 }
 
+pub trait LogError<T> {
+    fn log_error(self) -> Option<T>;
+}
+
+impl<T, E: std::fmt::Display> LogError<T> for Result<T, E> {
+    /// Turn a result into an option, logging the error if it was one.
+    fn log_error(self) -> Option<T> {
+        match self {
+            Ok(x) => Some(x),
+            Err(e) => {
+                log::error!("{e}");
+                None
+            }
+        }
+    }
+}
+
+pub trait LogNone<T> {
+    fn log_none(self, msg: &str) -> Option<T>;
+}
+
+impl<T> LogNone<T> for Option<T> {
+    /// Logs the given error message if the option is `None`.
+    fn log_none(self, msg: &str) -> Self {
+        if self.is_none() {
+            log::error!("{msg}");
+        }
+        self
+    }
+}
+
 pub fn message_box(title: &str, body: &str) {
     run(&[
         "window_manager_message_box",

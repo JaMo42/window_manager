@@ -48,6 +48,7 @@ mod split_manager;
 mod timeout_thread;
 mod tooltip;
 mod update_thread;
+mod volume;
 mod window_manager;
 mod wm_hints;
 mod workspace;

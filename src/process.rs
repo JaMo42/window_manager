@@ -148,6 +148,7 @@ pub fn run_and_await(cmd: &[&str]) -> AnyResult<ExitStatus> {
         .status()?)
 }
 
+#[allow(dead_code)]
 pub fn run_and_await_with_output(cmd: &[&str]) -> AnyResult<String> {
     Ok(Command::new(cmd[0])
         .args(&cmd[1..])

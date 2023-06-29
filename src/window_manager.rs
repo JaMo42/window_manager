@@ -21,6 +21,7 @@ use crate::{
     process::run_and_await,
     session_manager::SessionManager,
     split_manager::SplitManager,
+    volume::{get_audio_api, AudioAPI},
     workspace::Workspace,
     x::{close_window, Display, ModifierMapping, PropertyValue, SetProperty, Window, XcbWindow},
     AnyResult,
@@ -77,6 +78,9 @@ pub struct WindowManager {
     pub cursors: Arc<Cursors>,
     pub dbus: DBusConnection,
     pub session_manager: Arc<Mutex<SessionManager>>,
+    // need this on the window manager so it can be accessed for the audio
+    // control key bindings.
+    pub audio_api: Option<Box<dyn AudioAPI>>,
     signal_receiver: Receiver<Signal>,
     context_map: Mutex<ContextMap>,
     event_sinks: RefCell<EventRouter>,
@@ -128,6 +132,7 @@ impl WindowManager {
             notification_manager: Arc::new(Mutex::new(NotificationManager::new())),
             split_manager: Rc::new(RefCell::new(SplitManager::default())),
             remove_sinks: RefCell::new(Vec::with_capacity(4)),
+            audio_api: get_audio_api(),
         });
         this.session_manager.lock().set_window_manager(&this);
         this.notification_manager.lock().set_window_manager(&this);
@@ -514,7 +519,7 @@ impl WindowManager {
             match self.display.next_event() {
                 Ok(event) => self.dispatch_event(event),
                 Err(error) => {
-                    log::error!("X error: {error:#?}");
+                    log::error!("X error: {error:?}");
                 }
             }
             while let Ok(sig) = self.signal_receiver.try_recv() {

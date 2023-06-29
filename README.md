@@ -13,10 +13,9 @@ Written in rust, `cargo` required.
 ### Libraries
 
 - `Xcursor`
+- `asound`
 
 ### Optional
-
-- `amixer` required for volume control actions and status bar widget
 
 - [`grid-resize`](https://github.com/JaMo42/grid-resize) required if the `grid_resize` option is enabled (see [configuration](./doc/CONFIG.md)).
 

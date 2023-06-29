@@ -7,7 +7,6 @@ use crate::{
     event::Signal,
     ewmh::{self, WindowType},
     mouse::{BUTTON_1, BUTTON_2, BUTTON_3, BUTTON_4, BUTTON_5},
-    platform::get_volume_info,
     rectangle::{Rectangle, ShowAt},
     tooltip::Tooltip,
     window_manager::{WindowKind, WindowManager},
@@ -311,7 +310,7 @@ pub struct Volume {
 
 impl Volume {
     pub fn new(bar_window: &Window, wm: &Arc<WindowManager>) -> Option<Self> {
-        if get_volume_info().is_some() {
+        if wm.audio_api.is_some() {
             Some(Self {
                 window: create_window(bar_window, wm),
                 normal_icon: wm.resources.volume().clone(),
@@ -334,41 +333,38 @@ impl Widget for Volume {
     }
 
     fn update(&mut self, dc: &MutexGuard<DrawingContext>, height: u16, x: i16) -> UpdateResult {
-        if let Some((is_muted, level)) = get_volume_info() {
-            if level == self.last_level
-                && self.last_mute_state.map_or(false, |last| is_muted == last)
-            {
-                return UpdateResult::Old(self.width);
-            }
-            let width = if is_muted {
-                draw_icon_and_text(
-                    dc,
-                    "muted",
-                    Some(&self.muted_icon),
-                    self.color,
-                    3,
-                    x,
-                    height,
-                )
-            } else {
-                let label = format!("{}%", level);
-                draw_icon_and_text(
-                    dc,
-                    &label,
-                    Some(&self.normal_icon),
-                    self.color,
-                    3,
-                    x,
-                    height,
-                )
-            };
-            self.last_level = level;
-            self.last_mute_state = Some(is_muted);
-            self.width = width;
-            UpdateResult::New(width)
-        } else {
-            UpdateResult::Old(self.width)
+        let ctl = unsafe { self.wm.audio_api.as_ref().unwrap_unchecked() };
+        let is_muted = ctl.is_muted();
+        let level = ctl.master_volume() as u32;
+        if level == self.last_level && self.last_mute_state.map_or(false, |last| is_muted == last) {
+            return UpdateResult::Old(self.width);
         }
+        let width = if is_muted {
+            draw_icon_and_text(
+                dc,
+                "muted",
+                Some(&self.muted_icon),
+                self.color,
+                3,
+                x,
+                height,
+            )
+        } else {
+            let label = format!("{}%", level);
+            draw_icon_and_text(
+                dc,
+                &label,
+                Some(&self.normal_icon),
+                self.color,
+                3,
+                x,
+                height,
+            )
+        };
+        self.last_level = level;
+        self.last_mute_state = Some(is_muted);
+        self.width = width;
+        UpdateResult::New(width)
     }
 
     fn click(&mut self, event: &ButtonPressEvent) {
