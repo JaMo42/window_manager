@@ -91,13 +91,13 @@ impl App {
             fg
         };
         let mute_color = if let ClickHit::Mute = hover {
-            if self.info.is_muted {
-                config.colors.focused
-            } else {
-                config.colors.urgent
-            }
+            config.colors.focused
         } else {
-            fg
+            if self.info.is_muted {
+                config.colors.urgent
+            } else {
+                fg
+            }
         };
         dc.text(title_str.as_ref(), self.layout.title)
             .color(fg)
