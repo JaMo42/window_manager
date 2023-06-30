@@ -155,7 +155,11 @@ impl Layout {
         let padding = Size::Physical(2.0).resolve(Some(dpmm), None, None) as i16;
         let line_height = Size::PercentOfFont(1.1).resolve(None, None, Some(font_height)) as i16;
         let space = Size::Physical(1.0).resolve(Some(dpmm), None, None) as i16;
-        let title_width = Size::Percent(0.15).resolve(None, Some(screen_size.width), None);
+        let title_width = config.bar.volume_mixer_title_width.resolve(
+            Some(dpmm),
+            Some(screen_size.width),
+            Some(font_height),
+        );
         let icon_x = padding;
         let title_x = icon_x + space + line_height;
         let minus_x = title_x + title_width as i16 + space;
@@ -247,7 +251,9 @@ impl VolumeMixer {
         let apps = ctl.list_apps();
         let layout = Layout::compute(&wm.config, &wm.drawing_context);
         let visual = wm.display.truecolor_visual();
-        let geometry = at.translate((0, 0, layout.window_width, layout.height_for(apps.len() + 1)));
+        let geometry = *at
+            .translate((0, 0, layout.window_width, layout.height_for(apps.len() + 1)))
+            .clamp_inside(monitors().primary().geometry());
         let window = Window::builder(wm.display.clone())
             .geometry(geometry)
             .depth(visual.depth)
