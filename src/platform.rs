@@ -4,19 +4,19 @@ pub mod actions {
     use crate::window_manager::WindowManager;
 
     pub fn increase_volume(wm: &WindowManager) {
-        if let Some(ctl) = &wm.audio_api {
+        if let Some(mut ctl) = wm.audio_api() {
             ctl.increase_master_volume(5);
         }
     }
 
     pub fn decrease_volume(wm: &WindowManager) {
-        if let Some(ctl) = &wm.audio_api {
+        if let Some(mut ctl) = wm.audio_api() {
             ctl.decrease_master_volume(5);
         }
     }
 
     pub fn mute_volume(wm: &WindowManager) {
-        if let Some(ctl) = &wm.audio_api {
+        if let Some(mut ctl) = wm.audio_api() {
             ctl.mute_master();
             super::notify_volume(wm, true);
         }
@@ -27,9 +27,10 @@ pub mod actions {
 /// If `mute_notification` is `true` the notification states whether volume has
 /// been muted or unmuted.
 fn notify_volume(wm: &WindowManager, mute_notification: bool) {
-    if let Some(ctl) = &wm.audio_api {
+    if let Some(mut ctl) = wm.audio_api() {
         let is_muted = ctl.is_muted();
         let level = ctl.master_volume();
+        drop(ctl);
         let summary = if mute_notification {
             if is_muted {
                 "Volume muted"

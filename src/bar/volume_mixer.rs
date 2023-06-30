@@ -243,8 +243,11 @@ impl VolumeMixer {
     const HOLD_DELAY: u64 = 375;
 
     fn new(wm: Arc<WindowManager>, at: ShowAt) -> Option<Self> {
-        let ctl = wm.audio_api.as_ref()?;
+        let mut ctl = wm.audio_api()?;
         let apps = ctl.list_apps();
+        let master_volume = ctl.master_volume();
+        let master_mute = ctl.is_muted();
+        drop(ctl);
         let layout = Layout::compute(&wm.config, &wm.drawing_context);
         let visual = wm.display.truecolor_visual();
         let geometry = at.translate((0, 0, layout.window_width, layout.height_for(apps.len() + 1)));
@@ -289,8 +292,8 @@ impl VolumeMixer {
                 index: u32::MAX,
                 name: Some("Master".to_string()),
                 icon_name: None,
-                volume: ctl.master_volume(),
-                is_muted: ctl.is_muted(),
+                volume: master_volume,
+                is_muted: master_mute,
             },
             master_layout,
             &wm.config.icon_theme,
@@ -314,7 +317,7 @@ impl VolumeMixer {
     }
 
     fn update(&mut self, index: Option<usize>) {
-        let ctl = unsafe { self.wm.audio_api.as_ref().unwrap_unchecked() };
+        let mut ctl = self.wm.audio_api_unchecked();
         match index {
             None => {
                 self.master.info.volume = ctl.master_volume();
@@ -325,6 +328,7 @@ impl VolumeMixer {
                 ctl.update_app(&mut app.info);
             }
         }
+        drop(ctl);
         self.paint();
         self.wm
             .signal_sender
@@ -398,7 +402,7 @@ impl VolumeMixer {
                 self.update_thread.as_mut().unwrap().update();
             }
             ClickHit::Mute => {
-                let ctl = unsafe { self.wm.audio_api.as_ref().unwrap_unchecked() };
+                let mut ctl = self.wm.audio_api_unchecked();
                 if app.is_none() {
                     ctl.mute_master();
                 } else {
@@ -505,13 +509,14 @@ pub fn volume_mixer(wm: Arc<WindowManager>, at: ShowAt) {
                     mixer.ignore_updates -= 1;
                     return;
                 }
-                let ctl = unsafe { mixer.wm.audio_api.as_ref().unwrap_unchecked() };
+                let mut ctl = mixer.wm.audio_api_unchecked();
                 if let Some((index, app_index)) = held.app {
                     match held.button {
                         ClickHit::Minus => ctl.decrease_app_volume(app_index, 5),
                         ClickHit::Plus => ctl.increase_app_volume(app_index, 5),
                         _ => unreachable!(),
                     }
+                    drop(ctl);
                     mixer.update(Some(index));
                 } else {
                     match held.button {
@@ -519,6 +524,7 @@ pub fn volume_mixer(wm: Arc<WindowManager>, at: ShowAt) {
                         ClickHit::Plus => ctl.increase_master_volume(5),
                         _ => unreachable!(),
                     }
+                    drop(ctl);
                     mixer.update(None);
                 }
             }

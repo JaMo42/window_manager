@@ -312,7 +312,7 @@ pub struct Volume {
 
 impl Volume {
     pub fn new(bar_window: &Window, wm: &Arc<WindowManager>) -> Option<Self> {
-        if wm.audio_api.is_some() {
+        if wm.has_audio_api() {
             Some(Self {
                 window: create_window(bar_window, wm),
                 normal_icon: wm.resources.volume().clone(),
@@ -336,9 +336,10 @@ impl Widget for Volume {
     }
 
     fn update(&mut self, dc: &MutexGuard<DrawingContext>, height: u16, x: i16) -> UpdateResult {
-        let ctl = unsafe { self.wm.audio_api.as_ref().unwrap_unchecked() };
+        let mut ctl = self.wm.audio_api_unchecked();
         let is_muted = ctl.is_muted();
         let level = ctl.master_volume() as u32;
+        drop(ctl);
         if level == self.last_level && self.last_mute_state.map_or(false, |last| is_muted == last) {
             return UpdateResult::Old(self.width);
         }

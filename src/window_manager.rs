@@ -79,9 +79,6 @@ pub struct WindowManager {
     pub cursors: Arc<Cursors>,
     pub dbus: DBusConnection,
     pub session_manager: Arc<Mutex<SessionManager>>,
-    // need this on the window manager so it can be accessed for the audio
-    // control key bindings.
-    pub audio_api: Option<Box<dyn AudioAPI>>,
     signal_receiver: Receiver<Signal>,
     context_map: Mutex<ContextMap>,
     event_sinks: RefCell<EventRouter>,
@@ -93,6 +90,9 @@ pub struct WindowManager {
     notification_manager: Arc<Mutex<NotificationManager>>,
     split_manager: Rc<RefCell<SplitManager>>,
     remove_sinks: RefCell<Vec<usize>>,
+    // need this on the window manager so it can be accessed for the audio
+    // control key bindings.
+    audio_api: Option<Mutex<Box<dyn AudioAPI>>>,
 }
 
 unsafe impl Send for WindowManager {}
@@ -133,7 +133,7 @@ impl WindowManager {
             notification_manager: Arc::new(Mutex::new(NotificationManager::new())),
             split_manager: Rc::new(RefCell::new(SplitManager::default())),
             remove_sinks: RefCell::new(Vec::with_capacity(4)),
-            audio_api: get_audio_api(),
+            audio_api: get_audio_api().map(Mutex::new),
         });
         this.session_manager.lock().set_window_manager(&this);
         this.notification_manager.lock().set_window_manager(&this);
@@ -436,6 +436,21 @@ impl WindowManager {
         } {
             manager.close_after(id, timeout, self.notification_manager.clone());
         }
+    }
+
+    /// Returns `true` is an audio api is available.
+    pub fn has_audio_api(&self) -> bool {
+        self.audio_api.is_some()
+    }
+
+    /// Returns a mutex guard for the audio api, if there is one.
+    pub fn audio_api(&self) -> Option<MutexGuard<Box<dyn AudioAPI>>> {
+        self.audio_api.as_ref().map(|mtx| mtx.lock())
+    }
+
+    /// Assumes there is an audio api and returns a mutex guard for it.
+    pub fn audio_api_unchecked(&self) -> MutexGuard<Box<dyn AudioAPI>> {
+        unsafe { self.audio_api.as_ref().unwrap_unchecked() }.lock()
     }
 
     fn grab_keys(&self) -> AnyResult<()> {

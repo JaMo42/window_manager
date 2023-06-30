@@ -1,11 +1,7 @@
 use crate::error::{LogError, LogNone};
 use libpulse_binding::volume::{ChannelVolumes, Volume};
 use pulsectl::controllers::{types::ApplicationInfo, AppControl, DeviceControl, SinkController};
-use std::{
-    cell::{RefCell, RefMut},
-    ffi::CStr,
-    ops::Add,
-};
+use std::{ffi::CStr, ops::Add};
 
 pub struct AppInfo {
     pub index: u32,
@@ -31,17 +27,17 @@ impl AppInfo {
 
 pub trait AudioAPI {
     // Master controls
-    fn master_volume(&self) -> u8;
-    fn is_muted(&self) -> bool;
-    fn mute_master(&self);
-    fn increase_master_volume(&self, delta: u8);
-    fn decrease_master_volume(&self, delta: u8);
+    fn master_volume(&mut self) -> u8;
+    fn is_muted(&mut self) -> bool;
+    fn mute_master(&mut self);
+    fn increase_master_volume(&mut self, delta: u8);
+    fn decrease_master_volume(&mut self, delta: u8);
     // Per-application controls, only provided by the PulseAudio backend
-    fn list_apps(&self) -> Vec<AppInfo>;
-    fn update_app(&self, app: &mut AppInfo);
-    fn mute_app(&self, index: u32, mute: bool);
-    fn increase_app_volume(&self, index: u32, delta: u8);
-    fn decrease_app_volume(&self, index: u32, delta: u8);
+    fn list_apps(&mut self) -> Vec<AppInfo>;
+    fn update_app(&mut self, app: &mut AppInfo);
+    fn mute_app(&mut self, index: u32, mute: bool);
+    fn increase_app_volume(&mut self, index: u32, delta: u8);
+    fn decrease_app_volume(&mut self, index: u32, delta: u8);
 }
 
 pub struct ALSA {
@@ -80,27 +76,27 @@ impl AudioAPI for ALSA {
     //       would even fail at this point so it will probably stay like this
     //       until I get a crash from it.
 
-    fn master_volume(&self) -> u8 {
+    fn master_volume(&mut self) -> u8 {
         self.handle.handle_events().log_error();
         let channel = alsa::mixer::SelemChannelId::mono();
         let vol = self.elem.get_playback_volume(channel).unwrap();
         ((vol - self.range.0) / self.range_div) as u8
     }
 
-    fn is_muted(&self) -> bool {
+    fn is_muted(&mut self) -> bool {
         self.handle.handle_events().log_error();
         let channel = alsa::mixer::SelemChannelId::mono();
         self.elem.get_playback_switch(channel).unwrap() == 0
     }
 
-    fn mute_master(&self) {
+    fn mute_master(&mut self) {
         let is_muted = self.is_muted();
         self.elem
             .set_playback_switch_all(if is_muted { 1 } else { 0 })
             .unwrap();
     }
 
-    fn increase_master_volume(&self, delta: u8) {
+    fn increase_master_volume(&mut self, delta: u8) {
         let current = self.master_volume();
         let value = self.range.0 + (current as i64 + delta as i64) * self.range_div;
         self.elem
@@ -108,7 +104,7 @@ impl AudioAPI for ALSA {
             .unwrap();
     }
 
-    fn decrease_master_volume(&self, delta: u8) {
+    fn decrease_master_volume(&mut self, delta: u8) {
         let current = self.master_volume();
         let value = self.range.0 + (current as i64 - delta as i64) * self.range_div;
         self.elem
@@ -116,23 +112,23 @@ impl AudioAPI for ALSA {
             .unwrap();
     }
 
-    fn list_apps(&self) -> Vec<AppInfo> {
+    fn list_apps(&mut self) -> Vec<AppInfo> {
         Vec::new()
     }
 
-    fn update_app(&self, _: &mut AppInfo) {
+    fn update_app(&mut self, _: &mut AppInfo) {
         unimplemented!()
     }
 
-    fn mute_app(&self, _: u32, _: bool) {
+    fn mute_app(&mut self, _: u32, _: bool) {
         unimplemented!()
     }
 
-    fn increase_app_volume(&self, _: u32, _: u8) {
+    fn increase_app_volume(&mut self, _: u32, _: u8) {
         unimplemented!()
     }
 
-    fn decrease_app_volume(&self, _: u32, _: u8) {
+    fn decrease_app_volume(&mut self, _: u32, _: u8) {
         unimplemented!()
     }
 }
@@ -141,23 +137,18 @@ impl AudioAPI for ALSA {
 // makes sense once we have a mixer gui.
 
 pub struct PulseAudio {
-    handler: RefCell<SinkController>,
+    handler: SinkController,
     default_device: u32,
 }
 
 impl PulseAudio {
     pub fn new() -> Option<Self> {
         let mut handler = SinkController::create().log_error()?;
-        let default_device = handler.get_default_device().log_error()?;
-        let default_device_index = default_device.index;
+        let default_device = handler.get_default_device().log_error()?.index;
         Some(Self {
-            handler: RefCell::new(handler),
-            default_device: default_device_index,
+            handler,
+            default_device,
         })
-    }
-
-    fn handler_mut(&self) -> RefMut<SinkController> {
-        self.handler.borrow_mut()
     }
 
     fn volume2percent(volume: Volume) -> u8 {
@@ -182,42 +173,36 @@ impl PulseAudio {
 }
 
 impl AudioAPI for PulseAudio {
-    fn master_volume(&self) -> u8 {
-        Self::volume2percent(
-            self.handler_mut()
-                .get_default_device()
-                .unwrap()
-                .volume
-                .avg(),
-        )
+    fn master_volume(&mut self) -> u8 {
+        Self::volume2percent(self.handler.get_default_device().unwrap().volume.avg())
     }
 
-    fn is_muted(&self) -> bool {
-        self.handler_mut().get_default_device().unwrap().mute
+    fn is_muted(&mut self) -> bool {
+        self.handler.get_default_device().unwrap().mute
     }
 
-    fn mute_master(&self) {
+    fn mute_master(&mut self) {
         let is_muted = self.is_muted();
-        self.handler_mut()
+        self.handler
             .set_device_mute_by_index(self.default_device, !is_muted)
     }
 
-    fn increase_master_volume(&self, delta: u8) {
-        let mut dev = self.handler_mut().get_default_device().unwrap();
+    fn increase_master_volume(&mut self, delta: u8) {
+        let mut dev = self.handler.get_default_device().unwrap();
         let new_volume = self.change_volume(&mut dev.volume, delta, u32::add);
-        self.handler_mut()
+        self.handler
             .set_device_volume_by_index(self.default_device, new_volume);
     }
 
-    fn decrease_master_volume(&self, delta: u8) {
-        let mut dev = self.handler_mut().get_default_device().unwrap();
+    fn decrease_master_volume(&mut self, delta: u8) {
+        let mut dev = self.handler.get_default_device().unwrap();
         let new_volume = self.change_volume(&mut dev.volume, delta, u32::saturating_sub);
-        self.handler_mut()
+        self.handler
             .set_device_volume_by_index(self.default_device, new_volume);
     }
 
-    fn list_apps(&self) -> Vec<AppInfo> {
-        self.handler_mut()
+    fn list_apps(&mut self) -> Vec<AppInfo> {
+        self.handler
             .list_applications()
             .unwrap()
             .into_iter()
@@ -225,27 +210,25 @@ impl AudioAPI for PulseAudio {
             .collect()
     }
 
-    fn update_app(&self, app: &mut AppInfo) {
-        if let Ok(info) = self.handler_mut().get_app_by_index(app.index) {
+    fn update_app(&mut self, app: &mut AppInfo) {
+        if let Ok(info) = self.handler.get_app_by_index(app.index) {
             app.is_muted = info.mute;
             app.volume = Self::volume2percent(info.volume.avg());
         }
     }
 
-    fn mute_app(&self, index: u32, mute: bool) {
-        self.handler_mut().set_app_mute(index, mute).log_error();
+    fn mute_app(&mut self, index: u32, mute: bool) {
+        self.handler.set_app_mute(index, mute).log_error();
     }
 
-    fn increase_app_volume(&self, index: u32, delta: u8) {
+    fn increase_app_volume(&mut self, index: u32, delta: u8) {
         let delta = delta as f64 / 100.0;
-        self.handler_mut()
-            .increase_app_volume_by_percent(index, delta);
+        self.handler.increase_app_volume_by_percent(index, delta);
     }
 
-    fn decrease_app_volume(&self, index: u32, delta: u8) {
+    fn decrease_app_volume(&mut self, index: u32, delta: u8) {
         let delta = delta as f64 / 100.0;
-        self.handler_mut()
-            .decrease_app_volume_by_percent(index, delta);
+        self.handler.decrease_app_volume_by_percent(index, delta);
     }
 }
 
