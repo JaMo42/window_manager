@@ -275,7 +275,11 @@ impl VolumeMixer {
                             // We don't handle enter events but still want to get
                             // them to stop the main event sinks motion event
                             // compression from stealing our events.
-                            | EventMask::ENTER_WINDOW,
+                            | EventMask::ENTER_WINDOW
+                            // We need leave events to clear the hovered item
+                            // because we sometimes don't get motion events
+                            // if moving away too fast.
+                            | EventMask::LEAVE_WINDOW,
                     )
                     .colormap(visual.colormap);
             })
@@ -476,6 +480,10 @@ impl EventSink for VolumeMixer {
                         }
                     }
                     Event::X(KeyPress(_)) => self.destroy(),
+                    Event::X(LeaveNotify(_)) => {
+                        self.hover = HeldButton::default();
+                        self.paint();
+                    }
                     _ => {}
                 }
             }
@@ -492,6 +500,7 @@ impl EventSink for VolumeMixer {
             LeaveNotifyEvent::NUMBER,
             MotionNotifyEvent::NUMBER,
             KeyPressEvent::NUMBER,
+            LeaveNotifyEvent::NUMBER,
         ]
     }
 }
