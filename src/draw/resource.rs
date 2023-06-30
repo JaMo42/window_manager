@@ -54,6 +54,8 @@ builtin_resources! {
     power: Svg => svg,
     volume: Svg => svg,
     volume_muted: Svg => svg,
+    minus: Svg => svg,
+    plus: Svg => svg,
 }
 
 pub struct Svg {
@@ -120,7 +122,7 @@ impl Svg {
     }
 }
 
-pub(super) fn load_builtin_svg(name: &str) -> Svg {
+pub fn load_builtin_svg(name: &str) -> Svg {
     let file = RESOURCE_DIR
         .get_file(&format!("{name}.svg"))
         .unwrap_or_else(|| panic!("missing builtin resource: {name}"));

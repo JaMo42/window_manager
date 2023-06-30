@@ -1,5 +1,5 @@
 use super::{Display, Visual, Window, WindowAttributes, XcbWindow};
-use crate::{error::OrFatal, rectangle::Rectangle};
+use crate::error::OrFatal;
 use std::sync::Arc;
 use xcb::x::{CreateWindow, Visualid, WindowClass, COPY_FROM_PARENT};
 
@@ -52,8 +52,8 @@ impl WindowBuilder {
         self
     }
 
-    pub fn geometry(mut self, rect: Rectangle) -> Self {
-        (self.x, self.y, self.width, self.height) = rect.into_parts();
+    pub fn geometry(mut self, rect: impl Into<(i16, i16, u16, u16)>) -> Self {
+        (self.x, self.y, self.width, self.height) = rect.into();
         self
     }
 

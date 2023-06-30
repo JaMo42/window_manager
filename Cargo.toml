@@ -20,12 +20,15 @@ gtk = "0.16.1"
 include_dir = "0.7.3"
 itertools = "0.10.5"
 libc = "0.2.65"
+# Dependency of `pulsectl-rs`, we explicitly need it to access the `Volume` type.
+libpulse-binding = "2.24.0"
 librsvg = { version="2.55.1", git="https://gitlab.gnome.org/GNOME/librsvg" }
 log = "0.4.16"
 log4rs = "1.1.1"
 pango = { version = "0.16.3", features = ["v1_44"]}
 pangocairo = "0.16.3"
 parking_lot = "0.12.1"
+pulsectl-rs = "0.3.2"
 rand = "0.8.5"
 strsim = "0.10.0"
 system_shutdown = "3.0.0"

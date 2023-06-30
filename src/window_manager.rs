@@ -64,6 +64,7 @@ pub enum WindowKind {
     Root,
     SplitHandle,
     StatusBar,
+    StatusBarWidget,
     TrayClient,
 }
 

@@ -6,6 +6,7 @@ mod bar;
 mod event_sink;
 mod tray_client;
 mod tray_manager;
+mod volume_mixer;
 mod widget;
 mod xembed;
 

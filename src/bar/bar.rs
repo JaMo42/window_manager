@@ -74,6 +74,7 @@ impl Bar {
         ewmh::set_window_type(&window, WindowType::Dock);
         wm.set_window_kind(&window, WindowKind::MetaOrUnmanaged);
         ClassHint::new("window_manager_bar", "window_manager_bar").set(&window);
+        log::debug!("bar: bar window: {}", window.resource_id());
         window.map();
         window.raise();
         Self {

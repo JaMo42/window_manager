@@ -22,3 +22,7 @@ From [Google Fonts](https://fonts.google.com/icons):
   - Volume: https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Avolume_up%3AFILL%401%3Bwght%40400%3BGRAD%400%3Bopsz%4048
 
   - Volume muted: https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Avolume_off%3AFILL%401%3Bwght%40400%3BGRAD%400%3Bopsz%4048
+
+  - Plus: https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Aadd%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048
+
+  - Minus: https://fonts.google.com/icons?selected=Material%20Symbols%20Outlined%3Aremove%3AFILL%400%3Bwght%40400%3BGRAD%400%3Bopsz%4048

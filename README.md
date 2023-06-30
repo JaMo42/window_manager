@@ -13,7 +13,8 @@ Written in rust, `cargo` required.
 ### Libraries
 
 - `Xcursor`
-- `asound`
+- `asound` (ALSA)
+- `pulse` (PulseAudio)
 
 ### Optional
 
@@ -110,9 +111,21 @@ The window manager has a builtin status bar. See the [configuration file format]
 
 The bar contains the following widgets:
 
- - Left: Workspace display and switcher
+- Left: Workspace display and switcher
 
- - Right: Battery charge, volume, current time, and a system tray
+- Right: Battery charge, volume, current time, and a system tray
+
+Controls:
+
+- Workspace switcher:
+  - Click: Select workspace
+  - Scroll: Scroll through workspaces
+
+- Volume:
+  - Left click: Toggle master volume mute
+  - Right click: Open volume mixer
+  - Scroll up: Increase master volume
+  - Scroll down: Decrease master volume
 
 ## Acknowledgments
 

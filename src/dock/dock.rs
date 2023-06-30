@@ -296,6 +296,7 @@ impl Dock {
                 return i;
             }
         }
+        log::error!("Hello there");
         unreachable!()
     }
 

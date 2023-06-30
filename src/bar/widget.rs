@@ -1,5 +1,6 @@
 use crate::{
     action::quit_dialog,
+    bar::volume_mixer::volume_mixer,
     color::Color,
     config::Config,
     draw::{Alignment, ColorKind, DrawingContext, Svg},
@@ -306,6 +307,7 @@ pub struct Volume {
     last_level: u32,
     last_mute_state: Option<bool>,
     width: u16,
+    geometry: Rectangle,
 }
 
 impl Volume {
@@ -320,6 +322,7 @@ impl Volume {
                 last_level: u32::MAX,
                 last_mute_state: None,
                 width: 0,
+                geometry: Rectangle::zeroed(),
             })
         } else {
             None
@@ -370,8 +373,12 @@ impl Widget for Volume {
     fn click(&mut self, event: &ButtonPressEvent) {
         use crate::platform::actions::*;
         let button = event.detail();
-        if button == BUTTON_1 || button == BUTTON_2 || button == BUTTON_3 {
+        if button == BUTTON_1 {
             mute_volume(&self.wm);
+        } else if button == BUTTON_3 {
+            let x = self.geometry.x + self.geometry.width as i16 / 2;
+            let y = self.geometry.y + self.geometry.height as i16;
+            volume_mixer(self.wm.clone(), ShowAt::TopCenter((x, y)));
         } else if button == BUTTON_5 {
             // Scroll up
             increase_volume(&self.wm);
@@ -383,6 +390,10 @@ impl Widget for Volume {
 
     fn invalidate(&mut self) {
         self.last_mute_state = None;
+    }
+
+    fn set_geometry(&mut self, geometry: Rectangle) {
+        self.geometry = geometry;
     }
 }
 
