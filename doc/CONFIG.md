@@ -118,6 +118,7 @@ Key and type | Description | Default
 `localized_time` <br> `bool` | use the `LC_TIME` locale for the format values in `time_format` | `true`
 `power_supply` <br> `string` | the power supply to use for the battery widget | `'BAT0'`
 `update_interval` <br> `uint` | time between automatic bar updates in milliseconds | `10000`
+`volume_mixer_title_width` <br> `size`, relative to font size, main monitor width, and main monitor dpmm | width for the program name column in the volume mixer | `15%`
 
 ### [dock]
 

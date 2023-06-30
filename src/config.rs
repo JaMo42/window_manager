@@ -259,6 +259,7 @@ parsed_config! {
             localized_time: bool = "true",
             power_supply: String = "'BAT0'",
             update_interval: u64 = "10000",
+            volume_mixer_title_width: Size = "15%",
         }
         Dock {
             enable: bool = "true",
