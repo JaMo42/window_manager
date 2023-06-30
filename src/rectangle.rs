@@ -121,19 +121,15 @@ impl Rectangle {
 
     /// Does this rectangle overlap the other rectangle?
     pub fn overlaps(&self, other: Rectangle) -> bool {
-        let other_right = other.x + other.width as i16;
-        let other_bottom = other.y + other.height as i16;
-        for corner in [
-            (other.x, other.y),
-            (other_right, other.y),
-            (other_right, other_bottom),
-            (other.x, other_bottom),
-        ] {
-            if self.contains(corner) {
-                return true;
-            }
-        }
-        false
+        // -1 to get values inside the rectangles
+        let my_right = self.right_edge() - 1;
+        let my_bottom = self.bottom_edge() - 1;
+        let other_right = other.right_edge() - 1;
+        let other_bottom = other.bottom_edge() - 1;
+        self.x <= other_right
+            && my_right >= other.x
+            && self.y <= other_bottom
+            && my_bottom >= other.y
     }
 
     /// Grows/shrinks the rectangle by the given amount in each direction.

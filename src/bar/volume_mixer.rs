@@ -359,7 +359,6 @@ impl VolumeMixer {
     }
 
     fn show(&mut self) {
-        log::trace!("showing volume mixer");
         self.window.map();
         if let Some(mouse_block) = &self.mouse_block {
             self.window.stack_above(mouse_block.handle());
