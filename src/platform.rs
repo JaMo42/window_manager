@@ -18,6 +18,7 @@ pub mod actions {
     pub fn mute_volume(wm: &WindowManager) {
         if let Some(mut ctl) = wm.audio_api() {
             ctl.mute_master();
+            drop(ctl);
             super::notify_volume(wm, true);
         }
     }
