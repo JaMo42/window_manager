@@ -78,7 +78,7 @@ impl App {
         let title_str = if let Some(title) = &self.info.name {
             Cow::Borrowed(title.as_str())
         } else {
-            Cow::Owned(format!("[Sink {}]", self.info.index))
+            Cow::Owned(format!("[Sink {}]", self.info.indices[0]))
         };
         let minus_color = if let ClickHit::Minus = hover {
             config.colors.focused
@@ -205,7 +205,7 @@ impl Layout {
 
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 struct HeldButton {
-    app: Option<(usize, u32)>, // `None` for master volume
+    app: Option<usize>, // `None` for master volume
     button: ClickHit,
 }
 
@@ -217,7 +217,7 @@ impl HeldButton {
     }
 
     fn button_for_index(&self, index: Option<usize>) -> ClickHit {
-        if self.app.map(|(i, _)| i) == index {
+        if self.app == index {
             self.button
         } else {
             ClickHit::None
@@ -299,7 +299,7 @@ impl VolumeMixer {
         let master_layout = layout.item(0);
         let mut master = App::new(
             AppInfo {
-                index: u32::MAX,
+                indices: Vec::new(),
                 name: Some("Master".to_string()),
                 icon_name: None,
                 volume: master_volume,
@@ -388,9 +388,9 @@ impl VolumeMixer {
         dc.render(&self.window, local_geometry);
     }
 
-    fn maybe_click(&mut self, x: i16, y: i16, app: Option<(usize, u32)>) -> bool {
+    fn maybe_click(&mut self, x: i16, y: i16, app: Option<usize>) -> bool {
         let a = match app {
-            Some((index, _)) => &self.apps[index],
+            Some(index) => &self.apps[index],
             None => &self.master,
         };
         match a.click(x, y) {
@@ -415,12 +415,12 @@ impl VolumeMixer {
                 if app.is_none() {
                     ctl.mute_master();
                 } else {
-                    ctl.mute_app(a.info.index, !a.info.is_muted)
+                    ctl.mute_app(&a.info);
                 }
             }
             ClickHit::None => return false,
         }
-        self.update(app.map(|(index, _)| index));
+        self.update(app);
         false
     }
 }
@@ -442,8 +442,7 @@ impl EventSink for VolumeMixer {
                             return true;
                         }
                         for i in 0..self.apps.len() {
-                            let app = Some((i, self.apps[i].info.index));
-                            if self.maybe_click(ev.event_x(), ev.event_y(), app) {
+                            if self.maybe_click(ev.event_x(), ev.event_y(), Some(i)) {
                                 return true;
                             }
                         }
@@ -465,7 +464,7 @@ impl EventSink for VolumeMixer {
                         for (i, app) in self.apps.iter().enumerate() {
                             if let Some(button) = app.click(x, y).into_option() {
                                 self.hover = HeldButton {
-                                    app: Some((i, 0)),
+                                    app: Some(i),
                                     button,
                                 };
                                 if self.hover != prev {
@@ -524,10 +523,10 @@ pub fn volume_mixer(wm: Arc<WindowManager>, at: ShowAt) {
                     return;
                 }
                 let mut ctl = mixer.wm.audio_api_unchecked();
-                if let Some((index, app_index)) = held.app {
+                if let Some(index) = held.app {
                     match held.button {
-                        ClickHit::Minus => ctl.decrease_app_volume(app_index, 5),
-                        ClickHit::Plus => ctl.increase_app_volume(app_index, 5),
+                        ClickHit::Minus => ctl.decrease_app_volume(&mixer.apps[index].info, 5),
+                        ClickHit::Plus => ctl.increase_app_volume(&mixer.apps[index].info, 5),
                         _ => unreachable!(),
                     }
                     drop(ctl);

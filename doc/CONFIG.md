@@ -119,6 +119,7 @@ Key and type | Description | Default
 `power_supply` <br> `string` | the power supply to use for the battery widget | `'BAT0'`
 `update_interval` <br> `uint` | time between automatic bar updates in milliseconds | `10000`
 `volume_mixer_title_width` <br> `size`, relative to font size, main monitor width, and main monitor dpmm | width for the program name column in the volume mixer | `15%`
+`volume_mixer_grouping` <br> `"name"` or `"pid"` | specify if applications in the volume mixer are grouped by name or process id, invalid values result in `"pid"` being used. Note that the process id is that provided by pulse audio and for example browsers tend to have the same process id for all windows. If different instances already have different volume levels they are not grouped. | `"name"`
 
 ### [dock]
 

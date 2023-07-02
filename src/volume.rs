@@ -1,10 +1,18 @@
-use crate::error::{LogError, LogNone};
+use crate::{
+    config::Config,
+    error::{LogError, LogNone},
+};
 use libpulse_binding::volume::{ChannelVolumes, Volume};
 use pulsectl::controllers::{types::ApplicationInfo, AppControl, DeviceControl, SinkController};
-use std::{ffi::CStr, ops::Add};
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap},
+    ffi::CStr,
+    hash::{Hash, Hasher},
+    ops::Add,
+};
 
 pub struct AppInfo {
-    pub index: u32,
+    pub indices: Vec<u32>,
     pub name: Option<String>,
     pub icon_name: Option<String>,
     pub volume: u8,
@@ -12,15 +20,33 @@ pub struct AppInfo {
 }
 
 impl AppInfo {
-    fn from_pa(info: ApplicationInfo) -> Self {
-        let name = info.proplist.get_str("application.name");
-        let icon_name = info.proplist.get_str("application.icon_name");
+    fn new(instances: Vec<ApplicationInfo>) -> Self {
+        let mut indices = Vec::with_capacity(instances.len());
+        let mut volume = u8::MAX;
+        let mut is_muted = false;
+        let mut name = None;
+        let mut icon_name = None;
+        for i in instances {
+            indices.push(i.index);
+            volume = volume.min(PulseAudio::volume2percent(i.volume.avg()));
+            is_muted = is_muted || i.mute;
+            if name.is_none() {
+                if let Some(a_name) = i.proplist.get_str("application.name") {
+                    name = Some(a_name);
+                }
+            }
+            if icon_name.is_none() {
+                if let Some(a_icon_name) = i.proplist.get_str("application.icon_name") {
+                    icon_name = Some(a_icon_name);
+                }
+            }
+        }
         Self {
-            index: info.index,
+            indices,
             name,
             icon_name,
-            volume: PulseAudio::volume2percent(info.volume.avg()),
-            is_muted: info.mute,
+            volume,
+            is_muted,
         }
     }
 }
@@ -35,9 +61,9 @@ pub trait AudioAPI {
     // Per-application controls, only provided by the PulseAudio backend
     fn list_apps(&mut self) -> Vec<AppInfo>;
     fn update_app(&mut self, app: &mut AppInfo);
-    fn mute_app(&mut self, index: u32, mute: bool);
-    fn increase_app_volume(&mut self, index: u32, delta: u8);
-    fn decrease_app_volume(&mut self, index: u32, delta: u8);
+    fn mute_app(&mut self, app: &AppInfo);
+    fn increase_app_volume(&mut self, app: &AppInfo, delta: u8);
+    fn decrease_app_volume(&mut self, app: &AppInfo, delta: u8);
 }
 
 pub struct ALSA {
@@ -120,15 +146,15 @@ impl AudioAPI for ALSA {
         unimplemented!()
     }
 
-    fn mute_app(&mut self, _: u32, _: bool) {
+    fn mute_app(&mut self, _: &AppInfo) {
         unimplemented!()
     }
 
-    fn increase_app_volume(&mut self, _: u32, _: u8) {
+    fn increase_app_volume(&mut self, _: &AppInfo, _: u8) {
         unimplemented!()
     }
 
-    fn decrease_app_volume(&mut self, _: u32, _: u8) {
+    fn decrease_app_volume(&mut self, _: &AppInfo, _: u8) {
         unimplemented!()
     }
 }
@@ -139,15 +165,20 @@ impl AudioAPI for ALSA {
 pub struct PulseAudio {
     handler: SinkController,
     default_device: u32,
+    group_key: &'static str,
 }
 
 impl PulseAudio {
-    pub fn new() -> Option<Self> {
+    pub fn new(config: &Config) -> Option<Self> {
         let mut handler = SinkController::create().log_error()?;
         let default_device = handler.get_default_device().log_error()?.index;
         Some(Self {
             handler,
             default_device,
+            group_key: match config.bar.volume_mixer_grouping.as_str() {
+                "name" => "application.name",
+                _ => "application.process.id",
+            },
         })
     }
 
@@ -202,38 +233,57 @@ impl AudioAPI for PulseAudio {
     }
 
     fn list_apps(&mut self) -> Vec<AppInfo> {
-        self.handler
-            .list_applications()
-            .unwrap()
-            .into_iter()
-            .map(AppInfo::from_pa)
-            .collect()
+        let mut apps = HashMap::new();
+        for app in self.handler.list_applications().unwrap() {
+            let mut hasher = DefaultHasher::new();
+            app.proplist.get(self.group_key).hash(&mut hasher);
+            // In addition to the group key we also want to make sure the
+            // instances start with the same state, for the mute state this is
+            // not that important since we set it to an absulute value anyways
+            // but the volume is only changed by a delta so it would always
+            // stay de-synced.  We could synchronize it manually but potentially
+            // changing the values of programs just because the volume mixer was
+            // opened seem like a bad idea.
+            app.mute.hash(&mut hasher);
+            Self::volume2percent(app.volume.avg()).hash(&mut hasher);
+            let id = hasher.finish();
+            apps.entry(id)
+                .or_insert_with(|| Vec::with_capacity(1))
+                .push(app);
+        }
+        apps.into_values().map(AppInfo::new).collect()
     }
 
     fn update_app(&mut self, app: &mut AppInfo) {
-        if let Ok(info) = self.handler.get_app_by_index(app.index) {
+        if let Ok(info) = self.handler.get_app_by_index(app.indices[0]) {
             app.is_muted = info.mute;
             app.volume = Self::volume2percent(info.volume.avg());
         }
     }
 
-    fn mute_app(&mut self, index: u32, mute: bool) {
-        self.handler.set_app_mute(index, mute).log_error();
+    fn mute_app(&mut self, app: &AppInfo) {
+        for &index in app.indices.iter() {
+            self.handler.set_app_mute(index, !app.is_muted).log_error();
+        }
     }
 
-    fn increase_app_volume(&mut self, index: u32, delta: u8) {
+    fn increase_app_volume(&mut self, app: &AppInfo, delta: u8) {
         let delta = delta as f64 / 100.0;
-        self.handler.increase_app_volume_by_percent(index, delta);
+        for &index in app.indices.iter() {
+            self.handler.increase_app_volume_by_percent(index, delta);
+        }
     }
 
-    fn decrease_app_volume(&mut self, index: u32, delta: u8) {
+    fn decrease_app_volume(&mut self, app: &AppInfo, delta: u8) {
         let delta = delta as f64 / 100.0;
-        self.handler.decrease_app_volume_by_percent(index, delta);
+        for &index in app.indices.iter() {
+            self.handler.decrease_app_volume_by_percent(index, delta);
+        }
     }
 }
 
-pub fn get_audio_api() -> Option<Box<dyn AudioAPI>> {
-    if let Some(pulseaudio) = PulseAudio::new() {
+pub fn get_audio_api(config: &Config) -> Option<Box<dyn AudioAPI>> {
+    if let Some(pulseaudio) = PulseAudio::new(config) {
         log::info!("using PulseAudio backend");
         Some(Box::new(pulseaudio))
     } else if let Some(alsa) = ALSA::new() {

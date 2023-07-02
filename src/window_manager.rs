@@ -111,6 +111,7 @@ impl WindowManager {
         let resources = Arc::new(BuiltinResources::load_all());
         let (signal_sender, signal_receiver) = channel();
         let dbus = DBusConnection::new().unwrap_or_fatal(&display);
+        let audio_api = get_audio_api(&config).map(Mutex::new);
         let this = Arc::new(Self {
             display: display.clone(),
             config,
@@ -133,7 +134,7 @@ impl WindowManager {
             notification_manager: Arc::new(Mutex::new(NotificationManager::new())),
             split_manager: Rc::new(RefCell::new(SplitManager::default())),
             remove_sinks: RefCell::new(Vec::with_capacity(4)),
-            audio_api: get_audio_api().map(Mutex::new),
+            audio_api,
         });
         this.session_manager.lock().set_window_manager(&this);
         this.notification_manager.lock().set_window_manager(&this);
@@ -235,9 +236,13 @@ impl WindowManager {
     pub fn dbg_log_workspaces(&self) {
         if cfg!(debug_assertions) {
             for (idx, ws) in self.workspaces.lock().iter().enumerate() {
-                log::debug!("workspace {idx}:");
+                // the comments after the debug lines are for when I'm checking
+                // if I left any debug logs in by grepping as I only use them
+                // during development and use `trace` for presistent debug
+                // logging.
+                log::debug!("workspace {idx}:");  // this is intended
                 for c in ws.iter() {
-                    log::debug!("  {}", *c);
+                    log::debug!("  {}", *c);      // this is intended
                 }
             }
         }

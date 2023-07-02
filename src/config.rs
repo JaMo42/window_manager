@@ -260,6 +260,7 @@ parsed_config! {
             power_supply: String = "'BAT0'",
             update_interval: u64 = "10000",
             volume_mixer_title_width: Size = "15%",
+            volume_mixer_grouping: String = "'name'",
         }
         Dock {
             enable: bool = "true",

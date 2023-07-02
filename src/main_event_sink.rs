@@ -59,7 +59,7 @@ impl MainEventSink {
     fn map_request(&mut self, event: &MapRequestEvent) {
         use WindowType::*;
         if event.parent() != self.display.root() {
-            log::debug!("Got map request for non-toplevel?");
+            log::trace!("Got map request for non-toplevel?");
             return;
         }
         if let Some(client) = self.wm.win2client(&event.window()) {
