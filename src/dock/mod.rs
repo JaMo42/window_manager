@@ -4,3 +4,4 @@ mod item;
 mod layout;
 
 pub use dock::Dock;
+pub use layout::DockLayout;

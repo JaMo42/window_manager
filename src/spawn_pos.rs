@@ -1,5 +1,6 @@
 use crate::{
-    client::Client, config::Config, monitors::monitors, rectangle::Rectangle, workspace::Workspace,
+    client::Client, config::Config, dock::DockLayout, monitors::monitors, rectangle::Rectangle,
+    workspace::Workspace,
 };
 use std::{collections::BTreeSet, sync::Arc};
 
@@ -419,9 +420,17 @@ pub fn spawn_geometry(
 ) -> Rectangle {
     let window_area = *monitors().primary().window_area();
     let mut frame = with_geomerty.unwrap_or(new_client.frame_geometry());
+    let mut get_random_position = || {
+        let mut dock_layout = DockLayout::default();
+        dock_layout.compute(config);
+        let max_y = dock_layout.dock(1).y;
+        let my_window_area =
+            window_area.with_height(window_area.height.min((max_y - window_area.y) as u16));
+        frame.random_position_inside(&my_window_area);
+        frame
+    };
     if !config.layout.smart_window_placement {
-        frame.random_position_inside(&window_area);
-        return frame;
+        return get_random_position();
     }
     let windows: Vec<_> = current_workspace
         .clients()
@@ -430,7 +439,7 @@ pub fn spawn_geometry(
         .collect();
     let m = config.layout.smart_window_placement_max;
     if windows.is_empty() || (m > 0 && windows.len() >= m) {
-        frame.random_position_inside(&window_area);
+        get_random_position();
     } else {
         frame.clamp_inside(&window_area);
         if let Some((x, y)) = find_position(frame, window_area, &windows) {
