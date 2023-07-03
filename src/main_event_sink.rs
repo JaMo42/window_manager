@@ -352,12 +352,13 @@ impl MainEventSink {
         if let Some(client) = self.wm.win2client(&event.window()) {
             let mut new_geometry = client.client_geometry();
             let mut geometry_changed = false;
+            let frame_offset = client.frame_offset();
             if event.value_mask().contains(ConfigWindowMask::X) {
-                new_geometry.x = event.x();
+                new_geometry.x = event.x() + frame_offset.x;
                 geometry_changed = true;
             }
             if event.value_mask().contains(ConfigWindowMask::Y) {
-                new_geometry.y = event.y();
+                new_geometry.y = event.y() + frame_offset.y;
                 geometry_changed = true;
             }
             if event.value_mask().contains(ConfigWindowMask::WIDTH) {

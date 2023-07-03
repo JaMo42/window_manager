@@ -36,6 +36,7 @@ use xcb::{
 };
 use xcb_util::icccm::get_wm_protocols;
 
+#[derive(Debug)]
 pub enum SetClientGeometry {
     /// Set the size of the frame (outer window)
     Frame(Rectangle),
@@ -88,6 +89,15 @@ fn create_frame(display: &Arc<Display>, geometry: Rectangle, cursor: Cursor) -> 
         .build()
 }
 
+fn fix_frame_position(geometry: &mut Rectangle, frame_geometry: &mut Rectangle) {
+    let dx = geometry.x - frame_geometry.x;
+    let dy = geometry.y - frame_geometry.y;
+    frame_geometry.x = geometry.x;
+    frame_geometry.y = geometry.y;
+    geometry.x += dx;
+    geometry.y += dy;
+}
+
 pub struct Client {
     wm: Weak<WindowManager>,
     window: Window,
@@ -138,7 +148,7 @@ impl Client {
             // TODO: do_not_propagate?
         });
 
-        let geometry = Rectangle::from_parts(window.get_geometry())
+        let mut geometry = Rectangle::from_parts(window.get_geometry())
             .clamp_size(layout.min_size(), monitors().primary().window_area().size());
         let frame_kind = if MotifHints::get(&window)
             .map(|motif_hints| motif_hints.has_own_decorations())
@@ -151,8 +161,8 @@ impl Client {
         } else {
             FrameKind::Decorated
         };
-        // FIXME: should move geometry and use the original position for the frame
-        let frame_size = layout.get_frame(frame_kind, &geometry);
+        let mut frame_size = layout.get_frame(frame_kind, &geometry);
+        fix_frame_position(&mut geometry, &mut frame_size);
         let frame = create_frame(window.display(), frame_size, wm.cursors.normal);
         let (x, y) = layout.reparent_position(frame_kind);
         window.reparent(&frame, x, y);

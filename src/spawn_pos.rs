@@ -421,7 +421,7 @@ pub fn spawn_geometry(
     let window_area = *monitors().primary().window_area();
     let mut frame = with_geomerty.unwrap_or(new_client.frame_geometry());
     let mut get_random_position = || {
-        if new_client.client_geometry().position() == (0, 0) {
+        if new_client.frame_geometry().position() == (0, 0) {
             let mut dock_layout = DockLayout::default();
             dock_layout.compute(config);
             let max_y = dock_layout.dock(1).y;
