@@ -240,9 +240,9 @@ impl WindowManager {
                 // if I left any debug logs in by grepping as I only use them
                 // during development and use `trace` for presistent debug
                 // logging.
-                log::debug!("workspace {idx}:");  // this is intended
+                log::debug!("workspace {idx}:"); // this is intended
                 for c in ws.iter() {
-                    log::debug!("  {}", *c);      // this is intended
+                    log::debug!("  {}", *c); // this is intended
                 }
             }
         }

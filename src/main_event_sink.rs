@@ -1,5 +1,5 @@
 use crate::{
-    action::resnap,
+    action::{resnap, snap_on_monitor},
     class_hint::ClassHint,
     client::{Client, SetClientGeometry},
     config::{Action, Config, WorkspaceAction},
@@ -11,7 +11,7 @@ use crate::{
     monitors::{monitors, monitors_mut},
     mouse::{mouse_move, mouse_resize, MouseResizeOptions, BUTTON_1, BUTTON_3},
     process::run_or_message_box,
-    rectangle::Rectangle,
+    rectangle::{rectangle_is_already_in_snapped_position, Rectangle},
     session_manager::SESSION_MANAGER_EVENT,
     spawn_pos::spawn_geometry,
     window_manager::{WindowKind, WindowManager},
@@ -97,18 +97,43 @@ impl MainEventSink {
     fn map_new_client(&mut self, window: Window, window_type: WindowType) {
         let handle = window.handle();
         let client = Client::new(&self.wm, window, window_type);
+        let mut do_snap = None;
         let g = if let WindowType::Dialog = window_type {
             let monitor = *client.get_monitor().window_area();
             *client.frame_geometry().center_inside(&monitor)
+        } else if let Some(x) = rectangle_is_already_in_snapped_position(
+            client.frame_geometry(),
+            &self.wm,
+            client.get_layout().gap(),
+        ) {
+            do_snap = Some(x);
+            // since the client is already snapped we make up an unsnapped
+            // geometry.
+            let unsnapped = monitors().get(x.0).geometry().scale(67);
+            spawn_geometry(
+                &client,
+                &self.wm.active_workspace(),
+                &self.wm.config,
+                Some(unsnapped),
+            )
         } else {
-            spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config)
+            spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config, None)
         };
-        client.move_and_resize(SetClientGeometry::Frame(g));
-        client.save_geometry();
+        if do_snap.is_none() {
+            client.move_and_resize(SetClientGeometry::Frame(g));
+            client.save_geometry();
+        }
         if client.workspace() == self.wm.active_workspace_index() {
             client.map();
             client.draw_border();
             self.display.set_input_focus(client.handle());
+        }
+        if let Some((monitor_index, snap_state)) = do_snap {
+            // warning: will send the snap signals before the NewClient signal
+            // and before the client is even added to the workspace list, this
+            // currently seems to be fine but may cause issues in the future.
+            snap_on_monitor(&client, monitors().get(monitor_index), snap_state);
+            client.modify_saved_geometry(|saved| *saved = g);
         }
         log::info!("Mapped new client: {}", client.id_info());
         self.signal_sender

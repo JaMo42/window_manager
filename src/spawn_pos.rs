@@ -415,9 +415,10 @@ pub fn spawn_geometry(
     new_client: &Client,
     current_workspace: &Workspace,
     config: &Config,
+    with_geomerty: Option<Rectangle>,
 ) -> Rectangle {
     let window_area = *monitors().primary().window_area();
-    let mut frame = new_client.frame_geometry();
+    let mut frame = with_geomerty.unwrap_or(new_client.frame_geometry());
     if !config.layout.smart_window_placement {
         frame.random_position_inside(&window_area);
         return frame;

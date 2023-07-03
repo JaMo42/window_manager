@@ -1,5 +1,7 @@
 use rand::{thread_rng, Rng};
 
+use crate::{monitors::monitors, snap::SnapState, window_manager::WindowManager};
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Rectangle {
     pub x: i16,
@@ -152,9 +154,9 @@ impl Rectangle {
     /// Returns a new rectangle scaled by the given percentage
     /// The given percentage is an integer in the range [0; 100].
     /// The center point stays at the same position.
-    pub fn scale(&self, percent: u16) -> Self {
-        let width = self.width * percent / 100;
-        let height = self.height * percent / 100;
+    pub fn scale(&self, percent: u32) -> Self {
+        let width = (self.width as u32 * percent / 100) as u16;
+        let height = (self.height as u32 * percent / 100) as u16;
         let x = self.x + (self.width - width) as i16 / 2;
         let y = self.y + (self.height - height) as i16 / 2;
         Self::new(x, y, width, height)
@@ -211,6 +213,14 @@ impl Rectangle {
             self.y = rng.gen_range(parent.y..=max);
         }
     }
+
+    /// Returns a percentage representing how similar the two rectangles are in
+    /// size.  This is the average of the separate width and height similarities.
+    pub fn size_similarity(&self, other: Rectangle) -> f64 {
+        let w = self.width.min(other.width) as f64 / self.width.max(other.width) as f64;
+        let h = self.height.min(other.height) as f64 / self.height.max(other.height) as f64;
+        (w + h) / 2.0
+    }
 }
 
 impl std::fmt::Display for Rectangle {
@@ -229,6 +239,42 @@ impl From<Rectangle> for (i16, i16, u16, u16) {
     fn from(val: Rectangle) -> Self {
         val.into_parts()
     }
+}
+
+pub fn rectangle_is_already_in_snapped_position(
+    rect: Rectangle,
+    wm: &WindowManager,
+    gaps: i16,
+) -> Option<(isize, SnapState)> {
+    // we could try to determine the best snap state and monitor based on the
+    // rectangles current position but since we only use this once per new
+    // client we can just spend some extra time.
+    for state in [
+        SnapState::Left,
+        SnapState::TopLeft,
+        SnapState::BottomLeft,
+        SnapState::Right,
+        SnapState::TopRight,
+        SnapState::BottomRight,
+        SnapState::Maximized,
+    ] {
+        for monitor in monitors().iter() {
+            let splits = wm
+                .split_manager()
+                .get_handles(wm.active_workspace_index(), monitor.index() as isize)
+                .as_splits();
+            let snapped = state.get_geometry(splits, monitor, gaps);
+            let x_threshhold = (snapped.width as u32 * 10 / 100) as i16;
+            let y_threshhold = (snapped.height as u32 * 10 / 100) as i16;
+            let dx = (snapped.x - rect.x).abs();
+            let dy = (snapped.y - rect.y).abs();
+            let size_sim = snapped.size_similarity(rect);
+            if size_sim > 0.9 && dx <= x_threshhold && dy <= y_threshhold {
+                return Some((monitor.index() as isize, state));
+            }
+        }
+    }
+    None
 }
 
 /// Offset of a point in side a rectangle on a single axis.
