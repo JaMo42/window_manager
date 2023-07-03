@@ -151,6 +151,7 @@ impl Client {
         } else {
             FrameKind::Decorated
         };
+        // FIXME: should move geometry and use the original position for the frame
         let frame_size = layout.get_frame(frame_kind, &geometry);
         let frame = create_frame(window.display(), frame_size, wm.cursors.normal);
         let (x, y) = layout.reparent_position(frame_kind);

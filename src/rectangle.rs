@@ -89,6 +89,11 @@ impl Rectangle {
         self
     }
 
+    /// Returns the x and y coordinates.
+    pub fn position(&self) -> (i16, i16) {
+        (self.x, self.y)
+    }
+
     /// Returns the width and height.
     pub fn size(&self) -> (u16, u16) {
         (self.width, self.height)
