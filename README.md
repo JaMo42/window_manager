@@ -12,72 +12,84 @@ Written in rust, `cargo` required.
 
 ### Libraries
 
+- `xcb`
+- `xcb-icccm`
 - `Xcursor`
-- `asound` (ALSA)
-- `pulse` (PulseAudio)
+- `gtk-3`
+
+apt libraries: `libx11-xcb-dev libxcb-icccm4-dev libxcursor-dev libgtk-3-dev`
+
+pacman libraries: `libxcb xcb-util-wm libxcursor gtk3`
 
 ### Optional
 
 - [`grid-resize`](https://github.com/JaMo42/grid-resize) required if the `grid_resize` option is enabled (see [configuration](./doc/CONFIG.md)).
+- `asound`
+    - apt: `libasound2-dev`
+    - pacman: `alsa-lib`
+- `pulse`
+    - apt: `libpulse-dev`
+    - pacman: `libpulse`
 
-## Compiling
+Either ALSA (libasound) or PulseAudio (libpulse) are required for volume controls, PulseAudio is required for per-application volume mixing.
+Their presence is detected when compiling with `make` and their implementations are enabled respectively.
+If both are installed PulseAudio is preferred over ALSA since it provides per-application controls.
 
-### Debug
+## Usage
+
+Build and install a release build: `make release && sudo make install`
+
+### Building
 
 ```sh
-$ cargo build
-$ ./run.sh
+# Debug build for only the window manager (both commands do the same):
+$ make
+$ make debug
+# Debug build including utility programs:
+$ BUILD_ALL=1 make debug
+# Release build including utility programs:
+$ make release
 ```
 
-This launches the X server and runs the window manager locally so it has to be ran from a tty.
+Using `make` for building, the presence of the ALSA and PulseAudio libraries is
+checked and their implementations are only enabled if available.
 
-Methods of running:
+When building with `cargo build` both backends are used by default, use `--no-default-features` to disable them and the `my_alsa` or `pulse` features to enable only one of them.
 
-- `./run.sh` or `./run.sh startx`: starts the X server and the window manager, must be called from a tty.
+Example: `cargo build --no-default-features --features my_alsa`
 
-- `./run.sh xephyr`: starts Xephyr with a single displayed and runs the window manager in it.
+### Installing
 
-- `./run.sh multi_mon`: starts Xephyr with multiple monitors and runs the window manager in it.
-
-### Release
-
+```sh
+# Install to /usr/local/bin
+$ sudo make install
+# Install to custom path
+$ sudo INSTALL_PREFIX=/my/install/path make install
 ```
-$ cargo build --realse
-$ ./install.sh
-```
 
-This installs the windows manager onto the system, it can now be ran from a `.xinitrc` using:
+Installed programs (with default path):
+- `/usr/local/bin/window_manager`
+- `/usr/local/bin/window_manager_quit`
+- `/usr/local/bin/window_manager_message_box`
 
+If running the install command results in a rustup error it is trying to rebuild but cannot since it's running as super user.
+Just run `make release` normally to fix this.
+
+In addition to the window manager and its utility programs this will also install the `window_manager.desktop` file to `/usr/share/xsessions/window_manager.desktop`.
+
+### Running
+
+The window manager is visible to any display manager like `GDM`, `SDDM`, `LightDM`, or others via the `/usr/share/xsessions/window_manager.desktop` file installed by `make install`.
+
+The window manager can be ran from a `.xinitrc` using:
 ```sh
 exec window_manager
 ```
 
-Or for a display manager like `GDM`, `SDDM`, `LightDM`, add this to `/usr/share/xsessions/window_manager.desktop`:
-
-```desktop
-[Desktop Entry]
-Name=window_manager
-Comment=Session running window_manager
-Exec=window_manager
-Type=Application
-```
-
-(the `install.sh` script will ask you if want to create this file).
-
-### Installation script
-
-Running `install.sh` will:
-
-- compile the program if `target/realease/window_manager` does not exist
-
-- copy the program to `$INSTALL_PREFIX/window_manager` (default for `INSTALL_PREFIX` is `/usr/local/bin`)
-
-- For each of these files, asks if you want to copy them to the corresponding location:
-  - `config` -> `$CONFIG_PREFIX/window_manager/config`
-  - `autostartrc` -> `$CONFIG_PREFIX/window_manager/autostratrc` (You probably want your own file instead of the example)
-  - `window_manager.desktop` -> `/usr/share/xsessions/window_manager.desktop`
-
-  (default for `CONFIG_PREFIX` is `$XDG_CONFIG_HOME` or `$HOME/.config`)
+To run a debug build without installing it use the `run.sh` script:
+- `./sun.sh` or `./run.sh startx`: starts the X server and the window manager, must be run from a tty
+- `./run.sh xephyr` starts Xephyr with a single display and runs the window manager in it
+- `./run.sh multi_mon` starts Xephyr with multiple monitors and runs the window manager in it
 
 ## Configuration
 
@@ -88,6 +100,8 @@ See [configuration file format](./doc/CONFIG.md).
 Applications that should run at startup are added to `autostartrc` in the same directory.
 
 This is simply a bash script that is run on startup (so don't forget to add `&` to the end of command so they don't block execution).
+
+An example configuration is included in the `config` directory.
 
 ### Pre-defined key bindings
 
