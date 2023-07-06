@@ -68,6 +68,14 @@ impl DockLayout {
         self.show_window
     }
 
+    pub fn small_show_window(&self) -> Rectangle {
+        const HEIGHT: u16 = 1;
+        let mut base = self.show_window();
+        base.y += (base.height - HEIGHT) as i16;
+        base.height = HEIGHT;
+        base
+    }
+
     pub fn is_offset(&self) -> bool {
         self.offset > 0
     }

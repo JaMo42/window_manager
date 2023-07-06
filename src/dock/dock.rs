@@ -10,7 +10,7 @@ use crate::{
     rectangle::Rectangle,
     timeout_thread::RepeatableTimeoutThread,
     window_manager::{WindowKind, WindowManager},
-    x::{Window, XcbWindow},
+    x::{Visual, Window, XcbWindow},
 };
 use parking_lot::Mutex;
 use std::{ptr::NonNull, sync::Arc};
@@ -18,6 +18,34 @@ use xcb::{
     x::{ButtonPressEvent, EnterNotifyEvent, EventMask, LeaveNotifyEvent},
     Event, Xid,
 };
+
+fn build_show_window(
+    wm: &WindowManager,
+    geometry: Rectangle,
+    visual: &Visual,
+    class_hint: &ClassHint,
+) -> Window {
+    let window = Window::builder(wm.display.clone())
+        .geometry(geometry)
+        .depth(visual.depth)
+        .visual(visual.id)
+        .attributes(|attributes| {
+            attributes
+                .override_redirect()
+                .cursor(wm.cursors.normal)
+                .background_pixel(0)
+                .border_pixel(0)
+                .event_mask(
+                    EventMask::ENTER_WINDOW | EventMask::LEAVE_WINDOW | EventMask::BUTTON_PRESS,
+                )
+                .colormap(visual.colormap);
+        })
+        .build();
+    set_window_type(&window, WindowType::Dock);
+    wm.set_window_kind(&window, WindowKind::DockShow);
+    class_hint.set(&window);
+    window
+}
 
 #[derive(Copy, Clone)]
 pub struct ItemRef {
@@ -43,7 +71,12 @@ pub struct Dock {
     pub(super) wm: Arc<WindowManager>,
     items: Vec<Item>,
     window: Window,
+    /// The normal show window, currently always 100px high.  Clients and
+    /// extended frames can overlap this.
     show_window: Window,
+    /// Smaller show window, always 1px high.  This is always kept on top of
+    /// the window stack.
+    small_show_window: Window,
     layout: DockLayout,
     hide_thread: Option<RepeatableTimeoutThread>,
     visible: bool,
@@ -81,29 +114,15 @@ impl Dock {
         wm.set_window_kind(&window, WindowKind::Dock);
         class_hint.set(&window);
 
-        let show_window = Window::builder(wm.display.clone())
-            .geometry(layout.show_window())
-            .depth(visual.depth)
-            .visual(visual.id)
-            .attributes(|attributes| {
-                attributes
-                    .override_redirect()
-                    .cursor(wm.cursors.normal)
-                    .background_pixel(0)
-                    .border_pixel(0)
-                    .event_mask(
-                        EventMask::ENTER_WINDOW | EventMask::LEAVE_WINDOW | EventMask::BUTTON_PRESS,
-                    )
-                    .colormap(visual.colormap);
-            })
-            .build();
-        set_window_type(&show_window, WindowType::Dock);
-        wm.set_window_kind(&show_window, WindowKind::DockShow);
-        class_hint.set(&show_window);
+        let show_window = build_show_window(wm, layout.show_window(), visual, &class_hint);
+        let small_show_window =
+            build_show_window(wm, layout.small_show_window(), visual, &class_hint);
 
         log::trace!("dock: dock window: {}", window);
         log::trace!("dock: show window: {}", show_window);
+        log::trace!("dock: small show window: {}", small_show_window);
         show_window.map();
+        small_show_window.map();
         window.map();
 
         let mut items = Vec::with_capacity(wm.config.dock.pinned.len());
@@ -129,6 +148,7 @@ impl Dock {
             items,
             window,
             show_window,
+            small_show_window,
             layout,
             hide_thread: None,
             visible: true,
@@ -158,6 +178,8 @@ impl Dock {
         self.window.destroy();
         self.wm.remove_all_contexts(&self.show_window);
         self.show_window.destroy();
+        self.wm.remove_all_contexts(&self.small_show_window);
+        self.small_show_window.destroy();
         self.hide_thread().destroy();
     }
 
@@ -168,12 +190,16 @@ impl Dock {
         self.window.move_and_resize(self.geometry);
         self.show_window.move_and_resize(self.layout.show_window());
         self.show_window.clear();
+        self.small_show_window
+            .move_and_resize(self.layout.small_show_window());
+        self.small_show_window.clear();
         self.layout_items();
         for i in self.items.iter_mut() {
             i.set_icon_rect(self.layout.icon());
         }
 
         self.show_window.raise();
+        self.small_show_window.raise();
         if self.visible {
             self.window.raise();
         }
@@ -239,6 +265,7 @@ impl Dock {
 
     /// Shows the dock.
     pub fn show(&mut self) {
+        log::debug!("-- Dock::show");
         if !self.visible {
             self.window.map();
             self.window.raise();
@@ -249,6 +276,7 @@ impl Dock {
 
     /// Hides the dock. The `keep_open` value is ignored.
     pub fn hide(&mut self) {
+        log::debug!("-- Dock::hide");
         if self.visible {
             self.window.unmap();
             self.visible = false;
@@ -353,6 +381,7 @@ impl Dock {
                 true
             }
             WindowKind::DockShow => {
+                log::debug!("-- enter dock show");
                 self.cancel_hide();
                 self.show();
                 true
@@ -377,6 +406,7 @@ impl Dock {
                 true
             }
             WindowKind::DockShow => {
+                log::debug!("-- leave dock show");
                 if !self.geometry.contains((event.root_x(), event.root_y())) {
                     self.hide_after(500);
                 }
@@ -402,6 +432,7 @@ impl Dock {
                 // so for now we do this as an easy way to restore it.
                 // TODO: can this be detected with something like exposure events?
                 self.show_window.clear();
+                self.small_show_window.clear();
                 true
             }
             WindowKind::DockItem => {
@@ -508,6 +539,7 @@ impl EventSink for Dock {
     }
 
     fn signal(&mut self, signal: &Signal) {
+        self.small_show_window.raise();
         match signal {
             Signal::ActiveWorkspaceEmpty(is_empty) => {
                 if *is_empty {
