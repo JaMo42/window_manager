@@ -421,14 +421,12 @@ pub fn spawn_geometry(
     let window_area = *monitors().primary().window_area();
     let mut frame = with_geomerty.unwrap_or(new_client.frame_geometry());
     let mut get_random_position = || {
-        if new_client.frame_geometry().position() == (0, 0) {
-            let mut dock_layout = DockLayout::default();
-            dock_layout.compute(config);
-            let max_y = dock_layout.dock(1).y;
-            let my_window_area =
-                window_area.with_height(window_area.height.min((max_y - window_area.y) as u16));
-            frame.random_position_inside(&my_window_area);
-        }
+        let mut dock_layout = DockLayout::default();
+        dock_layout.compute(config);
+        let max_y = dock_layout.dock(1).y;
+        let my_window_area =
+            window_area.with_height(window_area.height.min((max_y - window_area.y) as u16));
+        frame.random_position_inside(&my_window_area);
         frame
     };
     if !config.layout.smart_window_placement {

@@ -97,6 +97,7 @@ impl MainEventSink {
     fn map_new_client(&mut self, window: Window, window_type: WindowType) {
         let handle = window.handle();
         let client = Client::new(&self.wm, window, window_type);
+        let initial_geometry = client.frame_geometry();
         let mut do_snap = None;
         let g = if let WindowType::Dialog = window_type {
             let monitor = *client.get_monitor().window_area();
@@ -116,8 +117,10 @@ impl MainEventSink {
                 &self.wm.config,
                 Some(unsnapped),
             )
-        } else {
+        } else if initial_geometry.position() == (0, 0) {
             spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config, None)
+        } else {
+            initial_geometry
         };
         if do_snap.is_none() {
             client.move_and_resize(SetClientGeometry::Frame(g));
