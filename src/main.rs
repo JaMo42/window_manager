@@ -50,6 +50,7 @@ mod tooltip;
 mod update_thread;
 mod volume;
 mod window_manager;
+mod window_switcher;
 mod wm_hints;
 mod workspace;
 mod x;

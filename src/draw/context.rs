@@ -42,6 +42,32 @@ fn find_visual_type(display: &Display, visual: &Visual) -> *mut Visualtype {
     );
 }
 
+pub fn create_xcb_surface(
+    display: &Display,
+    drawable_id: u32,
+    (width, height): (u16, u16),
+) -> XCBSurface {
+    let visual = display.truecolor_visual();
+    unsafe {
+        // According to this issue in the xcb crate you're supposed to just
+        // cast these like this:
+        // https://github.com/rust-x-bindings/rust-xcb/issues/200
+        use cairo_sys::{xcb_connection_t, xcb_visualtype_t};
+        let connection = display.connection().get_raw_conn();
+        let connection = NonNull::new(connection as *mut xcb_connection_t).unwrap_unchecked();
+        let visual_type = find_visual_type(&display, visual);
+        let visual_type = NonNull::new(visual_type as *mut xcb_visualtype_t).unwrap_unchecked();
+        XCBSurface::create(
+            &XCBConnection(connection),
+            &XCBDrawable(drawable_id),
+            &XCBVisualType(visual_type),
+            width as i32,
+            height as i32,
+        )
+        .unwrap_or_fatal(&display)
+    }
+}
+
 pub struct DrawingContext {
     display: Arc<Display>,
     pixmap: Pixmap,
@@ -60,24 +86,7 @@ impl DrawingContext {
         log::trace!("draw: creating context");
         let visual = display.truecolor_visual();
         let pixmap = display.create_pixmap(None, visual.depth, width, height);
-        let surface = unsafe {
-            // According to this issue in the xcb crate you're supposed to just
-            // cast these like this:
-            // https://github.com/rust-x-bindings/rust-xcb/issues/200
-            use cairo_sys::{xcb_connection_t, xcb_visualtype_t};
-            let connection = display.connection().get_raw_conn();
-            let connection = NonNull::new(connection as *mut xcb_connection_t).unwrap_unchecked();
-            let visual_type = find_visual_type(&display, visual);
-            let visual_type = NonNull::new(visual_type as *mut xcb_visualtype_t).unwrap_unchecked();
-            XCBSurface::create(
-                &XCBConnection(connection),
-                &XCBDrawable(pixmap.resource_id()),
-                &XCBVisualType(visual_type),
-                width as i32,
-                height as i32,
-            )
-            .unwrap_or_fatal(&display)
-        };
+        let surface = create_xcb_surface(&display, pixmap.resource_id(), (width, height));
         let context = Context::new(&surface).unwrap_or_fatal(&display);
         context.set_operator(Operator::Source);
         let layout = pangocairo::create_layout(&context);

@@ -66,6 +66,7 @@ pub enum WindowKind {
     StatusBar,
     StatusBarWidget,
     TrayClient,
+    WindowSwitcher,
 }
 
 pub struct WindowManager {

@@ -1,5 +1,5 @@
-use std::ffi::CString;
-use x11::xlib::{NoSymbol, XStringToKeysym};
+use std::ffi::{CStr, CString};
+use x11::xlib::{KeySym, NoSymbol, XKeysymToString, XStringToKeysym};
 
 mod display;
 mod input_only_window;
@@ -32,6 +32,19 @@ pub fn string_to_keysym(s: &str) -> Option<u64> {
         } else {
             Some(maybe_sym)
         }
+    }
+}
+
+#[allow(dead_code)]
+pub fn keysym_to_string(sym: KeySym) -> Option<String> {
+    let ptr = unsafe { XKeysymToString(sym) };
+    if ptr.is_null() {
+        return None;
+    } else {
+        unsafe { CStr::from_ptr(ptr) }
+            .to_str()
+            .ok()
+            .map(ToString::to_string)
     }
 }
 

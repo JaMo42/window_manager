@@ -17,6 +17,7 @@ pub fn display_fatal_error(display: &Display, message: String) {
         "Error: {}",
         remove_markup(&message).replace('\n', "\n     | ")
     );
+    //log::error!("Backtrace:\n{}", std::backtrace::Backtrace::capture());
     // We need an arc for this but in a lot of places where we call this
     // function we don't have access to one.
     // `Arc::from_raw` *should* only be called with a pointer obtained from

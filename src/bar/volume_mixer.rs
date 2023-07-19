@@ -14,7 +14,10 @@ use crate::{
 use pango::EllipsizeMode;
 use parking_lot::Mutex;
 use std::{borrow::Cow, sync::Arc};
-use xcb::{x::EventMask, Event, Xid};
+use xcb::{
+    x::{ButtonPressEvent, EventMask, MotionNotifyEvent},
+    Event, Xid,
+};
 
 #[derive(Copy, Clone, Debug)]
 struct ItemLayout {
@@ -423,6 +426,45 @@ impl VolumeMixer {
         self.update(app);
         false
     }
+
+    fn button_press(&mut self, ev: &ButtonPressEvent) {
+        if self.maybe_click(ev.event_x(), ev.event_y(), None) {
+            return;
+        }
+        for i in 0..self.apps.len() {
+            if self.maybe_click(ev.event_x(), ev.event_y(), Some(i)) {
+                return;
+            }
+        }
+    }
+
+    fn motion(&mut self, ev: &MotionNotifyEvent) {
+        let prev = self.hover.take();
+        let x = ev.event_x();
+        let y = ev.event_y();
+        if let Some(button) = self.master.click(x, y).into_option() {
+            self.hover = HeldButton { app: None, button };
+            if self.hover != prev {
+                self.paint();
+            }
+            return;
+        }
+        for (i, app) in self.apps.iter().enumerate() {
+            if let Some(button) = app.click(x, y).into_option() {
+                self.hover = HeldButton {
+                    app: Some(i),
+                    button,
+                };
+                if self.hover != prev {
+                    self.paint();
+                }
+                return;
+            }
+        }
+        if self.hover != prev {
+            self.paint();
+        }
+    }
 }
 
 impl EventSink for VolumeMixer {
@@ -438,46 +480,17 @@ impl EventSink for VolumeMixer {
                 use xcb::x::Event::*;
                 match event {
                     Event::X(ButtonPress(ev)) => {
-                        if self.maybe_click(ev.event_x(), ev.event_y(), None) {
-                            return true;
-                        }
-                        for i in 0..self.apps.len() {
-                            if self.maybe_click(ev.event_x(), ev.event_y(), Some(i)) {
-                                return true;
-                            }
-                        }
+                        self.button_press(ev);
                     }
                     Event::X(ButtonRelease(_)) => {
                         self.held_button = None;
                     }
                     Event::X(MotionNotify(ev)) => {
-                        let prev = self.hover.take();
-                        let x = ev.event_x();
-                        let y = ev.event_y();
-                        if let Some(button) = self.master.click(x, y).into_option() {
-                            self.hover = HeldButton { app: None, button };
-                            if self.hover != prev {
-                                self.paint();
-                            }
-                            return true;
-                        }
-                        for (i, app) in self.apps.iter().enumerate() {
-                            if let Some(button) = app.click(x, y).into_option() {
-                                self.hover = HeldButton {
-                                    app: Some(i),
-                                    button,
-                                };
-                                if self.hover != prev {
-                                    self.paint();
-                                }
-                                return true;
-                            }
-                        }
-                        if self.hover != prev {
-                            self.paint();
-                        }
+                        self.motion(ev);
                     }
-                    Event::X(KeyPress(_)) => self.destroy(),
+                    Event::X(KeyPress(_)) => {
+                        self.destroy();
+                    }
                     Event::X(LeaveNotify(_)) => {
                         self.hover = HeldButton::default();
                         self.paint();
@@ -498,7 +511,6 @@ impl EventSink for VolumeMixer {
             LeaveNotifyEvent::NUMBER,
             MotionNotifyEvent::NUMBER,
             KeyPressEvent::NUMBER,
-            LeaveNotifyEvent::NUMBER,
         ]
     }
 }

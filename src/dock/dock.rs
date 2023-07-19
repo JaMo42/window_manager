@@ -265,7 +265,6 @@ impl Dock {
 
     /// Shows the dock.
     pub fn show(&mut self) {
-        log::debug!("-- Dock::show");
         if !self.visible {
             self.window.map();
             self.window.raise();
@@ -276,7 +275,6 @@ impl Dock {
 
     /// Hides the dock. The `keep_open` value is ignored.
     pub fn hide(&mut self) {
-        log::debug!("-- Dock::hide");
         if self.visible {
             self.window.unmap();
             self.visible = false;
@@ -381,7 +379,6 @@ impl Dock {
                 true
             }
             WindowKind::DockShow => {
-                log::debug!("-- enter dock show");
                 self.cancel_hide();
                 self.show();
                 true
@@ -406,7 +403,6 @@ impl Dock {
                 true
             }
             WindowKind::DockShow => {
-                log::debug!("-- leave dock show");
                 if !self.geometry.contains((event.root_x(), event.root_y())) {
                     self.hide_after(500);
                 }

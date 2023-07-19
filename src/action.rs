@@ -8,6 +8,7 @@ use crate::{
     process::{self, run_or_message_box},
     snap::SnapState,
     window_manager::WindowManager,
+    window_switcher::window_switcher,
 };
 use xcb::Xid;
 
@@ -52,7 +53,13 @@ pub fn move_to_workspace(wm: &WindowManager, workspace_index: usize, client: Opt
 }
 
 pub fn switch_window(wm: &WindowManager) {
-    wm.active_workspace().switch_window(wm);
+    let ws = wm.active_workspace();
+    if ws.clients().len() < 2 {
+        return;
+    }
+    let wm = ws.clients()[0].get_window_manager();
+    drop(ws);
+    window_switcher(wm);
 }
 
 /// Snaps the client on the given monitor

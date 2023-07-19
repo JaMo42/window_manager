@@ -1,28 +1,28 @@
 use crate::{
     client::Client,
-    config::Config,
     error::OrFatal,
     event::Signal,
     ewmh::Root,
     window_manager::WindowManager,
-    x::{Display, Window, XcbWindow},
+    x::{Display, XcbWindow},
 };
 use itertools::Itertools;
 use std::sync::{mpsc::Sender, Arc};
-use x11::keysym::{XK_Alt_L, XK_Tab};
 use xcb::{
-    x::{ConfigWindow, ConfigureWindow, EventMask, KeyButMask, KeyPressEvent, StackMode},
-    Event, Xid,
+    x::{ConfigWindow, ConfigureWindow, StackMode},
+    Xid,
 };
 
 pub struct Workspace {
     index: usize,
     display: Arc<Display>,
     root: Root,
-    config: Arc<Config>,
     clients: Vec<Arc<Client>>,
     signal_sender: Sender<Signal>,
     is_active: bool,
+    /// Prevents the workspace from focusing clients when set to `true`.
+    // see the `focus_client` client method for why this is needed.
+    pub no_focus: bool,
 }
 
 impl Workspace {
@@ -31,10 +31,10 @@ impl Workspace {
             index,
             display: wm.display.clone(),
             root: wm.root.clone(),
-            config: wm.config.clone(),
             clients: Vec::new(),
             signal_sender: wm.signal_sender.clone(),
             is_active: index == 0,
+            no_focus: false,
         }
     }
 
@@ -73,6 +73,14 @@ impl Workspace {
     }
 
     fn focus_client(&self, client: &Client) {
+        if self.no_focus {
+            // XXX: for some reason the window switcher needs this or the client
+            // focused by this will take the input focus even though the
+            // switcher should take it for himself afterwars, I have no clue
+            // whatsoever why but this "solution" works.
+            self.root.set_focused_client(None);
+            return;
+        }
         client.focus();
         client.send_message(self.display.atoms.wm_take_focus);
         self.root.set_focused_client(Some(client.handle()));
@@ -189,96 +197,5 @@ impl Workspace {
         } else {
             log::error!("Tried to focus window not on workspace");
         }
-    }
-
-    /// Runs the window switcher.
-    pub fn switch_window(&mut self, wm: &WindowManager) {
-        use xcb::x::Event::*;
-        const RATE: u32 = 1000 / 10;
-        if self.clients.len() <= 1 {
-            if let Some(only) = self.clients.first() {
-                if only.real_state().is_minimized() {
-                    only.focus();
-                }
-            }
-            return;
-        }
-        let window = Window::builder(self.display.clone())
-            .attributes(|attributes| {
-                attributes.event_mask(EventMask::KEY_PRESS | EventMask::KEY_RELEASE);
-            })
-            .build();
-        window.map();
-        window.lower();
-        self.display.set_input_focus(window.handle());
-        // Put the first tab back
-        let tab = self.display.keysym_to_keycode(XK_Tab);
-        let event = KeyPressEvent::new(
-            tab,
-            RATE + 1,
-            self.display.root(),
-            window.handle(),
-            window.handle(),
-            0,
-            0,
-            0,
-            0,
-            KeyButMask::empty(),
-            true,
-        );
-        self.display.put_back_event(Ok(Event::X(KeyPress(event))));
-        let shift = KeyButMask::from_bits_truncate(wm.modmap.borrow().shift().bits());
-        let alt = self.display.keysym_to_keycode(XK_Alt_L);
-        let mut switch_idx = 0;
-        let mut last_time = 0;
-        loop {
-            let event = match self.display.next_event() {
-                Ok(event) => event,
-                Err(_) => continue,
-            };
-            match event {
-                Event::X(KeyPress(event)) => {
-                    if event.time() - last_time < RATE {
-                        continue;
-                    }
-                    last_time = event.time();
-                    if event.detail() == tab {
-                        {
-                            let c = &self.clients[switch_idx];
-                            c.set_border(self.config.colors.normal_border());
-                            if c.real_state().is_minimized() {
-                                c.unmap();
-                            } else {
-                                self.restack();
-                            }
-                        }
-                        if event.state().contains(shift) {
-                            if switch_idx == 0 {
-                                switch_idx = self.clients.len() - 1;
-                            } else {
-                                switch_idx -= 1;
-                            }
-                        } else {
-                            switch_idx = (switch_idx + 1) % self.clients.len();
-                        }
-                        {
-                            let c = &self.clients[switch_idx];
-                            if c.real_state().is_minimized() {
-                                c.map();
-                            }
-                            c.set_border(self.config.colors.selected_border());
-                            c.raise();
-                        }
-                    }
-                }
-                Event::X(KeyRelease(event)) => {
-                    if event.detail() == alt {
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        self.focus_at(switch_idx);
     }
 }

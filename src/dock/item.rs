@@ -286,7 +286,7 @@ impl Item {
 
     fn focus_instance(&mut self, idx: usize) {
         self.focused_instance = idx; // wasn't in old version?
-        let client = &self.instances[idx];
+        let client = &self.instances[idx]; // TODO: crash here
         if client.workspace() != self.wm.active_workspace_index() {
             action::select_workspace(&self.wm, client.workspace(), None);
         }

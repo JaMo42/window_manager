@@ -56,6 +56,15 @@ impl Rectangle {
         )
     }
 
+    pub fn into_float_parts(self) -> (f64, f64, f64, f64) {
+        (
+            self.x as f64,
+            self.y as f64,
+            self.width as f64,
+            self.height as f64,
+        )
+    }
+
     pub fn with_x(mut self, x: i16) -> Self {
         self.x = x;
         self
@@ -63,6 +72,11 @@ impl Rectangle {
 
     pub fn with_y(mut self, y: i16) -> Self {
         self.y = y;
+        self
+    }
+
+    pub fn with_width(mut self, width: u16) -> Self {
+        self.width = width;
         self
     }
 
