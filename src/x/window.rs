@@ -1,4 +1,5 @@
 use super::{Display, WindowAttributes, WindowBuilder, XcbWindow};
+use crate::error::OrFatal;
 use std::sync::Arc;
 use xcb::x::ClearArea;
 use xcb::x::Cursor;
@@ -108,6 +109,15 @@ impl Window {
         self.change_attributes(|attributes| {
             attributes.event_mask(mask);
         });
+    }
+
+    pub fn get_depth(&self) -> u8 {
+        self.display
+            .request_with_reply(&GetGeometry {
+                drawable: Drawable::Window(self.handle),
+            })
+            .unwrap_or_fatal(&self.display)
+            .depth()
     }
 
     pub fn configure(&self, value_list: &mut [ConfigWindow]) {

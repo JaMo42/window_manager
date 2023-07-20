@@ -143,6 +143,7 @@ struct WindowSwitcherClient {
     close_button_hovered: bool,
     close_button_pressed: bool,
     selected: bool,
+    depth: u8,
 }
 
 struct WindowSwitcher {
@@ -160,6 +161,9 @@ struct WindowSwitcher {
     // want to pass around some flag so we store this flag and set if from the
     // signal handler.
     in_signal_handler: bool,
+    // for now we can only use the xcb surface to draw window previews if they
+    // have the same depth as out TrueColor visual.
+    depth: u8,
 }
 
 impl WindowSwitcher {
@@ -198,6 +202,7 @@ impl WindowSwitcher {
         let layout = Layout::compute(&wm.config, font_height);
         let surface = create_xcb_surface(&wm.display, window.resource_id(), (10, 10));
         let shift = KeyButMask::from_bits_truncate(wm.modmap.borrow().shift().bits());
+        let depth = visual.depth;
         Self {
             wm,
             layout,
@@ -210,6 +215,7 @@ impl WindowSwitcher {
             switch_index: 1,
             shift,
             in_signal_handler: false,
+            depth,
         }
     }
 
@@ -320,6 +326,7 @@ impl WindowSwitcher {
                 close_button_hovered: false,
                 close_button_pressed: false,
                 selected: false,
+                depth: client.window().get_depth(),
             });
         }
         drop(workspace);
@@ -411,6 +418,21 @@ impl WindowSwitcher {
                 },
                 client.layout.close_button,
             );
+        }
+        if client.depth != self.depth || client.client.is_minimized() {
+            // TODO: we should still be able to get a preview for windows with
+            // a different depth.  This can either be done by manually doing the
+            // GetImage request or by just having a XCBSurface for every depth
+            // we have.
+            if let Some(icon) = client.client.icon() {
+                let rect = client.layout.preview;
+                let smaller_side = u16::min(rect.width, rect.height);
+                let icon_size = smaller_side * 90 / 100;
+                let mut icon_rect = Rectangle::new(0, 0, icon_size, icon_size);
+                icon_rect.center_inside(&rect);
+                dc.draw_svg(icon, icon_rect);
+            }
+            return;
         }
         let (width, height) = client.client.client_geometry().size();
         if let Err(_) = self.surface.set_drawable(
