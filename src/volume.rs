@@ -23,7 +23,7 @@ pub trait AudioAPI {
     fn decrease_app_volume(&mut self, app: &AppInfo, delta: u8);
 }
 
-#[cfg(feature = "my_alsa")]
+#[cfg(feature = "alsa")]
 mod my_alsa {
     use super::*;
     use crate::error::{LogError, LogNone};
@@ -300,7 +300,7 @@ pub fn get_audio_api(_config: &Config) -> Option<Box<dyn AudioAPI>> {
         log::info!("using PulseAudio backend");
         return Some(Box::new(pulseaudio));
     }
-    #[cfg(feature = "my_alsa")]
+    #[cfg(feature = "alsa")]
     if let Some(alsa) = my_alsa::Alsa::new() {
         log::info!("using ALSA backend");
         return Some(Box::new(alsa));

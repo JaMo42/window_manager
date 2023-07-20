@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["my_alsa", "pulse"]
-my_alsa = ["alsa"]
+default = ["alsa", "pulse"]
+alsa = ["dep:alsa"]
 pulse = ["libpulse-binding", "pulsectl-rs"]
 
 [dependencies]

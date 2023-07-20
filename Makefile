@@ -7,7 +7,7 @@
 
 FEATURES :=
 ifeq ($(shell pkg-config --exists alsa; echo $$?),0)
-	FEATURES += my_alsa
+	FEATURES += alsa
 endif
 
 ifeq ($(shell pkg-config --exists libpulse; echo $$?),0)

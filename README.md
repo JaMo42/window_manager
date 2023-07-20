@@ -54,9 +54,9 @@ $ make release
 Using `make` for building, the presence of the ALSA and PulseAudio libraries is
 checked and their implementations are only enabled if available.
 
-When building with `cargo build` both backends are used by default, use `--no-default-features` to disable them and the `my_alsa` or `pulse` features to enable only one of them.
+When building with `cargo build` both backends are used by default, use `--no-default-features` to disable them and the `alsa` or `pulse` features to enable only one of them.
 
-Example: `cargo build --no-default-features --features my_alsa`
+Example: `cargo build --no-default-features --features alsa`
 
 ### Installing
 
