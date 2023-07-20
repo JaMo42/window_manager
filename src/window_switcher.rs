@@ -142,8 +142,10 @@ impl ClientLayout {
 
     fn disable_preview(&mut self, width: u16) {
         self.background.height -= self.preview.height;
+        // FXIME: apparently the below comment is wrong
         // the width passed will be the maximum preview width so this never overflows
-        let width_delta = width - self.background.width;
+        //let width_delta = width - self.background.width;
+        let width_delta = (width as i32 - self.background.width as i32).abs() as u16;
         self.background.width = width;
         self.title.width += width_delta;
         self.close_button.x += width_delta as i16;
@@ -176,14 +178,13 @@ fn try_distribute_with_row_count(
     rows.push(Vec::new());
     let mut current_row = unsafe { rows.last_mut().unwrap_unchecked() };
     for (index, client) in clients.iter().enumerate() {
-        if row_width + client.width() > layout.max_width {
-            return (false, 0);
-        }
         if current_row.len() == max_columns {
             rows.push(Vec::new());
             current_row = unsafe { rows.last_mut().unwrap_unchecked() };
             max_row_width = max_row_width.max(row_width - row_width_0);
             row_width = row_width_0;
+        } else if row_width + client.width() > layout.max_width {
+            return (false, 0);
         }
         current_row.push(index);
         if row_width != row_width_0 {
@@ -332,7 +333,7 @@ impl WindowSwitcher {
         layout: &Layout,
         client_layouts: &mut [ClientLayout],
         icons: Vec<bool>,
-    ) -> (Rectangle, bool) {
+    ) -> Option<(Rectangle, bool)> {
         let mut previews = true;
         // TODO: could be better as this ignores the actual sizes of the
         // previews and just minimizes the empty cells on the last row.
@@ -350,9 +351,7 @@ impl WindowSwitcher {
                 for client in client_layouts.iter_mut() {
                     client.disable_preview(layout.max_preview_width);
                 }
-                // FIXME: I guess at this point we should just cancel the window
-                // switcher.
-                try_distribute(client_layouts, layout, &mut rows, &options).expect("gg")
+                try_distribute(client_layouts, layout, &mut rows, &options)?
             }
         };
         let mut row_width;
@@ -379,7 +378,7 @@ impl WindowSwitcher {
         let monitor = *monitors().primary().geometry();
         let x = monitor.x + (monitor.width - width) as i16 / 2;
         let y = monitor.y + (monitor.height - height) as i16 / 2;
-        (Rectangle::new(x, y, width, height), previews)
+        Some((Rectangle::new(x, y, width, height), previews))
     }
 
     /// Tries one layout, returns the geometry of the container window and
@@ -389,7 +388,7 @@ impl WindowSwitcher {
         removed: XcbWindow,
         layout: &Layout,
         client_layouts: &mut Vec<ClientLayout>,
-    ) -> (Rectangle, bool) {
+    ) -> Option<(Rectangle, bool)> {
         client_layouts.clear();
         let workspace = self.wm.active_workspace();
         for client in workspace.iter() {
@@ -405,36 +404,47 @@ impl WindowSwitcher {
             .map(|client| client.icon().is_some())
             .collect();
         drop(workspace);
-        let (geometry, previews) = self.layout_rows_and_container(layout, client_layouts, icons);
-        (geometry, previews)
+        let (geometry, previews) = self.layout_rows_and_container(layout, client_layouts, icons)?;
+        Some((geometry, previews))
     }
 
     /// Rebuilds the layout.  If `removed` is not `XcbWindow::none()` it will
     /// be ignored in the workspaces client list.
-    fn layout(&mut self, removed: XcbWindow) {
+    fn layout(&mut self, removed: XcbWindow) -> bool {
         self.previews = true;
         self.clear_clients();
         // Determine layout
         let mut client_layouts = Vec::with_capacity(self.clients.len());
         let mut first_without_previews = None;
+        let mut ok = false;
         for (index, layout) in self.layouts.iter().enumerate() {
-            let (container_geometry, previews) =
-                self.try_layout(removed, layout, &mut client_layouts);
-            self.geometry = container_geometry;
-            if previews {
-                first_without_previews = None;
-                self.used_layout = index;
-                break;
-            }
-            if first_without_previews.is_none() {
-                first_without_previews = Some(index);
+            if let Some((container_geometry, previews)) =
+                self.try_layout(removed, layout, &mut client_layouts)
+            {
+                self.geometry = container_geometry;
+                if previews {
+                    first_without_previews = None;
+                    self.used_layout = index;
+                    ok = true;
+                    break;
+                }
+                if first_without_previews.is_none() {
+                    first_without_previews = Some(index);
+                }
             }
         }
         if let Some(index) = first_without_previews {
             self.previews = false;
             self.used_layout = index;
-            (self.geometry, _) =
-                self.try_layout(removed, &self.layouts[index], &mut client_layouts);
+            (self.geometry, _) = self
+                .try_layout(removed, &self.layouts[index], &mut client_layouts)
+                .unwrap();
+            ok = true;
+        }
+        if !ok {
+            log::error!("cannot fit the window switcher on the screen");
+            self.cancel();
+            return false;
         }
         // Build layout
         let make_input_window = |parent| {
@@ -476,6 +486,7 @@ impl WindowSwitcher {
             client.layout.layout_input_windows(&self.wm.display, client);
         }
         self.clients[self.switch_index].selected = true;
+        true
     }
 
     /// Paints only the close button of a client.  If the client is not hovered
@@ -882,10 +893,11 @@ pub fn window_switcher(wm: Arc<WindowManager>) {
     workspace.clients()[0].draw_border();
     drop(workspace);
     let mut ws = Box::new(WindowSwitcher::new(wm.clone()));
-    ws.layout(XcbWindow::none());
-    ws.window.map();
-    ws.window.raise();
-    ws.paint();
-    wm.display.set_input_focus(ws.window.handle());
-    wm.add_event_sink(SinkStorage::Unique(ws));
+    if ws.layout(XcbWindow::none()) {
+        ws.window.map();
+        ws.window.raise();
+        ws.paint();
+        wm.display.set_input_focus(ws.window.handle());
+        wm.add_event_sink(SinkStorage::Unique(ws))
+    }
 }
