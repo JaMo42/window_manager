@@ -18,6 +18,8 @@ use xcb::{
     Event, Xid,
 };
 
+// TODO: 1 or 2 alternative layout with smaller previews before hiding them.
+
 #[derive(Debug)]
 struct Layout {
     padding: i16,
@@ -28,6 +30,7 @@ struct Layout {
     min_preview_width: u16,
     max_preview_width: u16,
     max_width: u16,
+    max_height: u16,
 }
 
 impl Layout {
@@ -42,6 +45,7 @@ impl Layout {
         let min_preview_width = preview_height / 2;
         let max_preview_width = preview_height * 2;
         let max_width = (screen_size.width as u32 * 90 / 100) as u16;
+        let max_height = (screen_size.height as u32 * 90 / 100) as u16;
         Self {
             padding,
             spacing,
@@ -51,6 +55,7 @@ impl Layout {
             min_preview_width,
             max_preview_width,
             max_width,
+            max_height,
         }
     }
 
@@ -116,7 +121,9 @@ impl ClientLayout {
         self.close_button = self
             .close_button
             .at(
-                left + (self.preview.width - self.close_button.width) as i16,
+                // We add the initial x here for `disable_preview` to work before
+                // this function is called.
+                self.close_button.x + left + (self.preview.width - self.close_button.width) as i16,
                 top,
             )
             .scale(80);
@@ -132,6 +139,15 @@ impl ClientLayout {
         close_button.y -= self.background.y;
         client.close_button.move_and_resize(display, close_button);
     }
+
+    fn disable_preview(&mut self, width: u16) {
+        self.background.height -= self.preview.height;
+        // the width passed will be the maximum preview width so this never overflows
+        let width_delta = width - self.background.width;
+        self.background.width = width;
+        self.title.width += width_delta;
+        self.close_button.x += width_delta as i16;
+    }
 }
 
 struct WindowSwitcherClient {
@@ -144,6 +160,67 @@ struct WindowSwitcherClient {
     close_button_pressed: bool,
     selected: bool,
     depth: u8,
+}
+
+fn try_distribute_with_row_count(
+    clients: &[WindowSwitcherClient],
+    layout: &Layout,
+    rows: &mut Vec<Vec<usize>>,
+    row_count: usize,
+) -> (bool, u16) {
+    rows.clear();
+    let max_columns = (clients.len() + row_count - 1) / row_count;
+    let row_width_0 = 2 * layout.padding as u16;
+    let mut row_width = row_width_0;
+    let mut max_row_width = 0;
+    rows.push(Vec::new());
+    let mut current_row = unsafe { rows.last_mut().unwrap_unchecked() };
+    for (index, client) in clients.iter().enumerate() {
+        if row_width + client.layout.width() > layout.max_width {
+            return (false, 0);
+        }
+        if current_row.len() == max_columns {
+            rows.push(Vec::new());
+            current_row = unsafe { rows.last_mut().unwrap_unchecked() };
+            max_row_width = max_row_width.max(row_width - row_width_0);
+            row_width = row_width_0;
+        }
+        current_row.push(index);
+        if row_width != row_width_0 {
+            row_width += layout.spacing as u16;
+        }
+        row_width += client.layout.width();
+    }
+    let mut height = 2 * layout.padding as u16;
+    for row in rows {
+        let row_height = row
+            .iter()
+            .map(|&index| clients[index].layout.height())
+            .max()
+            .unwrap();
+        height += row_height + layout.spacing as u16 + 1;
+    }
+    height -= layout.spacing as u16;
+    if height > layout.max_height {
+        return (false, 0);
+    }
+    max_row_width = max_row_width.max(row_width - row_width_0);
+    (true, max_row_width)
+}
+
+fn try_distribute(
+    clients: &[WindowSwitcherClient],
+    layout: &Layout,
+    rows: &mut Vec<Vec<usize>>,
+    options: &[(usize, usize)],
+) -> Option<u16> {
+    for &(row_count, _) in options {
+        let (ok, max_row_width) = try_distribute_with_row_count(clients, layout, rows, row_count);
+        if ok {
+            return Some(max_row_width);
+        }
+    }
+    None
 }
 
 struct WindowSwitcher {
@@ -164,6 +241,7 @@ struct WindowSwitcher {
     // for now we can only use the xcb surface to draw window previews if they
     // have the same depth as out TrueColor visual.
     depth: u8,
+    previews: bool,
 }
 
 impl WindowSwitcher {
@@ -216,6 +294,7 @@ impl WindowSwitcher {
             shift,
             in_signal_handler: false,
             depth,
+            previews: true,
         }
     }
 
@@ -243,30 +322,28 @@ impl WindowSwitcher {
     /// Figures out how the rows are arranged and positions the clients.
     /// Returns the rectangle for the main window.
     fn layout_rows_and_container(&mut self) -> Rectangle {
-        // TODO: optimize to minimize empty space instead of only adding a new
-        // row when we are too wide.
-        // `row_width` and `row_width_0` contain the container padding,
-        // `max_row_width` just contains the content of the row.
-        let row_width_0 = 2 * self.layout.padding as u16;
-        let mut rows = Vec::new();
-        let mut row_width = row_width_0;
-        let mut max_row_width = 0;
-        rows.push(Vec::new());
-        let mut current_row = unsafe { rows.last_mut().unwrap_unchecked() };
-        for (index, client) in self.clients.iter().enumerate() {
-            if row_width + client.layout.width() > self.layout.max_width {
-                rows.push(Vec::new());
-                current_row = unsafe { rows.last_mut().unwrap_unchecked() };
-                max_row_width = max_row_width.max(row_width - row_width_0);
-                row_width = row_width_0;
-            }
-            current_row.push(index);
-            if row_width != row_width_0 {
-                row_width += self.layout.spacing as u16;
-            }
-            row_width += client.layout.width();
+        // TODO: could be better as this ignores the actual sizes of the
+        // previews and just minimizes the empty cells on the last row.
+        let mut options = Vec::with_capacity(self.clients.len());
+        for row_count in 1..=self.clients.len() {
+            let leftover = self.clients.len() % row_count;
+            options.push((row_count, leftover));
         }
-        max_row_width = max_row_width.max(row_width - row_width_0);
+        options.sort_unstable();
+        let mut rows = Vec::new();
+        let max_row_width = match try_distribute(&self.clients, &self.layout, &mut rows, &options) {
+            Some(width) => width,
+            None => {
+                self.previews = false;
+                for client in &mut self.clients {
+                    client.layout.disable_preview(self.layout.max_preview_width);
+                }
+                // FIXME: I guess at this point we should just cancel the window
+                // switcher.
+                try_distribute(&self.clients, &self.layout, &mut rows, &options).expect("gg")
+            }
+        };
+        let mut row_width;
         let mut y = self.layout.padding;
         for row in rows {
             row_width = row
@@ -298,6 +375,7 @@ impl WindowSwitcher {
     /// be ignored in the workspaces client list.
     fn layout(&mut self, removed: XcbWindow) {
         self.clear_clients();
+        self.previews = true;
         let make_input_window = |parent| {
             let win = InputOnlyWindow::builder()
                 .with_parent(parent)
@@ -418,6 +496,9 @@ impl WindowSwitcher {
                 },
                 client.layout.close_button,
             );
+        }
+        if !self.previews {
+            return;
         }
         if client.depth != self.depth || client.client.is_minimized() {
             // TODO: we should still be able to get a preview for windows with
@@ -637,12 +718,6 @@ impl WindowSwitcher {
         if event.detail() == self.wm.display.keysym_to_keycode(XK_Alt_L) {
             self.finish();
         }
-    }
-}
-
-impl Drop for WindowSwitcher {
-    fn drop(&mut self) {
-        log::warn!("WindowSwitcher dropped");
     }
 }
 
