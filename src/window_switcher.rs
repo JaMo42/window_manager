@@ -64,7 +64,6 @@ impl Layout {
         if width != tentative_width {
             height = (width as f64 / aspect_ratio).round() as u16;
         }
-        // TODO: nicer logic
         if height > self.preview_height {
             height = self.preview_height;
             width = (self.preview_height as f64 * aspect_ratio).round() as u16;
@@ -460,6 +459,7 @@ impl WindowSwitcher {
             .wm
             .active_workspace()
             .iter()
+            .filter(|c| c.handle() != removed)
             .zip(client_layouts.into_iter())
         {
             let input_window = make_input_window(self.window.handle());
