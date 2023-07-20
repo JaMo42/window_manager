@@ -142,10 +142,8 @@ impl ClientLayout {
 
     fn disable_preview(&mut self, width: u16) {
         self.background.height -= self.preview.height;
-        // FXIME: apparently the below comment is wrong
         // the width passed will be the maximum preview width so this never overflows
-        //let width_delta = width - self.background.width;
-        let width_delta = (width as i32 - self.background.width as i32).abs() as u16;
+        let width_delta = width - self.preview.width;
         self.background.width = width;
         self.title.width += width_delta;
         self.close_button.x += width_delta as i16;
