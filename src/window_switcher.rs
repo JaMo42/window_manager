@@ -18,6 +18,63 @@ use xcb::{
     Event, Xid,
 };
 
+// Detailed layout system explanation
+//
+// Functions:
+//   - WindowSwitcher::layout:
+//     Goes through all available layouts and get the largest we can use,
+//     preferrably with previews using the `WindowSwitcher::try_layout`. method
+//     After this it creates the `WindowSwitcherClients` structures with their
+//     input windows and sets all their positions as wellas the container window
+//     geometry and maps all the input windows.  If this function returns false
+//     we were not able  to create a window switcher with any layout. The
+//     `window_switcher` function will abort in this case.
+//
+//   - WindowSwitcher::try_layout:
+//     Attempts to create a layout with a specific layout size.  This first
+//     determines the sizes of ceach client using the `Layout::client` method
+//     and then attempts to build the grid with those sizes using the
+//     `WindowSwitcher::layout_grid` mehod.
+//
+//   - Layout::client
+//     This only sets the sizes of a `ClientLayout` but leaves the positions
+//     unset as we need to know the sizes to determine the positions.
+//
+//   - WindowSwitcher::layout_grid
+//     Tries to get the grid layout and container size, this is also where we
+//     check if the layout cannot be used at all.  To get the grid we first build
+//     a list of row counts and how many leftover spaces that row count has and
+//     sort that list minimize the leftover spaces while minimizing the row count.
+//     This is definetly not an optimal way of minimizing free space as it ignores
+//     the actual sizes of the clients but it's east to implement.  We then go
+//     throught that list from best to worst and pick the first option that works
+//     using the `try_distribute` function.  If no option works we disable
+//     previews and try again.  If it still doesn't work we reject the layout
+//     completely.  If the layout does work we then go through the generated
+//     grid and set the client positions accordingly using
+//     `ClientLayout::set_position`.
+//
+//   - `try_distribute`
+//     Takes the list of row-count options from `WindowSwitcher::layout_grid`
+//     and tries to build the grid with each row count using the
+//     `try_distribute_with_row_count` function.
+//
+//   - `try_distribute_with_row_count`
+//     First determines the column count based on the given row count and the
+//     Builds the grid by growing the last row and adding a new row if that row
+//     reached the column count.  If a row grows wider than the maxium width
+//     allowed by the layout the row-count option is rejected and we go back to
+//     `try_distrbute` to try the next option.  If after finishing building the
+//     grid it's height is taller than the maximum height allowed by the layout
+//     the row-count is rejected as well.  Note that this function only creates
+//     a 2d vector with the indices of clients that should be in that position
+//     in the grid but does not set any positions.
+//
+//   - `ClientLayout::set_position`
+//     Receiver the top-left corner of the client position including padding
+//     and sets all its positions accordingly using the sizes that were already
+//     computed by `Layout::client`.
+
 #[derive(Debug)]
 struct Layout {
     padding: i16,
@@ -327,7 +384,7 @@ impl WindowSwitcher {
 
     /// Figures out how the rows are arranged and positions the clients.
     /// Returns the rectangle for the main window.
-    fn layout_rows_and_container(
+    fn layout_grid(
         &self,
         layout: &Layout,
         client_layouts: &mut [ClientLayout],
@@ -381,7 +438,9 @@ impl WindowSwitcher {
     }
 
     /// Tries one layout, returns the geometry of the container window and
-    /// whether this layout can have previews.
+    /// whether this layout can have previews.  Returns `None` if this layout
+    /// cannot be used at all even without preview and `Some((container_geometry,
+    /// previews))` otherwise where `previews` is `true` if it can have previews.
     fn try_layout(
         &self,
         removed: XcbWindow,
@@ -403,7 +462,7 @@ impl WindowSwitcher {
             .map(|client| client.icon().is_some())
             .collect();
         drop(workspace);
-        let (geometry, previews) = self.layout_rows_and_container(layout, client_layouts, icons)?;
+        let (geometry, previews) = self.layout_grid(layout, client_layouts, icons)?;
         Some((geometry, previews))
     }
 
