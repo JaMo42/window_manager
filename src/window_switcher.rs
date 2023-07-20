@@ -34,14 +34,14 @@ struct Layout {
 }
 
 impl Layout {
-    fn compute(_config: &Config, font_height: u16) -> Self {
+    fn compute(_config: &Config, font_height: u16, preview_height_percent: u32) -> Self {
         let dpmm = monitors().primary().dpmm();
         let screen_size = *monitors().primary().geometry();
         let padding = Size::Physical(2.0).resolve(Some(dpmm), None, None) as i16;
         let spacing = padding / 2;
         let client_padding = spacing;
         let title_height = Size::PercentOfFont(1.2).resolve(None, None, Some(font_height));
-        let preview_height = screen_size.height * 20 / 100;
+        let preview_height = (screen_size.height as u32 * preview_height_percent / 100) as u16;
         let min_preview_width = preview_height / 2;
         let max_preview_width = preview_height * 2;
         let max_width = (screen_size.width as u32 * 90 / 100) as u16;
@@ -163,7 +163,7 @@ struct WindowSwitcherClient {
 }
 
 fn try_distribute_with_row_count(
-    clients: &[WindowSwitcherClient],
+    clients: &[ClientLayout],
     layout: &Layout,
     rows: &mut Vec<Vec<usize>>,
     row_count: usize,
@@ -176,7 +176,7 @@ fn try_distribute_with_row_count(
     rows.push(Vec::new());
     let mut current_row = unsafe { rows.last_mut().unwrap_unchecked() };
     for (index, client) in clients.iter().enumerate() {
-        if row_width + client.layout.width() > layout.max_width {
+        if row_width + client.width() > layout.max_width {
             return (false, 0);
         }
         if current_row.len() == max_columns {
@@ -189,13 +189,13 @@ fn try_distribute_with_row_count(
         if row_width != row_width_0 {
             row_width += layout.spacing as u16;
         }
-        row_width += client.layout.width();
+        row_width += client.width();
     }
     let mut height = 2 * layout.padding as u16;
     for row in rows {
         let row_height = row
             .iter()
-            .map(|&index| clients[index].layout.height())
+            .map(|&index| clients[index].height())
             .max()
             .unwrap();
         height += row_height + layout.spacing as u16 + 1;
@@ -209,7 +209,7 @@ fn try_distribute_with_row_count(
 }
 
 fn try_distribute(
-    clients: &[WindowSwitcherClient],
+    clients: &[ClientLayout],
     layout: &Layout,
     rows: &mut Vec<Vec<usize>>,
     options: &[(usize, usize)],
@@ -225,7 +225,8 @@ fn try_distribute(
 
 struct WindowSwitcher {
     wm: Arc<WindowManager>,
-    layout: Layout,
+    layouts: Vec<Layout>,
+    used_layout: usize,
     window: Window,
     geometry: Rectangle,
     font: FontDescription,
@@ -277,13 +278,18 @@ impl WindowSwitcher {
             .title_font()
             .clone();
         let font_height = wm.drawing_context.lock().font_height(Some(&font));
-        let layout = Layout::compute(&wm.config, font_height);
+        let layouts = vec![
+            Layout::compute(&wm.config, font_height, 20),
+            Layout::compute(&wm.config, font_height, 15),
+            Layout::compute(&wm.config, font_height, 10),
+        ];
         let surface = create_xcb_surface(&wm.display, window.resource_id(), (10, 10));
         let shift = KeyButMask::from_bits_truncate(wm.modmap.borrow().shift().bits());
         let depth = visual.depth;
         Self {
             wm,
-            layout,
+            layouts,
+            used_layout: 0,
             window,
             geometry: Rectangle::zeroed(),
             font,
@@ -321,61 +327,115 @@ impl WindowSwitcher {
 
     /// Figures out how the rows are arranged and positions the clients.
     /// Returns the rectangle for the main window.
-    fn layout_rows_and_container(&mut self) -> Rectangle {
+    fn layout_rows_and_container(
+        &self,
+        layout: &Layout,
+        client_layouts: &mut [ClientLayout],
+        icons: Vec<bool>,
+    ) -> (Rectangle, bool) {
+        let mut previews = true;
         // TODO: could be better as this ignores the actual sizes of the
         // previews and just minimizes the empty cells on the last row.
-        let mut options = Vec::with_capacity(self.clients.len());
-        for row_count in 1..=self.clients.len() {
-            let leftover = self.clients.len() % row_count;
+        let mut options = Vec::with_capacity(client_layouts.len());
+        for row_count in 1..=client_layouts.len() {
+            let leftover = client_layouts.len() % row_count;
             options.push((row_count, leftover));
         }
         options.sort_unstable();
         let mut rows = Vec::new();
-        let max_row_width = match try_distribute(&self.clients, &self.layout, &mut rows, &options) {
+        let max_row_width = match try_distribute(client_layouts, layout, &mut rows, &options) {
             Some(width) => width,
             None => {
-                self.previews = false;
-                for client in &mut self.clients {
-                    client.layout.disable_preview(self.layout.max_preview_width);
+                previews = false;
+                for client in client_layouts.iter_mut() {
+                    client.disable_preview(layout.max_preview_width);
                 }
                 // FIXME: I guess at this point we should just cancel the window
                 // switcher.
-                try_distribute(&self.clients, &self.layout, &mut rows, &options).expect("gg")
+                try_distribute(client_layouts, layout, &mut rows, &options).expect("gg")
             }
         };
         let mut row_width;
-        let mut y = self.layout.padding;
+        let mut y = layout.padding;
         for row in rows {
             row_width = row
                 .iter()
-                .map(|&index| self.clients[index].layout.width() + self.layout.spacing as u16)
+                .map(|&index| client_layouts[index].width() + layout.spacing as u16)
                 .sum::<u16>()
-                - self.layout.spacing as u16;
-            let mut x = self.layout.padding + (max_row_width - row_width) as i16 / 2;
+                - layout.spacing as u16;
+            let mut x = layout.padding + (max_row_width - row_width) as i16 / 2;
             let mut height = 0;
             for index in row {
-                let client = &mut self.clients[index];
-                client
-                    .layout
-                    .set_position(x, y, &self.layout, client.client.icon().is_some());
-                height = height.max(client.layout.height());
-                x += client.layout.width() as i16 + self.layout.spacing;
+                let has_icon = icons[index];
+                let client = &mut client_layouts[index];
+                client.set_position(x, y, layout, has_icon);
+                height = height.max(client.height());
+                x += client.width() as i16 + layout.spacing;
             }
-            y += height as i16 + self.layout.spacing;
+            y += height as i16 + layout.spacing;
         }
-        let width = 2 * self.layout.padding as u16 + max_row_width;
-        let height = (y - self.layout.spacing + self.layout.padding) as u16;
+        let width = 2 * layout.padding as u16 + max_row_width;
+        let height = (y - layout.spacing + layout.padding) as u16;
         let monitor = *monitors().primary().geometry();
         let x = monitor.x + (monitor.width - width) as i16 / 2;
         let y = monitor.y + (monitor.height - height) as i16 / 2;
-        Rectangle::new(x, y, width, height)
+        (Rectangle::new(x, y, width, height), previews)
+    }
+
+    /// Tries one layout, returns the geometry of the container window and
+    /// whether this layout can have previews.
+    fn try_layout(
+        &self,
+        removed: XcbWindow,
+        layout: &Layout,
+        client_layouts: &mut Vec<ClientLayout>,
+    ) -> (Rectangle, bool) {
+        client_layouts.clear();
+        let workspace = self.wm.active_workspace();
+        for client in workspace.iter() {
+            if client.handle() == removed {
+                continue;
+            }
+            let (client_width, client_height) = client.client_geometry().size();
+            let aspect_ratio = client_width as f64 / client_height as f64;
+            client_layouts.push(layout.client(aspect_ratio, client.icon().is_some()));
+        }
+        let icons: Vec<_> = workspace
+            .iter()
+            .map(|client| client.icon().is_some())
+            .collect();
+        drop(workspace);
+        let (geometry, previews) = self.layout_rows_and_container(layout, client_layouts, icons);
+        (geometry, previews)
     }
 
     /// Rebuilds the layout.  If `removed` is not `XcbWindow::none()` it will
     /// be ignored in the workspaces client list.
     fn layout(&mut self, removed: XcbWindow) {
-        self.clear_clients();
         self.previews = true;
+        self.clear_clients();
+        // Determine layout
+        let mut client_layouts = Vec::with_capacity(self.clients.len());
+        let mut first_without_previews = None;
+        for (index, layout) in self.layouts.iter().enumerate() {
+            let (container_geometry, previews) =
+                self.try_layout(removed, layout, &mut client_layouts);
+            self.geometry = container_geometry;
+            if previews {
+                first_without_previews = None;
+                self.used_layout = index;
+                break;
+            }
+            if first_without_previews.is_none() {
+                first_without_previews = Some(index);
+            }
+        }
+        if let Some(index) = first_without_previews {
+            self.previews = false;
+            self.used_layout = index;
+            (self.geometry, _) = self.try_layout(removed, &self.layouts[index], &mut client_layouts);
+        }
+        // Build layout
         let make_input_window = |parent| {
             let win = InputOnlyWindow::builder()
                 .with_parent(parent)
@@ -385,14 +445,12 @@ impl WindowSwitcher {
             self.wm.set_window_kind(&win, WindowKind::WindowSwitcher);
             win
         };
-        let workspace = self.wm.active_workspace();
-        for client in workspace.iter() {
-            if client.handle() == removed {
-                continue;
-            }
-            let (client_width, client_height) = client.client_geometry().size();
-            let aspect_ratio = client_width as f64 / client_height as f64;
-            let client_layout = self.layout.client(aspect_ratio, client.icon().is_some());
+        for (client, client_layout) in self
+            .wm
+            .active_workspace()
+            .iter()
+            .zip(client_layouts.into_iter())
+        {
             let input_window = make_input_window(self.window.handle());
             let close_button = make_input_window(input_window.handle());
             self.clients.push(WindowSwitcherClient {
@@ -407,8 +465,6 @@ impl WindowSwitcher {
                 depth: client.window().get_depth(),
             });
         }
-        drop(workspace);
-        self.geometry = self.layout_rows_and_container();
         self.window.move_and_resize(self.geometry);
         // using `window.map_sub_windows()` causes the close_button to not
         // generate events, either because it's not being mapped for some reason
@@ -457,6 +513,7 @@ impl WindowSwitcher {
         let c_sel_text = self.wm.config.colors.selected_text;
         let c_hov = self.wm.config.colors.normal_border();
         let c_hov_text = self.wm.config.colors.normal_text;
+        #[allow(clippy::needless_late_init)]
         let c_text;
         let client = &self.clients[index];
         if repaint_background {
@@ -466,7 +523,7 @@ impl WindowSwitcher {
             let c = if client.selected { c_sel } else { c_hov };
             dc.rect(client.layout.background)
                 .gradient(GradientSpec::new_vertical(c.top(), c.border()))
-                .corner_radius(self.layout.client_padding as u16 * 3 / 2)
+                .corner_radius(self.layouts[self.used_layout].client_padding as u16 * 3 / 2)
                 .draw();
             c_text = if client.selected {
                 c_sel_text
@@ -516,17 +573,17 @@ impl WindowSwitcher {
             return;
         }
         let (width, height) = client.client.client_geometry().size();
-        if let Err(_) = self.surface.set_drawable(
+        if self.surface.set_drawable(
             &cairo::XCBDrawable(client.client.window().resource_id()),
             width as i32,
             height as i32,
-        ) {
+        ).is_err() {
             return;
         }
         let context = dc.cairo();
         let (x, y, p_width, p_height) = client.layout.preview.into_float_parts();
-        let width_scale = p_width as f64 / width as f64;
-        let height_scale = p_height as f64 / height as f64;
+        let width_scale = p_width / width as f64;
+        let height_scale = p_height / height as f64;
         context.save().unwrap();
         context.rectangle(x, y, p_width, p_height);
         context.clip();
@@ -593,12 +650,10 @@ impl WindowSwitcher {
             } else {
                 index = self.switch_index - 1;
             }
+        } else if self.switch_index == client_count - 1 {
+            index = 0;
         } else {
-            if self.switch_index == client_count - 1 {
-                index = 0;
-            } else {
-                index = self.switch_index + 1;
-            }
+            index = self.switch_index + 1;
         }
         self.select(index);
     }
