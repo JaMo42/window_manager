@@ -39,8 +39,8 @@ impl Layout {
         let client_padding = spacing;
         let title_height = Size::PercentOfFont(1.2).resolve(None, None, Some(font_height));
         let preview_height = screen_size.height * 20 / 100;
-        let min_preview_width = preview_height * 9 / 16;
-        let max_preview_width = min_preview_width * 3;
+        let min_preview_width = preview_height / 2;
+        let max_preview_width = preview_height * 2;
         let max_width = (screen_size.width as u32 * 90 / 100) as u16;
         Self {
             padding,
@@ -65,10 +65,8 @@ impl Layout {
         if height > self.preview_height {
             height = self.preview_height;
             width = (self.preview_height as f64 * aspect_ratio).round() as u16;
+            width = width.clamp(self.min_preview_width, self.max_preview_width);
         }
-        // FIXME: with xfce terminal, the previews height ends up being less
-        // than the preferred client height but it looks like it shouldn't be
-        // constraint by the width limits.
         let rect = Rectangle::new(
             0,
             0,
@@ -171,9 +169,8 @@ impl WindowSwitcher {
             .visual(visual.id)
             .depth(visual.depth)
             .geometry((0, 0, 10, 10)) // we have no meaningful geometry yet but
-            // we want to be sure we have the same
-            // size as the surface (not sure if this
-            // is actually neccessary)
+            // we want to be sure we have the same size as the surface (not sure
+            // if this is actually neccessary)
             .attributes(|attributes| {
                 attributes
                     .override_redirect()
@@ -242,7 +239,7 @@ impl WindowSwitcher {
     fn layout_rows_and_container(&mut self) -> Rectangle {
         // TODO: optimize to minimize empty space instead of only adding a new
         // row when we are too wide.
-        // `row_width` and `row_width_0` contain the containert padding,
+        // `row_width` and `row_width_0` contain the container padding,
         // `max_row_width` just contains the content of the row.
         let row_width_0 = 2 * self.layout.padding as u16;
         let mut rows = Vec::new();
