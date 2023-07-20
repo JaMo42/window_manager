@@ -18,8 +18,6 @@ use xcb::{
     Event, Xid,
 };
 
-// TODO: 1 or 2 alternative layout with smaller previews before hiding them.
-
 #[derive(Debug)]
 struct Layout {
     padding: i16,
@@ -277,11 +275,15 @@ impl WindowSwitcher {
             .title_font()
             .clone();
         let font_height = wm.drawing_context.lock().font_height(Some(&font));
-        let layouts = vec![
-            Layout::compute(&wm.config, font_height, 20),
-            Layout::compute(&wm.config, font_height, 15),
-            Layout::compute(&wm.config, font_height, 10),
-        ];
+        let layouts = wm
+            .config
+            .general
+            .window_switcher_sizes
+            .iter()
+            .map(|&preview_height_percent| {
+                Layout::compute(&wm.config, font_height, preview_height_percent)
+            })
+            .collect();
         let surface = create_xcb_surface(&wm.display, window.resource_id(), (10, 10));
         let shift = KeyButMask::from_bits_truncate(wm.modmap.borrow().shift().bits());
         let depth = visual.depth;
