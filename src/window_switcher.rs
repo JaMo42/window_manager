@@ -71,7 +71,7 @@ use xcb::{
 //     in the grid but does not set any positions.
 //
 //   - `ClientLayout::set_position`
-//     Receiver the top-left corner of the client position including padding
+//     Receives the top-left corner of the client position including padding
 //     and sets all its positions accordingly using the sizes that were already
 //     computed by `Layout::client`.
 
@@ -267,7 +267,7 @@ fn try_distribute(
     rows: &mut Vec<Vec<usize>>,
     options: &[(usize, usize)],
 ) -> Option<u16> {
-    for &(row_count, _) in options {
+    for &(_, row_count) in options {
         let (ok, max_row_width) = try_distribute_with_row_count(clients, layout, rows, row_count);
         if ok {
             return Some(max_row_width);
@@ -396,7 +396,7 @@ impl WindowSwitcher {
         let mut options = Vec::with_capacity(client_layouts.len());
         for row_count in 1..=client_layouts.len() {
             let leftover = client_layouts.len() % row_count;
-            options.push((row_count, leftover));
+            options.push((leftover, row_count));
         }
         options.sort_unstable();
         let mut rows = Vec::new();
