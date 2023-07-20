@@ -433,7 +433,8 @@ impl WindowSwitcher {
         if let Some(index) = first_without_previews {
             self.previews = false;
             self.used_layout = index;
-            (self.geometry, _) = self.try_layout(removed, &self.layouts[index], &mut client_layouts);
+            (self.geometry, _) =
+                self.try_layout(removed, &self.layouts[index], &mut client_layouts);
         }
         // Build layout
         let make_input_window = |parent| {
@@ -573,11 +574,15 @@ impl WindowSwitcher {
             return;
         }
         let (width, height) = client.client.client_geometry().size();
-        if self.surface.set_drawable(
-            &cairo::XCBDrawable(client.client.window().resource_id()),
-            width as i32,
-            height as i32,
-        ).is_err() {
+        if self
+            .surface
+            .set_drawable(
+                &cairo::XCBDrawable(client.client.window().resource_id()),
+                width as i32,
+                height as i32,
+            )
+            .is_err()
+        {
             return;
         }
         let context = dc.cairo();

@@ -55,7 +55,7 @@ pub fn create_xcb_surface(
         use cairo_sys::{xcb_connection_t, xcb_visualtype_t};
         let connection = display.connection().get_raw_conn();
         let connection = NonNull::new(connection as *mut xcb_connection_t).unwrap_unchecked();
-        let visual_type = find_visual_type(&display, visual);
+        let visual_type = find_visual_type(display, visual);
         let visual_type = NonNull::new(visual_type as *mut xcb_visualtype_t).unwrap_unchecked();
         XCBSurface::create(
             &XCBConnection(connection),
@@ -64,7 +64,7 @@ pub fn create_xcb_surface(
             width as i32,
             height as i32,
         )
-        .unwrap_or_fatal(&display)
+        .unwrap_or_fatal(display)
     }
 }
 

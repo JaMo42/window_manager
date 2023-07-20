@@ -33,7 +33,7 @@ mod my_alsa {
     };
     use std::ffi::CStr;
 
-    pub struct ALSA {
+    pub struct Alsa {
         handle: Mixer,
         // `elem` lifetime is same as `handle`. We use `static` so we don't need to
         // deal with the borrow checker.
@@ -42,7 +42,7 @@ mod my_alsa {
         range_div: i64,
     }
 
-    impl ALSA {
+    impl Alsa {
         pub fn new() -> Option<Self> {
             let sid = SelemId::new("Master", 0);
             let mut handle = Mixer::open(false).log_error()?;
@@ -64,7 +64,7 @@ mod my_alsa {
         }
     }
 
-    impl AudioAPI for ALSA {
+    impl AudioAPI for Alsa {
         // TODO: don't `unwrap` the get and set functions maybe but idk why these
         //       would even fail at this point so it will probably stay like this
         //       until I get a crash from it.
@@ -301,7 +301,7 @@ pub fn get_audio_api(_config: &Config) -> Option<Box<dyn AudioAPI>> {
         return Some(Box::new(pulseaudio));
     }
     #[cfg(feature = "my_alsa")]
-    if let Some(alsa) = my_alsa::ALSA::new() {
+    if let Some(alsa) = my_alsa::Alsa::new() {
         log::info!("using ALSA backend");
         return Some(Box::new(alsa));
     }

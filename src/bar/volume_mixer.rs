@@ -64,8 +64,7 @@ impl App {
         let icon = info
             .icon_name
             .as_deref()
-            .map(|name| load_icon(name, icon_theme).map(Result::ok).flatten())
-            .flatten()
+            .and_then(|name| load_icon(name, icon_theme).and_then(Result::ok))
             .map(Icon::App)
             .unwrap_or(Icon::None);
         Self { info, icon, layout }
@@ -95,12 +94,10 @@ impl App {
         };
         let mute_color = if let ClickHit::Mute = hover {
             config.colors.focused
+        } else if self.info.is_muted {
+            config.colors.urgent
         } else {
-            if self.info.is_muted {
-                config.colors.urgent
-            } else {
-                fg
-            }
+            fg
         };
         dc.text(title_str.as_ref(), self.layout.title)
             .color(fg)

@@ -39,7 +39,7 @@ pub fn string_to_keysym(s: &str) -> Option<u64> {
 pub fn keysym_to_string(sym: KeySym) -> Option<String> {
     let ptr = unsafe { XKeysymToString(sym) };
     if ptr.is_null() {
-        return None;
+        None
     } else {
         unsafe { CStr::from_ptr(ptr) }
             .to_str()
