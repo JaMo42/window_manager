@@ -4,7 +4,9 @@ use crate::{
     rectangle::Rectangle,
     x::{Display, Visual, Window},
 };
-use cairo::{Context, Operator, XCBConnection, XCBDrawable, XCBSurface, XCBVisualType};
+use cairo::{
+    Context, Filter, Operator, Surface, XCBConnection, XCBDrawable, XCBSurface, XCBVisualType,
+};
 use itertools::Itertools;
 use pango::{FontDescription, Layout};
 use std::{ptr::NonNull, sync::Arc};
@@ -334,5 +336,26 @@ impl DrawingContext {
             .unwrap_or_fatal(&self.display);
         self.set_color(color);
         self.context.mask(pattern).or_fatal(&self.display);
+    }
+
+    /// Draws another surface to the context.
+    pub fn draw_surface(
+        &self,
+        surface: &Surface,
+        x_scale: f64,
+        y_scale: f64,
+        rect: Rectangle,
+        filter: Filter,
+    ) {
+        let (x, y, width, height) = rect.into_float_parts();
+        self.context.save().unwrap();
+        self.context.rectangle(x, y, width, height);
+        self.context.clip();
+        self.context.translate(x, y);
+        self.context.scale(x_scale, y_scale);
+        self.context.set_source_surface(surface, 0.0, 0.0).unwrap();
+        self.context.source().set_filter(filter);
+        self.context.paint().unwrap();
+        self.context.restore().unwrap();
     }
 }

@@ -222,6 +222,7 @@ parsed_config! {
             grid_resize_live: bool = "false",
             scale_base_fonts: bool = "true",
             window_switcher_sizes: Vec<u32> = "[30, 20, 15, 10]",
+            window_switcher_filter: cairo::Filter = "Good",
         }
         Layout {
             workspaces: usize = "1",

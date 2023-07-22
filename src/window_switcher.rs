@@ -658,22 +658,17 @@ impl WindowSwitcher {
             }
             return;
         }
-        let (width, height) = client.client.client_geometry().size();
-        let context = dc.cairo();
-        let (x, y, p_width, p_height) = client.layout.preview.into_float_parts();
-        let width_scale = p_width / width as f64;
-        let height_scale = p_height / height as f64;
-        context.save().unwrap();
-        context.rectangle(x, y, p_width, p_height);
-        context.clip();
-        context.translate(x, y);
-        context.scale(width_scale, height_scale);
-        context
-            .set_source_surface(&client.surface, 0.0, 0.0)
-            .unwrap();
-        context.source().set_filter(cairo::Filter::Good);
-        context.paint().unwrap();
-        context.restore().unwrap();
+        let (c_width, c_height) = client.client.client_geometry().size();
+        let (p_width, p_height) = client.layout.preview.size();
+        let x_scale = p_width as f64 / c_width as f64;
+        let y_scale = p_height as f64 / c_height as f64;
+        dc.draw_surface(
+            &client.surface,
+            x_scale,
+            y_scale,
+            client.layout.preview,
+            self.wm.config.general.window_switcher_filter,
+        );
     }
 
     /// Paints the background and all clients.

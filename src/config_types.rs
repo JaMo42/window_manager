@@ -61,6 +61,25 @@ fn parse_list<T: Value>(
     Ok(v)
 }
 
+/// Boilerplate for getting 1 word (only alphabetic characters) from the scanner
+/// and comparing it case insensitively.
+macro_rules! parse_map_string {
+    ($scanner:ident, $error_message:expr, $error_label:expr, {$(
+        $str:expr => $value:expr,
+    )+}) => {{
+        let next_word = $scanner.some(|c| c.is_ascii_alphabetic());
+        match next_word.as_str().to_ascii_lowercase().as_str() {
+            $(
+            $str => Ok($value),
+            )+
+            _ => Err(next_word.as_error(
+                $error_message,
+                $error_label,
+            ))
+        }
+    }}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Keybindings section
 ////////////////////////////////////////////////////////////////////////////////
@@ -214,17 +233,17 @@ impl Value for f64 {
 
 impl Value for bool {
     fn parse(scanner: &mut Scanner) -> Result<Self, Error> {
-        let next_word = scanner.some(|c| c.is_ascii_alphabetic());
-        match next_word.as_str().to_ascii_lowercase().as_str() {
-            "true" => Ok(true),
-            "yes" => Ok(true),
-            "false" => Ok(false),
-            "no" => Ok(false),
-            _ => Err(next_word.as_error(
-                "invalid boolean value",
-                "expected `true`, `yes`, `false`, or `no`",
-            )),
-        }
+        parse_map_string!(
+            scanner,
+            "invalid boolean value",
+            "expected `true`, `yes`, `false`, or `no`",
+            {
+                "true" => true,
+                "yes" => true,
+                "false" => false,
+                "no" => false,
+            }
+        )
     }
 }
 
@@ -285,17 +304,17 @@ impl Value for WindowAreaPadding {
 impl Value for Alignment {
     fn parse(scanner: &mut Scanner) -> Result<Self, Error> {
         // We currently only use this for horizontal alignment so we can just
-        // parse those value and not worry about validating them.
-        let next_word = scanner.some(|c| c.is_alphabetic());
-        match next_word.as_str().to_ascii_lowercase().as_str() {
-            "left" => Ok(Alignment::LEFT),
-            "center" => Ok(Alignment::CENTER),
-            "right" => Ok(Alignment::RIGHT),
-            _ => Err(next_word.as_error(
-                "invalid alignment value",
-                "expected `Left`, `Center`, or `Right`",
-            )),
-        }
+        // parse those values and not worry about validating them.
+        parse_map_string!(
+            scanner,
+            "invalid alignment value",
+            "expected `Left`, `Center`, or `Right`",
+            {
+                "left" => Alignment::LEFT,
+                "center" => Alignment::CENTER,
+                "right" => Alignment::RIGHT,
+            }
+        )
     }
 }
 
@@ -392,57 +411,35 @@ where
         ))
     }
 }
-/*
-pub trait StringValidator {
-    fn validate(s: &str) -> Result<(), Error>;
-}
 
-pub struct ValidatedString<V: StringValidator> {
-    inner: String,
-    v_marker: PhantomData<V>,
-}
-
-impl<V: StringValidator> Deref for ValidatedString<V> {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl<V: StringValidator> Value for ValidatedString<V> {
+impl Value for cairo::Filter {
     fn parse(scanner: &mut Scanner) -> Result<Self, Error> {
-        let start = *scanner.location();
-        let s = String::parse(scanner)?;
-        let end = *scanner.location();
-        V::validate(&s)?;
-        Ok(Self {
-            inner: s,
-            v_marker: PhantomData,
+        parse_map_string!(
+            scanner,
+            "invalid filter value",
+            "expected filter",
+            {
+                "fast" => cairo::Filter::Fast,
+                "good" => cairo::Filter::Good,
+                "best" => cairo::Filter::Best,
+                "nearest" => cairo::Filter::Nearest,
+                "bilinear" => cairo::Filter::Bilinear,
+                "gaussian" => cairo::Filter::Gaussian,
+            }
+        )
+        .map_err(|e| {
+            e.with_help(
+                "Valid filter values are:
+           - Fast
+           - Good
+           - Best
+           - Nearest
+           - Bilinear
+           - Gaussian",
+            )
         })
     }
 }
-
-pub struct WindowButtonNameValidator;
-impl StringValidator for WindowButtonNameValidator {
-    fn validate(s: &str) -> Result<(), Error> {
-        const VALID: [&str; 3] = ["minimize", "maximize", "close"];
-        if VALID.contains(&s) {
-            Ok(())
-        } else {
-            let mut error = Error::new("invalid button name");
-            if let Some(similar) = most_similar(s, VALID.into_iter()) {
-                error = error.with_label(0..0, format!("help: a similar name exists: `{similar}`"));
-            } else {
-                error = error
-                    .with_label(0..0, "expected button name")
-                    .with_help("valid button names are `close`, `maximize`, and `minimize`");
-            }
-            Err(error)
-        }
-    }
-}
-*/
 
 ////////////////////////////////////////////////////////////////////////////////
 // Color scheme
