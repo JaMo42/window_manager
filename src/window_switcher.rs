@@ -827,6 +827,8 @@ impl WindowSwitcher {
             } else {
                 1
             }),
+            XK_Right | XK_L | XK_l => self.select_next(1),
+            XK_Left | XK_h | XK_H => self.select_next(-1),
             XK_Return | XK_space => self.finish(),
             _ => {}
         }
