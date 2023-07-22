@@ -292,6 +292,8 @@ struct WindowSwitcher {
     // signal handler.
     in_signal_handler: bool,
     previews: bool,
+    /// Indices of frist item in each row.
+    row_starts: Vec<usize>,
 }
 
 impl WindowSwitcher {
@@ -350,6 +352,7 @@ impl WindowSwitcher {
             shift,
             in_signal_handler: false,
             previews: true,
+            row_starts: Vec::new(),
         }
     }
 
@@ -360,6 +363,7 @@ impl WindowSwitcher {
             client.input_window.destroy(&self.wm.display);
             // close button is detroyed as subwindow
         }
+        self.row_starts.clear();
     }
 
     fn destroy(&mut self) {
@@ -380,6 +384,7 @@ impl WindowSwitcher {
         &self,
         layout: &Layout,
         client_layouts: &mut [ClientLayout],
+        row_starts: &mut Vec<usize>,
         icons: Vec<bool>,
     ) -> Option<(Rectangle, bool)> {
         let mut previews = true;
@@ -410,6 +415,7 @@ impl WindowSwitcher {
                 .map(|&index| client_layouts[index].width() + layout.spacing as u16)
                 .sum::<u16>()
                 - layout.spacing as u16;
+            row_starts.push(row[0]);
             let mut x = layout.padding + (max_row_width - row_width) as i16 / 2;
             let mut height = 0;
             for index in row {
@@ -438,6 +444,7 @@ impl WindowSwitcher {
         removed: XcbWindow,
         layout: &Layout,
         client_layouts: &mut Vec<ClientLayout>,
+        row_starts: &mut Vec<usize>,
     ) -> Option<(Rectangle, bool)> {
         client_layouts.clear();
         let workspace = self.wm.active_workspace();
@@ -454,7 +461,7 @@ impl WindowSwitcher {
             .map(|client| client.icon().is_some())
             .collect();
         drop(workspace);
-        let (geometry, previews) = self.layout_grid(layout, client_layouts, icons)?;
+        let (geometry, previews) = self.layout_grid(layout, client_layouts, row_starts, icons)?;
         Some((geometry, previews))
     }
 
@@ -464,12 +471,15 @@ impl WindowSwitcher {
         self.previews = true;
         self.clear_clients();
         // Determine layout
-        let mut client_layouts = Vec::with_capacity(self.clients.len());
+        let client_count = self.wm.active_workspace().clients().len();
+        let mut client_layouts = Vec::with_capacity(client_count);
+        let mut row_starts = Vec::with_capacity(client_count);
         let mut first_without_previews = None;
         let mut ok = false;
         for (index, layout) in self.layouts.iter().enumerate() {
+            row_starts.clear();
             if let Some((container_geometry, previews)) =
-                self.try_layout(removed, layout, &mut client_layouts)
+                self.try_layout(removed, layout, &mut client_layouts, &mut row_starts)
             {
                 self.geometry = container_geometry;
                 if previews {
@@ -486,8 +496,14 @@ impl WindowSwitcher {
         if let Some(index) = first_without_previews {
             self.previews = false;
             self.used_layout = index;
+            row_starts.clear();
             (self.geometry, _) = self
-                .try_layout(removed, &self.layouts[index], &mut client_layouts)
+                .try_layout(
+                    removed,
+                    &self.layouts[index],
+                    &mut client_layouts,
+                    &mut row_starts,
+                )
                 .unwrap();
             ok = true;
         }
@@ -497,6 +513,7 @@ impl WindowSwitcher {
             return false;
         }
         // Build layout
+        self.row_starts = row_starts;
         let make_input_window = |parent| {
             let win = InputOnlyWindow::builder()
                 .with_parent(parent)
@@ -722,6 +739,41 @@ impl WindowSwitcher {
         self.select(index);
     }
 
+    /// Move the selection to an adjacent row.  If delta if negative the
+    /// selection is moved up.
+    fn select_next_row(&mut self, delta: i8) {
+        let row_count = self.row_starts.len();
+        if row_count == 0 {
+            return;
+        }
+        let mut current_row = usize::MAX;
+        for (row_index, &start_index) in self.row_starts.iter().enumerate() {
+            if start_index > self.switch_index {
+                current_row = row_index - 1;
+                break;
+            }
+        }
+        if current_row == usize::MAX {
+            current_row = row_count - 1;
+        }
+        let position_in_row = self.switch_index - self.row_starts[current_row];
+        let next_row = if delta < 0 {
+            if current_row == 0 {
+                row_count - 1
+            } else {
+                current_row - 1
+            }
+        } else {
+            (current_row + 1) % row_count
+        };
+        let row_size = if next_row == row_count - 1 {
+            self.clients.len() - self.row_starts[next_row]
+        } else {
+            self.row_starts[next_row + 1] - self.row_starts[next_row]
+        };
+        self.select(self.row_starts[next_row] + position_in_row.min(row_size - 1));
+    }
+
     /// Focuses the selected client and destroys the window switcher.
     fn finish(&mut self) {
         let mut workspace = self.wm.active_workspace();
@@ -829,6 +881,8 @@ impl WindowSwitcher {
             }),
             XK_Right | XK_L | XK_l => self.select_next(1),
             XK_Left | XK_h | XK_H => self.select_next(-1),
+            XK_Up | XK_K | XK_k => self.select_next_row(-1),
+            XK_Down | XK_J | XK_j => self.select_next_row(1),
             XK_Return | XK_space => self.finish(),
             _ => {}
         }
