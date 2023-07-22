@@ -1,9 +1,12 @@
+use super::Visual;
 use super::{Display, WindowAttributes, WindowBuilder, XcbWindow};
 use crate::error::OrFatal;
 use std::sync::Arc;
 use xcb::x::ClearArea;
 use xcb::x::Cursor;
 use xcb::x::Cw;
+use xcb::x::GetWindowAttributes;
+use xcb::x::GetWindowAttributesReply;
 use xcb::x::SendEvent;
 use xcb::x::SendEventDest;
 use xcb::x::UnmapWindow;
@@ -118,6 +121,23 @@ impl Window {
             })
             .unwrap_or_fatal(&self.display)
             .depth()
+    }
+
+    pub fn get_attributes(&self) -> GetWindowAttributesReply {
+        self.display
+            .request_with_reply(&GetWindowAttributes {
+                window: self.handle,
+            })
+            .unwrap_or_fatal(&self.display)
+    }
+
+    pub fn get_visual(&self) -> Visual {
+        let attributes = self.get_attributes();
+        Visual {
+            depth: self.get_depth(),
+            id: attributes.visual(),
+            colormap: attributes.colormap(),
+        }
     }
 
     pub fn configure(&self, value_list: &mut [ConfigWindow]) {

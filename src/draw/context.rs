@@ -45,9 +45,9 @@ fn find_visual_type(display: &Display, visual: &Visual) -> *mut Visualtype {
 pub fn create_xcb_surface(
     display: &Display,
     drawable_id: u32,
+    visual: &Visual,
     (width, height): (u16, u16),
 ) -> XCBSurface {
-    let visual = display.truecolor_visual();
     unsafe {
         // According to this issue in the xcb crate you're supposed to just
         // cast these like this:
@@ -86,7 +86,12 @@ impl DrawingContext {
         log::trace!("draw: creating context");
         let visual = display.truecolor_visual();
         let pixmap = display.create_pixmap(None, visual.depth, width, height);
-        let surface = create_xcb_surface(&display, pixmap.resource_id(), (width, height));
+        let surface = create_xcb_surface(
+            &display,
+            pixmap.resource_id(),
+            display.truecolor_visual(),
+            (width, height),
+        );
         let context = Context::new(&surface).unwrap_or_fatal(&display);
         context.set_operator(Operator::Source);
         let layout = pangocairo::create_layout(&context);

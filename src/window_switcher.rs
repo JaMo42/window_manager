@@ -213,7 +213,7 @@ struct WindowSwitcherClient {
     close_button_hovered: bool,
     close_button_pressed: bool,
     selected: bool,
-    depth: u8,
+    surface: XCBSurface,
 }
 
 fn try_distribute_with_row_count(
@@ -284,7 +284,6 @@ struct WindowSwitcher {
     geometry: Rectangle,
     font: FontDescription,
     clients: Vec<WindowSwitcherClient>,
-    surface: XCBSurface,
     hovered: usize,
     switch_index: usize,
     shift: KeyButMask,
@@ -292,9 +291,6 @@ struct WindowSwitcher {
     // want to pass around some flag so we store this flag and set if from the
     // signal handler.
     in_signal_handler: bool,
-    // for now we can only use the xcb surface to draw window previews if they
-    // have the same depth as out TrueColor visual.
-    depth: u8,
     previews: bool,
 }
 
@@ -340,9 +336,7 @@ impl WindowSwitcher {
                 Layout::compute(&wm.config, font_height, preview_height_percent)
             })
             .collect();
-        let surface = create_xcb_surface(&wm.display, window.resource_id(), (10, 10));
         let shift = KeyButMask::from_bits_truncate(wm.modmap.borrow().shift().bits());
-        let depth = visual.depth;
         Self {
             wm,
             layouts,
@@ -351,12 +345,10 @@ impl WindowSwitcher {
             geometry: Rectangle::zeroed(),
             font,
             clients: Vec::new(),
-            surface,
             hovered: usize::MAX,
             switch_index: 1,
             shift,
             in_signal_handler: false,
-            depth,
             previews: true,
         }
     }
@@ -523,6 +515,12 @@ impl WindowSwitcher {
         {
             let input_window = make_input_window(self.window.handle());
             let close_button = make_input_window(input_window.handle());
+            let surface = create_xcb_surface(
+                client.display(),
+                client.window().resource_id(),
+                &client.window().get_visual(),
+                client.client_geometry().size(),
+            );
             self.clients.push(WindowSwitcherClient {
                 client: client.clone(),
                 layout: client_layout,
@@ -532,7 +530,7 @@ impl WindowSwitcher {
                 close_button_hovered: false,
                 close_button_pressed: false,
                 selected: false,
-                depth: client.window().get_depth(),
+                surface,
             });
         }
         self.window.move_and_resize(self.geometry);
@@ -628,7 +626,7 @@ impl WindowSwitcher {
         if !self.previews {
             return;
         }
-        if client.depth != self.depth || client.client.is_minimized() {
+        if client.client.is_minimized() {
             // TODO: we should still be able to get a preview for windows with
             // a different depth.  This can either be done by manually doing the
             // GetImage request or by just having a XCBSurface for every depth
@@ -644,17 +642,6 @@ impl WindowSwitcher {
             return;
         }
         let (width, height) = client.client.client_geometry().size();
-        if self
-            .surface
-            .set_drawable(
-                &cairo::XCBDrawable(client.client.window().resource_id()),
-                width as i32,
-                height as i32,
-            )
-            .is_err()
-        {
-            return;
-        }
         let context = dc.cairo();
         let (x, y, p_width, p_height) = client.layout.preview.into_float_parts();
         let width_scale = p_width / width as f64;
@@ -664,7 +651,9 @@ impl WindowSwitcher {
         context.clip();
         context.translate(x, y);
         context.scale(width_scale, height_scale);
-        context.set_source_surface(&self.surface, 0.0, 0.0).unwrap();
+        context
+            .set_source_surface(&client.surface, 0.0, 0.0)
+            .unwrap();
         context.source().set_filter(cairo::Filter::Good);
         context.paint().unwrap();
         context.restore().unwrap();
@@ -849,6 +838,19 @@ impl WindowSwitcher {
             self.finish();
         }
     }
+
+    /// Handles a change in client size.
+    fn resize_client(&mut self, handle: XcbWindow) {
+        for client in self.clients.iter() {
+            if client.client.window().handle() == handle {
+                let (width, height) = client.client.client_geometry().size();
+                client
+                    .surface
+                    .set_size(width as i32, height as i32)
+                    .unwrap();
+            }
+        }
+    }
 }
 
 impl EventSink for WindowSwitcher {
@@ -925,6 +927,12 @@ impl EventSink for WindowSwitcher {
             Signal::FocusClient(_) => {
                 self.window.raise();
                 self.wm.display.set_input_focus(self.window.handle());
+            }
+            Signal::ClientGeometry(handle, _) => {
+                self.resize_client(*handle);
+            }
+            Signal::SnapStateChanged(handle, _, _) => {
+                self.resize_client(*handle);
             }
             Signal::Quit => self.destroy(),
             _ => {}
