@@ -102,6 +102,8 @@ impl MainEventSink {
         let g = if let WindowType::Dialog = window_type {
             let monitor = *client.get_monitor().window_area();
             *client.frame_geometry().center_inside(&monitor)
+        } else if initial_geometry.position() == (0, 0) {
+            spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config, None)
         } else if let Some(x) = rectangle_is_already_in_snapped_position(
             client.frame_geometry(),
             &self.wm,
@@ -117,8 +119,6 @@ impl MainEventSink {
                 &self.wm.config,
                 Some(unsnapped),
             )
-        } else if initial_geometry.position() == (0, 0) {
-            spawn_geometry(&client, &self.wm.active_workspace(), &self.wm.config, None)
         } else {
             initial_geometry
         };
