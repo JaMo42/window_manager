@@ -285,8 +285,27 @@ impl Item {
     }
 
     fn focus_instance(&mut self, idx: usize) {
-        self.focused_instance = idx; // wasn't in old version?
-        let client = &self.instances[idx]; // TODO: crash here
+        if idx >= self.instances.len() {
+            log::error!(
+                "dock::Item::focus_instance: idx is out of bounds: idx={} instances={}",
+                idx,
+                self.instances.len()
+            );
+            let backtrace = std::backtrace::Backtrace::force_capture();
+            log::error!("Backtrace:\n{backtrace}");
+            if cfg!(debug_assertions) {
+                self.wm.notify(
+                    "Internal error",
+                    "dock::Item::focus_instance index is out of bounds.
+                    See log for more information.",
+                    "dialog-error",
+                    0,
+                );
+            }
+            return;
+        }
+        self.focused_instance = idx;
+        let client = &self.instances[idx];
         if client.workspace() != self.wm.active_workspace_index() {
             action::select_workspace(&self.wm, client.workspace(), None);
         }
