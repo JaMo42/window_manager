@@ -141,7 +141,9 @@ impl WindowManager {
         this.notification_manager.lock().set_window_manager(&this);
         this.split_manager.borrow_mut().construct(&this);
         SessionManager::register(this.session_manager.clone()).unwrap_or_fatal(&display);
-        NotificationManager::register(this.notification_manager.clone()).unwrap_or_fatal(&display);
+        if let Err(error) = NotificationManager::register(this.notification_manager.clone()) {
+            log::error!("Could not register notification server: {error}");
+        }
         let main_event_sink = Box::new(MainEventSink::new(this.clone()));
         {
             let mut e = this.event_sinks.borrow_mut();

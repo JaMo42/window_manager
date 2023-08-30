@@ -72,13 +72,15 @@ impl EventRouter {
     /// Dispatches an event.  If the event is an X event it is only dispatched
     /// to sinks that specify that event number in their filter.
     pub fn dispatch_event(&mut self, event: &Event) {
-        if std::option_env!("WM_LOG_ALL_EVENTS").is_some() && !matches!(event, Event::Unknown(_)) {
+        let do_log =
+            std::option_env!("WM_LOG_ALL_EVENTS").is_some() && !matches!(event, Event::Unknown(_));
+        if do_log {
             log::trace!("\x1b[2m Event: \x1b[92m{}\x1b[0m", DisplayEventName(event));
         }
         if let Event::X(x_event) = event {
             let id = x_event_number(x_event);
-            for i in self.masks[id as usize].iter() {
-                if self.sinks[*i].accept(event) {
+            for &i in self.masks[id as usize].iter() {
+                if self.sinks[i].accept(event) {
                     return;
                 }
             }
@@ -89,7 +91,7 @@ impl EventRouter {
                 }
             }
         }
-        if std::option_env!("WM_LOG_ALL_EVENTS").is_some() && !matches!(event, Event::Unknown(_)) {
+        if do_log {
             log::trace!("\x1b[2m      : Unhandeled\x1b[0m");
         }
     }

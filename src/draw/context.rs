@@ -311,7 +311,6 @@ impl DrawingContext {
         pangocairo::create_layout(&self.context)
     }
 
-    // TODO: better name
     /// Creates a `TextBuilder` from an existing layout.
     /// See `DrawingContext::text` for what the given rectangle specifies.
     pub fn text_layout<'a, 'b: 'a>(

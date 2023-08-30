@@ -270,7 +270,9 @@ impl Client {
     }
 
     pub fn get_window_manager(&self) -> Arc<WindowManager> {
-        self.wm.upgrade().expect("client outlived window manager")
+        self.wm
+            .upgrade()
+            .expect("client not to outlive the window manager")
     }
 
     pub fn get_monitor(&self) -> MappedRwLockReadGuard<Monitor> {

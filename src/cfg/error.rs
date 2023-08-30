@@ -91,9 +91,8 @@ impl Error {
         self
     }
 
-    #[allow(dead_code)]
     pub fn with_note(mut self, note: impl ToString) -> Self {
-        self.help = Some(note.to_string());
+        self.note = Some(note.to_string());
         self
     }
 

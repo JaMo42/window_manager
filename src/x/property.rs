@@ -10,7 +10,7 @@ use xcb::{
 };
 
 xcb::atoms_struct! {
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Clone, Debug)]
     pub struct Atoms {
         pub net_active_window => b"_NET_ACTIVE_WINDOW" only_if_exists = false,
         pub net_client_list => b"_NET_CLIENT_LIST" only_if_exists = false,
@@ -84,6 +84,7 @@ impl Atoms {
 
 /// Property types.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub enum PropertyValue {
     Atom(Atom),
     AtomList(Vec<Atom>),

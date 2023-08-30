@@ -543,7 +543,10 @@ impl EventSink for Dock {
                 }
             }
             Signal::ClientGeometry(..) | Signal::ClientMinimized(..) => self.check_occluded(None),
-            Signal::NewClient(handle) => self.new_client(*handle),
+            Signal::NewClient(handle) => {
+                self.new_client(*handle);
+                self.check_occluded(None);
+            }
             Signal::ClientRemoved(handle) => {
                 self.remove_client(*handle);
                 self.check_occluded(Some(*handle));

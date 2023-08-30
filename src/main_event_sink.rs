@@ -492,9 +492,11 @@ impl MainEventSink {
                 // The client got unmapped but we didn't cause it.  This may
                 // be a valid thing where we don't want to destroy the client
                 // but some program seem to do this instead of sending a
-                // DestroyNotify when closing their window (like solaar).
+                // DestroyNotify when closing their window.
                 // I guess because they don't actually destroy their window but
                 // we need the window gone so we treat it the same a destruction.
+                // Note that this does not destroy the original window but just
+                // out auxillary windows and removes all client data of it.
                 self.destroy_window(event.window());
 
                 // This seems to work fine and fixes the problem of some windows

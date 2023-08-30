@@ -67,15 +67,24 @@ macro_rules! parse_map_string {
     ($scanner:ident, $error_message:expr, $error_label:expr, {$(
         $str:expr => $value:expr,
     )+}) => {{
+        const VALID: &[&str] = &[$($str,)+];
         let next_word = $scanner.some(|c| c.is_ascii_alphabetic());
         match next_word.as_str().to_ascii_lowercase().as_str() {
             $(
             $str => Ok($value),
             )+
-            _ => Err(next_word.as_error(
-                $error_message,
-                $error_label,
-            ))
+            _ => {
+                let mut error = next_word.as_error(
+                    $error_message,
+                    $error_label,
+                );
+                if let Some(similar) = most_similar(&next_word, VALID.iter().cloned()) {
+                    error = error.with_note(
+                        format!("a variant with a similar name exists: `{similar}`")
+                    );
+                }
+                Err(error)
+            }
         }
     }}
 }
@@ -362,10 +371,10 @@ impl Value for Color {
             ))
         } else {
             Err(
-        value_error("invalid color value", "expected color").with_help(
-          "valid formats are `#RRGGBB`, `#RRGGBBAA`, `rgb(r, g, b)`, and `rgba(r, g, b, a)`",
-        ),
-      )
+                value_error("invalid color value", "expected color").with_help(
+                    "valid formats are `#RRGGBB`, `#RRGGBBAA`, `rgb(r, g, b)`, and `rgba(r, g, b, a)`",
+                ),
+            )
         }
     }
 }

@@ -644,10 +644,6 @@ impl WindowSwitcher {
             return;
         }
         if client.client.is_minimized() {
-            // TODO: we should still be able to get a preview for windows with
-            // a different depth.  This can either be done by manually doing the
-            // GetImage request or by just having a XCBSurface for every depth
-            // we have.
             if let Some(icon) = client.client.icon() {
                 let rect = client.layout.preview;
                 let smaller_side = u16::min(rect.width, rect.height);

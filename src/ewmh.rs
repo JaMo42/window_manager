@@ -260,7 +260,7 @@ impl WindowState {
         let window = client.window();
         let display = window.display();
         let state = match self {
-            Self::Normal => Vec::new(),
+            Self::Normal => vec![unsafe { Atom::new(xcb_util::icccm::WM_STATE_NORMAL as u32) }],
             Self::Snapped => match client.snap_state() {
                 SnapState::Left | SnapState::Right => {
                     vec![display.atoms.net_wm_action_maximize_vert]
@@ -464,6 +464,12 @@ pub fn client_message(client: &Client, event: &ClientMessageEvent) {
         net_wm_moveresize(client, event);
     } else if message_type == display.atoms.net_moveresize_window {
         net_moveresize_window(client, event);
+    } else {
+        log::trace!(
+            "Unhandeled client message: {:?} to {}",
+            event.r#type(),
+            event.window().resource_id()
+        );
     }
 }
 
