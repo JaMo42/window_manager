@@ -551,7 +551,12 @@ impl EventSink for Dock {
                 self.remove_client(*handle);
                 self.check_occluded(Some(*handle));
             }
-            Signal::FocusClient(handle) => self.update_focus(*handle),
+            Signal::FocusClient(handle) => {
+                self.update_focus(*handle);
+                if self.visible {
+                    self.window.raise();
+                }
+            }
             Signal::UrgencyChanged(handle) => self.update_urgency(*handle),
             Signal::Resize => {
                 self.resize();
