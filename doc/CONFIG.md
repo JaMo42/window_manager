@@ -60,7 +60,7 @@ Key and type | Description | Default
 `double_click_time` <br> `uint` | maximum time after which a second click is considered a double-click in milliseconds. | `500`
 `grid_resize` <br> `bool` | run [grid-resize](https://github.com/JaMo42/grid-resize) when holding the left and right mouse buttons while moving a window. | `false`
 `grid_resize_grid_size` <br> `[uint; 2]` | the vertical and horizontal columns for grid-resize. | `(16, 9)`
-`grid_resize_love` <br> `bool` | run grid-size in live mode. | `false`
+`grid_resize_live` <br> `bool` | run grid-size in live mode. | `false`
 `scale_base_fonts` <br> `bool` | see [fonts](#fonts). | `true`
 
 ### [layout]
