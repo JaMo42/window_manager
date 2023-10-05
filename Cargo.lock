@@ -1855,6 +1855,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "quick-xml"
+version = "0.28.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ce5e73202a820a31f8a0ee32ada5e21029c81fd9e3ebf668a40832e4219d9d1"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2655,7 +2664,7 @@ dependencies = [
  "strsim",
  "system_shutdown",
  "x11",
- "xcb 1.2.0",
+ "xcb 1.2.2",
  "xcb-util",
  "zbus",
 ]
@@ -2721,18 +2730,18 @@ checksum = "771e2b996df720cd1c6dd9ff90f62d91698fd3610cc078388d0564bdd6622a9c"
 dependencies = [
  "libc",
  "log",
- "quick-xml",
+ "quick-xml 0.22.0",
 ]
 
 [[package]]
 name = "xcb"
-version = "1.2.0"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0faeb4d7e2d54fff4a0584f61297e86b106914af2029778de7b427f72564d6c5"
+checksum = "fb3acf6b0945550d37d3a683b8f7de9d9f66b2c14dc390313b34d7ac6f1b4089"
 dependencies = [
  "bitflags",
  "libc",
- "quick-xml",
+ "quick-xml 0.28.2",
  "x11",
 ]
 

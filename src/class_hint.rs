@@ -1,6 +1,4 @@
-use crate::x::Window;
-use xcb::Xid;
-use xcb_util::icccm::{get_wm_class, set_wm_class};
+use crate::x::{GetProperty, PropertyValue, SetProperty, Window};
 
 #[derive(Debug, Default)]
 pub struct ClassHint {
@@ -10,15 +8,12 @@ pub struct ClassHint {
 
 impl ClassHint {
     pub fn get(window: &Window) -> Option<Self> {
-        let cookie = get_wm_class(
-            window.display().connection_for_xcb_util(),
-            window.handle().resource_id(),
-        );
-        let reply = cookie.get_reply().ok()?;
-        Some(Self {
-            class: reply.class().to_owned(),
-            name: reply.instance().to_owned(),
-        })
+        let display = window.display();
+        let data = window.get_string_property(display, display.atoms.wm_class)?;
+        let mut it = data.split('\0');
+        let name = it.next()?.to_owned();
+        let class = it.next()?.to_owned();
+        Some(Self { class, name })
     }
 
     pub fn new(class: &str, name: &str) -> Self {
@@ -30,11 +25,8 @@ impl ClassHint {
 
     /// Set the class hint on the given window.
     pub fn set(&self, window: &Window) {
-        set_wm_class(
-            window.display().connection_for_xcb_util(),
-            window.handle().resource_id(),
-            &self.class,
-            &self.name,
-        );
+        let data = format!("{}\0{}\0", self.name, self.class);
+        let display = window.display();
+        window.set_property(display, display.atoms.wm_class, PropertyValue::String(data));
     }
 }
