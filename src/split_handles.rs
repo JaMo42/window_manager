@@ -1,8 +1,8 @@
 use crate::{
-    class_hint::ClassHint,
     color::Color,
     draw::{ColorKind, DrawingContext},
     ewmh::{self, WindowType},
+    icccm::ClassHint,
     monitors::{monitors, Monitor},
     mouse::{FinishReason, TrackedMotion},
     rectangle::Rectangle,

@@ -2,13 +2,13 @@ use crate::{
     action::{maximize, resnap},
     appinfo::get_application_id,
     button::Button,
-    class_hint::ClassHint,
     color::BorderColor,
     draw::{load_app_icon, Alignment, GradientSpec, Svg},
     error::OrFatal,
     event::Signal,
     ewmh::{set_allowed_actions, set_frame_extents, WindowState, WindowType},
     extended_frame::ExtendedFrame,
+    icccm::{get_wm_protocols, ClassHint},
     layout::{ClientLayout, LayoutClass},
     monitors::{monitors, Monitor},
     motif_hints::MotifHints,
@@ -34,7 +34,6 @@ use xcb::{
     },
     Xid,
 };
-use xcb_util::icccm::get_wm_protocols;
 
 #[derive(Debug)]
 pub enum SetClientGeometry {
@@ -829,16 +828,10 @@ impl Client {
     pub fn send_message(&self, protocol: Atom) -> bool {
         let mut is_supported = false;
         let display = self.window.display();
-        if let Ok(get_protocols_reply) = get_wm_protocols(
-            display.connection_for_xcb_util(),
-            self.window.handle().resource_id(),
-            display.atoms.wm_protocols.resource_id(),
-        )
-        .get_reply()
-        {
+        if let Ok(reply) = get_wm_protocols(&self.window) {
             let protocol_id = protocol.resource_id();
-            for supported in get_protocols_reply.atoms().iter().cloned() {
-                if supported == protocol_id {
+            for supported in reply.value::<Atom>().iter() {
+                if supported.resource_id() == protocol_id {
                     is_supported = true;
                     break;
                 }

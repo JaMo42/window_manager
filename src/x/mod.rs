@@ -51,24 +51,18 @@ pub fn keysym_to_string(sym: KeySym) -> Option<String> {
 /// Destroys a windows using the `WM_DELETE_WINDOW` message if supported or
 /// the `KillClient` request if not.
 pub fn close_window(window: &Window) {
+    use crate::icccm::get_wm_protocols;
     use xcb::{
-        x::{ClientMessageData, ClientMessageEvent, EventMask, CURRENT_TIME},
+        x::{Atom, ClientMessageData, ClientMessageEvent, EventMask, CURRENT_TIME},
         Xid,
     };
-    use xcb_util::icccm::get_wm_protocols;
     let mut is_supported = false;
     let display = window.display();
     let protocol = display.atoms.wm_delete_window;
-    if let Ok(get_protocols_reply) = get_wm_protocols(
-        display.connection_for_xcb_util(),
-        window.handle().resource_id(),
-        display.atoms.wm_protocols.resource_id(),
-    )
-    .get_reply()
-    {
+    if let Ok(get_protocols_reply) = get_wm_protocols(window) {
         let protocol_id = protocol.resource_id();
-        for supported in get_protocols_reply.atoms().iter().cloned() {
-            if supported == protocol_id {
+        for supported in get_protocols_reply.value::<Atom>().iter() {
+            if supported.resource_id() == protocol_id {
                 is_supported = true;
                 break;
             }

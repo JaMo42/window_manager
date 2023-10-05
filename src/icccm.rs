@@ -1,4 +1,5 @@
 use crate::x::{GetProperty, PropertyValue, SetProperty, Window};
+use xcb::x::{GetPropertyReply, ATOM_ATOM};
 
 #[derive(Debug, Default)]
 pub struct ClassHint {
@@ -29,4 +30,9 @@ impl ClassHint {
         let display = window.display();
         window.set_property(display, display.atoms.wm_class, PropertyValue::String(data));
     }
+}
+
+pub fn get_wm_protocols(window: &Window) -> xcb::Result<GetPropertyReply> {
+    let display = window.display();
+    window.get_property(display, display.atoms.wm_protocols, ATOM_ATOM)
 }

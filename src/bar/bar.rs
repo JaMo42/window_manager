@@ -3,11 +3,11 @@ use super::{
     widget::{self, Widget},
 };
 use crate::{
-    class_hint::ClassHint,
     config::Config,
     error::OrFatal,
     event::Signal,
     ewmh::{self, WindowType},
+    icccm::ClassHint,
     monitors::monitors_mut,
     rectangle::Rectangle,
     window_manager::{WindowKind, WindowManager},

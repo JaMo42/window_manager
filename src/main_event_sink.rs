@@ -1,6 +1,5 @@
 use crate::{
     action::{resnap, snap_on_monitor},
-    class_hint::ClassHint,
     client::{Client, SetClientGeometry},
     config::{Action, Config, WorkspaceAction},
     dialog::SpecialDialog,
@@ -8,6 +7,7 @@ use crate::{
     event::{EventSink, Signal},
     ewmh::{self, WindowType},
     extended_frame::HoveredFrame,
+    icccm::ClassHint,
     monitors::{monitors, monitors_mut},
     mouse::{mouse_move, mouse_resize, MouseResizeOptions, BUTTON_1, BUTTON_3},
     process::run_or_message_box,

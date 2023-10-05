@@ -1,10 +1,10 @@
 use super::{item::Item, layout::DockLayout};
 use crate::{
-    class_hint::ClassHint,
     client::Client,
     color::Color,
     event::{EventSink, Signal},
     ewmh::{set_window_type, WindowType},
+    icccm::ClassHint,
     monitors::monitors,
     mouse::{BUTTON_1, BUTTON_2, BUTTON_3},
     rectangle::Rectangle,

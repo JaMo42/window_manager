@@ -25,6 +25,9 @@ const _NET_WM_MOVERESIZE_MOVE: u32 = 8;
 const _NET_WM_MOVERESIZE_SIZE_KEYBOARD: u32 = 9;
 const _NET_WM_MOVERESIZE_MOVE_KEYBOARD: u32 = 10;
 
+// https://x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#wm_state_property
+const WM_STATE_NORMAL: u32 = 1;
+
 #[derive(Debug, Clone)]
 pub struct Root(pub Window);
 
@@ -260,7 +263,7 @@ impl WindowState {
         let window = client.window();
         let display = window.display();
         let state = match self {
-            Self::Normal => vec![unsafe { Atom::new(xcb_util::icccm::WM_STATE_NORMAL as u32) }],
+            Self::Normal => vec![unsafe { Atom::new(WM_STATE_NORMAL) }],
             Self::Snapped => match client.snap_state() {
                 SnapState::Left | SnapState::Right => {
                     vec![display.atoms.net_wm_action_maximize_vert]
