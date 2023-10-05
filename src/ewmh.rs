@@ -379,7 +379,7 @@ fn wm_change_state(client: &Client, state: u32) {
     }
 }
 
-fn net_wm_moveresize(client: &Client, event: &ClientMessageEvent) {
+fn net_wm_moveresize(client: &Client, event: &ClientMessageEvent, grid_resize: bool) {
     let direction = match event.data() {
         ClientMessageData::Data32(data) => data[2],
         _ => return,
@@ -388,7 +388,7 @@ fn net_wm_moveresize(client: &Client, event: &ClientMessageEvent) {
         focus_client_on_its_workspace(client);
     }
     if direction == _NET_WM_MOVERESIZE_MOVE && client.may_move() {
-        mouse_move(client, BUTTON_1);
+        mouse_move(client, BUTTON_1, grid_resize);
     } else if !(direction == _NET_WM_MOVERESIZE_MOVE_KEYBOARD
         || direction == _NET_WM_MOVERESIZE_SIZE_KEYBOARD)
         && client.may_resize()
@@ -441,7 +441,7 @@ fn net_moveresize_window(client: &Client, event: &ClientMessageEvent) {
 }
 
 /// Handles a client message event to a client.
-pub fn client_message(client: &Client, event: &ClientMessageEvent) {
+pub fn client_message(client: &Client, event: &ClientMessageEvent, grid_resize: bool) {
     let display = client.display().clone();
     let message_type = event.r#type();
     if message_type == display.atoms.net_wm_state {
@@ -461,7 +461,7 @@ pub fn client_message(client: &Client, event: &ClientMessageEvent) {
             wm_change_state(client, data[0]);
         }
     } else if message_type == display.atoms.net_wm_moveresize {
-        net_wm_moveresize(client, event);
+        net_wm_moveresize(client, event, grid_resize);
     } else if message_type == display.atoms.net_moveresize_window {
         net_moveresize_window(client, event);
     } else {

@@ -177,6 +177,9 @@ impl<'a> TrackedMotion<'a> {
                     }
                 }
                 ButtonRelease(button) => {
+                    // FIXME: this can be weird as draggin a window with the left
+                    // mouse button can be cancelled by pressing the right mouse
+                    // button but it's a low priority scenario.
                     finish_reason = FinishReason::Finish(button.root_x(), button.root_y());
                     break;
                 }
@@ -274,7 +277,7 @@ impl MouseResizeOptions {
     }
 }
 
-pub fn mouse_move(client: &Client, pressed_key: u8) {
+pub fn mouse_move(client: &Client, pressed_key: u8, grid_resize: bool) {
     let wm = client.get_window_manager();
     let display = wm.display.clone();
     let (x, y) = display.query_pointer_position();
@@ -326,7 +329,7 @@ pub fn mouse_move(client: &Client, pressed_key: u8) {
             preview.update();
         })
         .on_button_press(&mut |event| {
-            if pressed_key | event.detail() == BUTTON_1 | BUTTON_3 {
+            if pressed_key | event.detail() == BUTTON_1 | BUTTON_3 && grid_resize {
                 preview.borrow_mut().cancel();
                 action::grid_resize(&shared_client.borrow());
                 true

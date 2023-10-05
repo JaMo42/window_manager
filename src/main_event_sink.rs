@@ -271,7 +271,11 @@ impl MainEventSink {
                     options = MouseResizeOptions::default();
                 }
                 match self.pressed_button {
-                    BUTTON_1 => mouse_move(&client, self.pressed_button),
+                    BUTTON_1 => mouse_move(
+                        &client,
+                        self.pressed_button,
+                        self.wm.config.general.grid_resize,
+                    ),
                     BUTTON_3 => mouse_resize(&client, options),
                     _ => {}
                 }
@@ -472,7 +476,7 @@ impl MainEventSink {
         if event.window() == self.display.root() {
             ewmh::root_message(&self.wm, event);
         } else if let Some(client) = self.wm.win2client(&event.window()) {
-            ewmh::client_message(&client, event);
+            ewmh::client_message(&client, event, self.wm.config.general.grid_resize);
         } else {
             log::trace!(
                 "Unhandeled client message: {:?} to {}",
