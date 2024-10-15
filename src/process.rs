@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 use std::{
     io::Result,
     mem::zeroed,
-    process::{Child, Command, ExitStatus, Stdio},
+    process::{Command, ExitStatus, Stdio},
 };
 
 #[derive(Clone, Debug)]
@@ -42,8 +42,8 @@ impl Drop for AnonPipe {
 /// This command will be a child of the init command and we do not need to await
 /// it in order to clean resources.
 /// However we cannot communicate with the process either.
-fn orphan(mut command: Command) -> Result<Child> {
-    const RESULT_SIZE: usize = std::mem::size_of::<Result<Child>>();
+fn orphan(mut command: Command) -> Result<()> {
+    const RESULT_SIZE: usize = std::mem::size_of::<Result<()>>();
     static PIPE: Mutex<Option<AnonPipe>> = Mutex::new(None);
     command
         .stdout(Stdio::null())
@@ -56,10 +56,10 @@ fn orphan(mut command: Command) -> Result<Child> {
         if pid == 0 {
             close(rx);
             setsid();
-            let result = command.spawn();
+            let result = command.spawn().map(|_| ());
             write(
                 tx,
-                &result as *const std::io::Result<Child> as *const c_void,
+                &result as *const std::io::Result<()> as *const c_void,
                 RESULT_SIZE,
             );
             close(tx);
@@ -69,7 +69,7 @@ fn orphan(mut command: Command) -> Result<Child> {
         let mut child = zeroed();
         read(
             rx,
-            &mut child as *mut std::io::Result<Child> as *mut c_void,
+            &mut child as *mut std::io::Result<()> as *mut c_void,
             RESULT_SIZE,
         );
         child
@@ -129,7 +129,7 @@ where
 pub fn run(cmd: &[impl AsRef<str>]) -> AnyResult<()> {
     let mut command = Command::new(cmd[0].as_ref());
     command.args(cmd[1..].iter().map(|a| a.as_ref()));
-    Ok(orphan(command).map(|_| ())?)
+    Ok(orphan(command)?)
 }
 
 pub fn run_or_message_box(cmd: &[impl AsRef<str>]) {

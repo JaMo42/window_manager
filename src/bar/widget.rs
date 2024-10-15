@@ -99,10 +99,6 @@ impl UpdateResult {
 }
 
 pub trait Widget {
-    fn resize(&self, rect: Rectangle) {
-        self.window().move_and_resize(rect);
-    }
-
     fn window(&self) -> &Window;
 
     /// Should draw the context to the context with the given height and X

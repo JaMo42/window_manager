@@ -40,6 +40,7 @@ type ActicationCallback<'a> = &'a mut dyn FnMut();
 
 #[derive(Copy, Clone)]
 pub enum FinishReason {
+    #[allow(unused)]
     Finish(i16, i16),
     Cancel,
     Failure,

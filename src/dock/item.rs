@@ -95,6 +95,7 @@ impl Item {
                 "Application not found",
                 &format!("'{}' was not found and got removed from the dock", name),
             );
+            log::error!("dock: application not found: '{}'", name);
             return None;
         }
         let window = InputOnlyWindow::builder()

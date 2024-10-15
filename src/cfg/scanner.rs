@@ -197,7 +197,7 @@ impl<'a> Scanner<'a> {
             return self.all_except(except);
         }
         let until = until.unwrap();
-        let check_except = except.unwrap_or(unsafe { char::from_u32_unchecked(u32::MAX) });
+        let check_except = except.unwrap_or('\0');
         let matched = self.some(|c| c != until && c != check_except);
         match self.peek() {
             Some(m) if m == until => Ok(matched),

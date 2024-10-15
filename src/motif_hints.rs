@@ -5,10 +5,10 @@ pub const MWM_HINTS_DECORATIONS: u32 = 1 << 1;
 #[derive(Debug, Copy, Clone)]
 pub struct MotifHints {
     pub flags: u32,
-    pub functions: u32,
+    //pub functions: u32,
     pub decorations: u32,
-    pub input_mode: u32,
-    pub status: u32,
+    //pub input_mode: u32,
+    //pub status: u32,
 }
 
 impl MotifHints {
@@ -16,10 +16,10 @@ impl MotifHints {
         if data.len() == 5 {
             Some(Self {
                 flags: data[0],
-                functions: data[1],
+                //functions: data[1],
                 decorations: data[2],
-                input_mode: data[3],
-                status: data[4],
+                //input_mode: data[3],
+                //status: data[4],
             })
         } else {
             log::warn!("Incomplete motif hints ({}/5 values)", data.len());

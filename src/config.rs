@@ -394,8 +394,10 @@ impl Config {
         log::trace!("Scaling fonts by {}%", (factor * 100.0).round() as u16);
         // These were originally not supposed to be mutable and I don't want
         // to put them all in cell types. This should be fine.
-        #[allow(clippy::cast_ref_to_mut)]
-        let this = unsafe { &mut *(self as *const Self as *mut Self) };
+        let this = unsafe {
+            let mut this = std::ptr::NonNull::new_unchecked(self as *const Self as *mut Self);
+            this.as_mut()
+        };
         scale_font(&mut this.bar.font, factor);
         if this.window.title_font_size > 0 {
             this.window.title_font_size =
