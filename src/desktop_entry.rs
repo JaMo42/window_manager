@@ -197,7 +197,6 @@ pub fn get_desktop_entry_data_dirs() -> Vec<String> {
     if let Ok(xdg_data_dirs) = std::env::var("XDG_DATA_DIRS") {
         xdg_data_dirs
             .split(':')
-            .filter(|d| std::fs::metadata(d).is_ok())
             .map(|d| {
                 if d.ends_with('/') {
                     format!("{d}applications")
@@ -205,12 +204,13 @@ pub fn get_desktop_entry_data_dirs() -> Vec<String> {
                     format!("{d}/applications")
                 }
             })
+            .filter(|d| std::fs::metadata(d).is_ok())
             .collect()
     } else {
-        // TODO: don't these need to be validated?
-        vec![
-            "/usr/local/share/applications".to_string(),
-            "/usr/share/applications".to_string(),
-        ]
+        ["/usr/local/share/applications", "/usr/share/applications"]
+            .into_iter()
+            .filter(|d| dbg!(d, std::fs::metadata(d).is_ok()).1)
+            .map(|d| d.to_string())
+            .collect()
     }
 }
