@@ -207,6 +207,7 @@ pub fn get_desktop_entry_data_dirs() -> Vec<String> {
             .filter(|d| std::fs::metadata(d).is_ok())
             .collect()
     } else {
+        // XXX: why did I put local first when I wrote this?
         ["/usr/local/share/applications", "/usr/share/applications"]
             .into_iter()
             .filter(|d| dbg!(d, std::fs::metadata(d).is_ok()).1)

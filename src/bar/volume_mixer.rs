@@ -1,8 +1,9 @@
 use crate::{
     config::{Config, Size},
-    draw::{load_builtin_svg, load_icon, Alignment, BuiltinResources, DrawingContext, Svg},
+    draw::{load_builtin_svg, Alignment, BuiltinResources, DrawingContext, Svg},
     error::OrFatal,
     event::{x_event_source, EventSink, Signal, SinkStorage},
+    icon_theme::IconRegistry,
     monitors::monitors,
     mouse_block::MouseBlock,
     rectangle::{Rectangle, ShowAt},
@@ -60,11 +61,12 @@ struct App {
 }
 
 impl App {
-    fn new(info: AppInfo, layout: ItemLayout, icon_theme: &str) -> Self {
+    fn new(info: AppInfo, layout: ItemLayout, reg: &IconRegistry) -> Self {
         let icon = info
             .icon_name
             .as_deref()
-            .and_then(|name| load_icon(name, icon_theme).and_then(Result::ok))
+            .and_then(|name| reg.lookup(name))
+            .and_then(|path| Svg::try_load(&path).ok())
             .map(Icon::App)
             .unwrap_or(Icon::None);
         Self { info, icon, layout }
@@ -292,7 +294,7 @@ impl VolumeMixer {
             .enumerate()
             .map(|(i, info)| {
                 let item_layout = layout.item(i + 1);
-                App::new(info, item_layout, &wm.config.icon_theme)
+                App::new(info, item_layout, &wm.config.icon_reg)
             })
             .collect();
 
@@ -306,7 +308,7 @@ impl VolumeMixer {
                 is_muted: master_mute,
             },
             master_layout,
-            &wm.config.icon_theme,
+            &wm.config.icon_reg,
         );
         master.icon = Icon::Builtin(load_builtin_svg("volume"));
 

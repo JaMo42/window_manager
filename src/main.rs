@@ -27,6 +27,7 @@ mod ewmh;
 mod extended_frame;
 mod geometry_preview;
 mod icccm;
+mod icon_theme;
 mod layout;
 mod main_event_sink;
 mod markup;

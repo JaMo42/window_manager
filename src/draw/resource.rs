@@ -1,5 +1,5 @@
 use super::DrawingContext;
-use crate::{desktop_entry::DesktopEntry, rectangle::Rectangle, AnyResult};
+use crate::{rectangle::Rectangle, AnyResult};
 use cairo::Pattern;
 use gio::{Cancellable, File, MemoryInputStream};
 use glib::Bytes;
@@ -127,48 +127,4 @@ pub fn load_builtin_svg(name: &str) -> Svg {
         .get_file(&format!("{name}.svg"))
         .unwrap_or_else(|| panic!("missing builtin resource: {name}"));
     Svg::from_bytes(file.contents())
-}
-
-pub fn load_icon(name: &str, theme: &str) -> Option<AnyResult<Svg>> {
-    const DIRS: [&str; 10] = [
-        "apps",
-        "actions",
-        "categories",
-        "status",
-        "devices",
-        "emblems",
-        "emotes",
-        "intl",
-        "mimetypes",
-        "places",
-    ];
-    if name.is_empty() {
-        return None;
-    }
-    if name.starts_with('/') {
-        // TODO: should maybe return `None` if the path does not exist.
-        return Some(Svg::try_load(name));
-    }
-    for d in DIRS {
-        let pathname = format!("{}/48x48/{}/{}.svg", theme, d, name);
-        if std::fs::metadata(&pathname).is_ok() {
-            return Some(Svg::try_load(&pathname));
-        }
-    }
-    log::trace!("No icon found for name '{name}'");
-    None
-}
-
-pub fn load_app_icon(application_name: &str, theme: &str) -> Option<Svg> {
-    if application_name.is_empty() {
-        return None;
-    }
-    let desktop_entry = DesktopEntry::new(application_name)?;
-    let name = desktop_entry.icon?;
-    let icon_path = if name.starts_with('/') {
-        name
-    } else {
-        format!("{}/48x48/apps/{}.svg", theme, name)
-    };
-    Svg::try_load(&icon_path).ok()
 }

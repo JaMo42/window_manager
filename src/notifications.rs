@@ -1,6 +1,6 @@
 use crate::{
     config::{Config, Size},
-    draw::{load_icon, Alignment, DrawingContext, Svg},
+    draw::{Alignment, DrawingContext, Svg},
     event::{EventSink, Signal},
     ewmh::{self, WindowType},
     log_error,
@@ -9,7 +9,6 @@ use crate::{
     timeout_thread::TimeoutThread,
     window_manager::WindowManager,
     x::{Window, XcbWindow},
-    AnyResult,
 };
 use pango::{Layout, Weight, WrapMode};
 use parking_lot::Mutex;
@@ -94,7 +93,9 @@ impl Notification {
             } else {
                 props.app_icon
             };
-            self.icon = load_icon(app_icon, &config.icon_theme).and_then(AnyResult::ok);
+            if let Some(path) = config.icon_reg.lookup(app_icon) {
+                self.icon = Svg::try_load(&path).ok();
+            }
         }
         self.update(dc, config);
     }

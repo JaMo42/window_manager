@@ -6,6 +6,7 @@ use crate::{
     config_types::ColorSchemeParser,
     draw::{Alignment, DrawingContext},
     error::OrFatal,
+    icon_theme::IconRegistry,
     layout::{lerp, ClientLayout, LayoutClass},
     monitors::{monitors_mut, WindowAreaPadding},
     paths,
@@ -190,27 +191,6 @@ fn parse_color_scheme(display: &Display, name: &str) -> AnyResult<ColorScheme> {
     scheme_parser.finish()
 }
 
-/// Tries to find the full path to the given icon theme name.
-fn find_icon_theme(name: &str) -> AnyResult<String> {
-    let home = std::env::var("HOME")?;
-    let directories = [
-        "/usr/share/icons".to_string(),
-        format!("{}/{}", home, ".local/share/icons"),
-        format!("{}/{}", home, ".icons"),
-    ];
-    log::trace!("Looking for icon theme");
-    for d in directories {
-        let path = format!("{}/{}", d, name);
-        log::trace!(" - {}", path);
-        if std::fs::metadata(&path).is_ok() {
-            log::trace!(" -> found");
-            return Ok(path);
-        }
-    }
-    log::trace!(" -> none found");
-    Err(format!("Icon theme not found: {}", name))?
-}
-
 parsed_config! {
     sections => {
         General {
@@ -308,7 +288,7 @@ pub struct Config {
     pub dock: Dock,
     pub split_handles: SplitHandles,
     pub colors: ColorScheme,
-    pub icon_theme: String,
+    pub icon_reg: IconRegistry,
 }
 
 unsafe impl Sync for Config {}
@@ -333,7 +313,7 @@ impl Config {
             dock: parsed.dock,
             split_handles: parsed.split_handles,
             colors: parse_color_scheme(display, &parsed.theme.colors)?,
-            icon_theme: find_icon_theme(&parsed.theme.icons)?,
+            icon_reg: IconRegistry::new(&parsed.theme.icons)?,
         };
         for ws_idx in 0..this.layout.workspaces {
             let sym = keysym::XK_1 + ws_idx as u32;

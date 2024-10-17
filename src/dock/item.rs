@@ -5,9 +5,10 @@ use crate::{
     color::Color,
     context_menu::Indicator,
     desktop_entry::DesktopEntry,
-    draw::{self, ColorKind, DrawingContext, Svg},
+    draw::{ColorKind, DrawingContext, Svg},
     error::message_box,
     event::SinkStorage,
+    icon_theme::IconRegistry,
     process::{run_or_message_box, split_commandline},
     rectangle::{Rectangle, ShowAt},
     tooltip::Tooltip,
@@ -18,18 +19,17 @@ use std::{rc::Rc, sync::Arc};
 
 type ContextMenu = crate::context_menu::ContextMenu<ItemRef>;
 
-fn get_icon(entry: Option<&DesktopEntry>, icon_theme: &str) -> Option<(Svg, bool)> {
-    let maybe_name_or_path = entry.and_then(|e| e.icon.clone());
-    if let Some(app_icon) = maybe_name_or_path.and_then(|name| {
-        let icon_path = if name.starts_with('/') {
-            name
-        } else {
-            format!("{}/48x48/apps/{}.svg", icon_theme, name)
-        };
-        Svg::try_load(&icon_path).ok()
-    }) {
-        Some((app_icon, true))
-    } else if let Some(Ok(icon)) = draw::load_icon("applications-system", icon_theme) {
+fn get_icon(entry: Option<&DesktopEntry>, reg: &IconRegistry) -> Option<(Svg, bool)> {
+    if let Some(path) = entry
+        .and_then(|e| e.icon.as_ref())
+        .and_then(|name| reg.lookup(name))
+        .and_then(|path| Svg::try_load(&path).ok())
+    {
+        Some((path, true))
+    } else if let Some(Ok(icon)) = reg
+        .lookup("applications-system")
+        .map(|path| Svg::try_load(&path))
+    {
         Some((icon, false))
     } else {
         None
@@ -95,7 +95,7 @@ impl Item {
                 "Application not found",
                 &format!("'{}' was not found and got removed from the dock", name),
             );
-            log::error!("dock: application not found: '{}'", name);
+            log::error!("dock: application desktop entry not found: '{}'", name);
             return None;
         }
         let window = InputOnlyWindow::builder()
@@ -106,7 +106,7 @@ impl Item {
             .build(&wm.display);
         wm.set_window_kind(&window, WindowKind::DockItem);
         window.map(&wm.display);
-        let (icon, is_app_icon) = if let Some(icon) = get_icon(de.as_ref(), &wm.config.icon_theme) {
+        let (icon, is_app_icon) = if let Some(icon) = get_icon(de.as_ref(), &wm.config.icon_reg) {
             icon
         } else {
             message_box(
@@ -119,7 +119,9 @@ impl Item {
         if let Some(de) = &de {
             for action in de.actions.iter() {
                 action_icons.push(action.icon.as_ref().and_then(|name| {
-                    Some(Rc::new(draw::load_icon(name, &wm.config.icon_theme)?.ok()?))
+                    Some(Rc::new(
+                        Svg::try_load(&wm.config.icon_reg.lookup(name)?).ok()?,
+                    ))
                 }));
             }
         }

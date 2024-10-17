@@ -3,7 +3,7 @@ use crate::{
     appinfo::get_application_id,
     button::Button,
     color::BorderColor,
-    draw::{load_app_icon, Alignment, GradientSpec, Svg},
+    draw::{Alignment, GradientSpec, Svg},
     error::OrFatal,
     event::Signal,
     ewmh::{set_allowed_actions, set_frame_extents, WindowState, WindowType},
@@ -184,7 +184,7 @@ impl Client {
 
         let icon = application_id
             .as_ref()
-            .and_then(|app_id| load_app_icon(app_id, &wm.config.icon_theme))
+            .and_then(|app_id| Svg::try_load(&wm.config.icon_reg.lookup_app_icon(app_id)?).ok())
             .map(Rc::new);
 
         set_allowed_actions(&window, !window_type.is_dialog());
